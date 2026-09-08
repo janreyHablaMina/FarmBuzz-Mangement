@@ -21,6 +21,7 @@ const ORANGE = '#ff7a00';
 
 const PROFILE_SECTIONS = [
   { key: 'health', title: 'Health & Care', subtitle: 'Health records, treatments and vaccinations', icon: 'stethoscope' },
+  { key: 'achievements', title: 'Achievements', subtitle: 'Wins, certificates, locations and notes', icon: 'trophy-outline' },
   { key: 'breeding', title: 'Breeding', subtitle: 'Pairing and breeding history', icon: 'gender-male-female' },
   { key: 'pedigree', title: 'Pedigree & Bloodline', subtitle: 'View parents and lineage', icon: 'dna' },
   { key: 'location', title: 'Location', subtitle: 'Current location and movement history', icon: 'map-marker-outline' },
@@ -134,7 +135,7 @@ function makeFarmBuzzId(bird, ringText) {
   return `FBZ-${new Date().getFullYear()}-${digits.padStart(3, '0')}`;
 }
 
-export default function BirdDetailScreen({ bird, onBack, onEdit, onOpenPedigree, onOpenHealthCare, onOpenBreeding, onOpenLocation, onOpenOwnership, onOpenMedia, onOpenDocuments, onOpenNotes }) {
+export default function BirdDetailScreen({ bird, onBack, onEdit, onOpenPedigree, onOpenHealthCare, onOpenAchievements, onOpenBreeding, onOpenLocation, onOpenOwnership, onOpenMedia, onOpenDocuments, onOpenNotes }) {
   const { width } = useWindowDimensions();
   const [moreVisible, setMoreVisible] = useState(false);
   const compact = width < 520;
@@ -177,6 +178,10 @@ export default function BirdDetailScreen({ bird, onBack, onEdit, onOpenPedigree,
     }
     if (section.key === 'health') {
       onOpenHealthCare?.();
+      return;
+    }
+    if (section.key === 'achievements') {
+      onOpenAchievements?.();
       return;
     }
     if (section.key === 'breeding') {

@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
-  Animated,
   Platform,
   Pressable,
   ScrollView,
@@ -193,42 +192,11 @@ function BirdCard({ bird, compact, onPress }) {
   );
 }
 
-function AnimatedFlockIcon() {
-  const motion = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    const animation = Animated.loop(
-      Animated.sequence([
-        Animated.timing(motion, { toValue: 1, duration: 1500, useNativeDriver: true }),
-        Animated.timing(motion, { toValue: 0, duration: 1500, useNativeDriver: true }),
-      ]),
-    );
-    animation.start();
-    return () => animation.stop();
-  }, [motion]);
-
-  return (
-    <Animated.Image
-      source={FLOCK_BADGE_IMAGE}
-      resizeMode="contain"
-      style={[
-        styles.summaryIconImage,
-        {
-          transform: [
-            { translateY: motion.interpolate({ inputRange: [0, 1], outputRange: [1, -1] }) },
-            { scale: motion.interpolate({ inputRange: [0, 1], outputRange: [0.95, 1] }) },
-          ],
-        },
-      ]}
-    />
-  );
-}
-
 function FlockSummary() {
   return (
     <View style={styles.summaryPanel}>
       <View style={styles.summaryIcon}>
-        <AnimatedFlockIcon />
+        <Image source={FLOCK_BADGE_IMAGE} contentFit="contain" style={styles.summaryIconImage} />
       </View>
       <View>
         <Text style={styles.summaryValue}>126</Text>

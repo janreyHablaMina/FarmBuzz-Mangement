@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   Alert,
-  Animated,
   Platform,
   Pressable,
   ScrollView,
@@ -37,6 +36,7 @@ import BirdMediaScreen from './BirdMediaScreen';
 import BirdNotesScreen from './BirdNotesScreen';
 import BirdDocumentsScreen from './BirdDocumentsScreen';
 import BirdHealthCareScreen from './BirdHealthCareScreen';
+import BirdAchievementsScreen from './BirdAchievementsScreen';
 import BirdBreedingScreen, { DEFAULT_EGG_RECORDS } from './BirdBreedingScreen';
 import OffspringScreen from './OffspringScreen';
 import AddPairingScreen from './AddPairingScreen';
@@ -139,6 +139,7 @@ const MODULES = [
 const STATS = [
   { value: '24', label: 'Active Birds', badgeImage: FLOCK_BADGE_IMAGE, color: THEME_ORANGE },
   { value: '7', label: 'Needs Attention', badgeImage: ATTENTION_BADGE_IMAGE, color: THEME_ORANGE },
+  { value: '0', label: 'Total Wins', icon: 'trophy-outline', color: THEME_ORANGE },
   { value: '4', label: 'Tasks Due', badgeImage: TASKS_BADGE_IMAGE, color: THEME_ORANGE },
 ];
 
@@ -214,6 +215,13 @@ const RECENT_ACTIVITY = [
   { id: 'task-feed', icon: 'clipboard-check-outline', title: 'Morning feeding completed', detail: 'Joel Dizon - Main flock', time: '2 hrs', destination: 'tasks' },
 ];
 
+function getBirdWins(bird) {
+  const winDetail = bird?.details?.find((detail) => /win/i.test(detail.text || ''));
+  if (!winDetail) return 0;
+  const wins = Number((winDetail.text || '').match(/\d+/)?.[0] || 0);
+  return Number.isFinite(wins) ? wins : 0;
+}
+
 function IconButton({ icon, label, onPress, compact }) {
   return (
     <Pressable
@@ -231,37 +239,14 @@ function IconButton({ icon, label, onPress, compact }) {
 }
 
 function AnimatedBadge({ source, icon, color, size }) {
-  const motion = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    const animation = Animated.loop(
-      Animated.sequence([
-        Animated.timing(motion, { toValue: 1, duration: 1500, useNativeDriver: true }),
-        Animated.timing(motion, { toValue: 0, duration: 1500, useNativeDriver: true }),
-      ]),
-    );
-    animation.start();
-    return () => animation.stop();
-  }, [motion]);
+  if (!source) {
+    return <MaterialCommunityIcons name={icon} size={size} color={color} />;
+  }
 
   return (
-    <Animated.View
-      style={[
-        styles.badgeMotion,
-        {
-          transform: [
-            { translateY: motion.interpolate({ inputRange: [0, 1], outputRange: [1, -1] }) },
-            { scale: motion.interpolate({ inputRange: [0, 1], outputRange: [0.95, 1] }) },
-          ],
-        },
-      ]}
-    >
-      {source ? (
-        <Animated.Image source={source} resizeMode="contain" style={styles.badgeImage} />
-      ) : (
-        <MaterialCommunityIcons name={icon} size={size} color={color} />
-      )}
-    </Animated.View>
+    <View style={styles.badgeMotion}>
+      <Image source={source} contentFit="contain" style={styles.badgeImage} />
+    </View>
   );
 }
 
@@ -377,7 +362,7 @@ function WorkspaceTabs({ activeTab, compact, onOpenShowcase, onOpenManagement })
               pressed && styles.pressed,
             ]}
           >
-            <Ionicons name={tab.icon} size={16} color={active ? '#061014' : '#d6dddf'} />
+            <Ionicons name={tab.icon} size={16} color={active ? '#ffffff' : '#d6dddf'} />
             <Text numberOfLines={1} style={[styles.workspaceTabText, active && styles.workspaceTabTextActive]}>
               {tab.label}
             </Text>
@@ -388,7 +373,7 @@ function WorkspaceTabs({ activeTab, compact, onOpenShowcase, onOpenManagement })
   );
 }
 
-function FarmBanner({ farmName, location, establishedYear, activeTab, onOpenShowcase, onOpenManagement, onOpenSettings }) {
+function FarmBanner({ farmName, location, establishedYear, onOpenShowcase, onOpenManagement, onOpenSettings }) {
   const { width } = useWindowDimensions();
   const compact = width < 480;
   const narrow = width < 390;
@@ -419,14 +404,12 @@ function FarmBanner({ farmName, location, establishedYear, activeTab, onOpenShow
           />
         </View>
         <View style={[styles.heroCopy, compact && styles.heroCopyCompact, narrow && styles.heroCopyNarrow]}>
-          <Text style={styles.heroEyebrow}>{activeTab === 'showcase' ? 'SHOWCASE' : 'MANAGEMENT TOOLS'}</Text>
+          <Text style={styles.heroEyebrow}>MANAGEMENT TOOLS</Text>
           <Text style={[styles.brand, compact && styles.brandCompact, narrow && styles.brandNarrow]}>
             {farmName}
           </Text>
           <Text style={[styles.tagline, narrow && styles.taglineNarrow]}>
-            {activeTab === 'showcase'
-              ? 'Preview the FarmBuzz experience before opening daily operations.'
-              : 'Your central hub for flock care, breeding, incubation, and daily farm operations.'}
+            Your central hub for flock care, breeding, incubation, and daily farm operations.
           </Text>
           <View style={[styles.farmMeta, narrow && styles.farmMetaNarrow]}><View style={styles.farmMetaItem}><Ionicons name="location-outline" size={narrow ? 13 : 15} color="#c4cbcd" /><Text numberOfLines={1} style={styles.farmMetaText}>{location}</Text></View><View style={styles.farmMetaDivider} /><View style={styles.farmMetaItem}><Ionicons name="calendar-outline" size={narrow ? 13 : 15} color="#c4cbcd" /><Text style={styles.farmMetaText}>Est. {establishedYear}</Text></View></View>
           <View
@@ -473,7 +456,6 @@ function ShowcaseScreen({ farmName, location, establishedYear, onOpenShowcase, o
             farmName={farmName}
             location={location}
             establishedYear={establishedYear}
-            activeTab="showcase"
             onOpenShowcase={onOpenShowcase}
             onOpenManagement={onOpenManagement}
             onOpenSettings={onOpenSettings}
@@ -499,10 +481,13 @@ function ShowcaseScreen({ farmName, location, establishedYear, onOpenShowcase, o
   );
 }
 
-function Dashboard({ farmName, location, establishedYear, onOpenShowcase, onOpenSettings, onOpenNeedsAttention, onOpenFlock, onOpenBreeding, onOpenHealthCare, onOpenEggsIncubation, onOpenTasks, onOpenTeam, onOpenSales }) {
+function Dashboard({ farmName, location, establishedYear, totalWins, onOpenShowcase, onOpenSettings, onOpenNeedsAttention, onOpenFlock, onOpenBreeding, onOpenHealthCare, onOpenEggsIncubation, onOpenTasks, onOpenTeam, onOpenSales }) {
   const { width } = useWindowDimensions();
   const compact = width < 480;
   const narrow = width < 390;
+  const dashboardStats = STATS.map((item) => (
+    item.label === 'Total Wins' ? { ...item, value: String(totalWins) } : item
+  ));
 
   return (
     <View style={styles.screen}>
@@ -516,7 +501,6 @@ function Dashboard({ farmName, location, establishedYear, onOpenShowcase, onOpen
             farmName={farmName}
             location={location}
             establishedYear={establishedYear}
-            activeTab="management"
             onOpenShowcase={onOpenShowcase}
             onOpenManagement={() => {}}
             onOpenSettings={onOpenSettings}
@@ -529,13 +513,13 @@ function Dashboard({ farmName, location, establishedYear, onOpenShowcase, onOpen
               onOpenManagement={() => {}}
             />
             <View style={[styles.statsPanel, compact && styles.statsPanelCompact]}>
-              {STATS.map((item, index) => (
+              {dashboardStats.map((item, index) => (
                 <Stat
                   key={item.label}
                   item={item}
                   compact={compact}
-                  isLast={index === STATS.length - 1}
-                  onPress={item.label === 'Active Birds' ? onOpenFlock : item.label === 'Needs Attention' ? onOpenNeedsAttention : onOpenTasks}
+                  isLast={index === dashboardStats.length - 1}
+                  onPress={item.label === 'Active Birds' ? onOpenFlock : item.label === 'Needs Attention' ? onOpenNeedsAttention : item.label === 'Tasks Due' ? onOpenTasks : undefined}
                 />
               ))}
             </View>
@@ -629,6 +613,7 @@ export default function App() {
   const [vaccinationReturn, setVaccinationReturn] = useState('health-care');
   const [vaccinationBird, setVaccinationBird] = useState(null);
   const [weightsByBird, setWeightsByBird] = useState({});
+  const [achievementsByBird, setAchievementsByBird] = useState({});
   const [eggRecordsByBird, setEggRecordsByBird] = useState({});
   const [farmLocations, setFarmLocations] = useState(DEFAULT_FARM_LOCATIONS);
   const [ownershipByBird, setOwnershipByBird] = useState(MOCK_OWNERSHIP_BY_BIRD);
@@ -666,6 +651,7 @@ export default function App() {
 
   const teamMembers = [...addedMembers, ...MEMBERS].map((member) => memberOverrides[member.id] || member);
   const flockBirds = [...addedBirds, ...BIRDS].map((bird) => birdOverrides[bird._recordKey || bird.farmBuzzId || bird.name] || bird);
+  const totalWins = flockBirds.reduce((sum, bird) => sum + getBirdWins(bird), 0);
 
   return (
     <SafeAreaProvider>
@@ -709,6 +695,7 @@ export default function App() {
           onEdit={() => setScreen('edit-bird')}
           onOpenPedigree={() => setScreen('pedigree-bloodline')}
           onOpenHealthCare={() => setScreen('bird-health-care')}
+          onOpenAchievements={() => setScreen('bird-achievements')}
           onOpenBreeding={() => setScreen('bird-breeding')}
           onOpenLocation={() => setScreen('bird-location')}
           onOpenOwnership={() => setScreen('bird-ownership')}
@@ -754,6 +741,23 @@ export default function App() {
             setScreen('vaccination-management');
           }}
           onOpenWeightHistory={() => setScreen('weight-history')}
+        />
+      ) : screen === 'bird-achievements' ? (
+        <BirdAchievementsScreen
+          bird={selectedBird}
+          achievement={achievementsByBird[selectedBird?._recordKey || selectedBird?.farmBuzzId || selectedBird?.name]}
+          onBack={() => setScreen('bird-detail')}
+          onAchievementChange={(record) => {
+            const recordKey = selectedBird?._recordKey || selectedBird?.farmBuzzId || selectedBird?.name;
+            const nextDetails = [
+              ...(selectedBird?.details || []).filter((detail) => !/win/i.test(detail.text || '')),
+              { icon: 'trophy-outline', text: `${record.wins} win${record.wins === '1' ? '' : 's'}` },
+            ];
+            const updatedBird = { ...selectedBird, details: nextDetails, _recordKey: recordKey };
+            setAchievementsByBird((current) => ({ ...current, [recordKey]: record }));
+            setSelectedBird(updatedBird);
+            setBirdOverrides((current) => ({ ...current, [recordKey]: updatedBird }));
+          }}
         />
       ) : screen === 'weight-history' ? (
         <WeightHistoryScreen
@@ -1202,6 +1206,7 @@ export default function App() {
           farmName={managementSettings.farmName}
           location={managementSettings.location}
           establishedYear={managementSettings.establishedYear}
+          totalWins={totalWins}
           onOpenShowcase={() => setScreen('showcase')}
           onOpenSettings={() => setScreen('management-settings')}
           onOpenNeedsAttention={() => {
@@ -1290,8 +1295,8 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', gap: 6, paddingHorizontal: 8,
   },
   workspaceTabActive: { backgroundColor: THEME_ORANGE },
-  workspaceTabText: { color: '#d6dddf', fontSize: 11, lineHeight: 14, fontWeight: '800', letterSpacing: 0 },
-  workspaceTabTextActive: { color: '#061014' },
+  workspaceTabText: { color: '#d6dddf', fontSize: 11, lineHeight: 14, fontWeight: '500', letterSpacing: 0 },
+  workspaceTabTextActive: { color: '#ffffff' },
   content: { paddingHorizontal: 10, paddingBottom: 34 },
   contentNarrow: { paddingHorizontal: 8 },
   statsPanel: {
