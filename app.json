@@ -1,17 +1,20 @@
 {
   "expo": {
-    "name": "Farm",
-    "slug": "Farm",
+    "name": "Management Tools",
+    "slug": "ju-gamefarm",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#020709",
     "ios": {
       "supportsTablet": true
     },
     "android": {
+      "package": "com.jugamefarm.farmbuzz",
+      "versionCode": 4,
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#020709",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -19,6 +22,24 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-image",
+      "expo-font",
+      "expo-video",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Management Tools to attach photos to bird health records.",
+          "cameraPermission": "Allow Management Tools to photograph bird injuries and health conditions.",
+          "microphonePermission": false
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "30cc63ea-073a-4d49-a693-737cb1e60bc7"
+      }
     }
   }
 }
