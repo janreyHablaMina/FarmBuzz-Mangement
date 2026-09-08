@@ -16,8 +16,6 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FLOCK_HERO_IMAGE } from './constants';
 
-const FLOCK_BADGE_IMAGE = require('./assets/flock-badge-illustration.png');
-
 const FILTERS = [
   { key: 'all', label: 'All', count: 126 },
   { key: 'cock', label: 'Cocks', count: 36 },
@@ -192,20 +190,6 @@ function BirdCard({ bird, compact, onPress }) {
   );
 }
 
-function FlockSummary() {
-  return (
-    <View style={styles.summaryPanel}>
-      <View style={styles.summaryIcon}>
-        <Image source={FLOCK_BADGE_IMAGE} contentFit="contain" style={styles.summaryIconImage} />
-      </View>
-      <View>
-        <Text style={styles.summaryValue}>126</Text>
-        <Text style={styles.summaryLabel}>Total birds in this farm</Text>
-      </View>
-    </View>
-  );
-}
-
 export default function FlockScreen({
   onBack,
   onAddBird,
@@ -334,7 +318,6 @@ export default function FlockScreen({
               )}
             </View>
 
-            <FlockSummary />
           </View>
         </View>
       </ScrollView>
@@ -434,17 +417,5 @@ const styles = StyleSheet.create({
   cardPressed: { opacity: 0.75, transform: [{ scale: 0.995 }] },
   emptyState: { height: 190, alignItems: 'center', justifyContent: 'center', gap: 8 },
   emptyText: { color: '#7f8a8e', fontSize: 13 },
-  summaryPanel: {
-    minHeight: 70, marginTop: 10, paddingHorizontal: 16, borderRadius: 8,
-    borderWidth: 1, borderColor: '#1c292f', backgroundColor: '#0b1418',
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-  },
-  summaryIcon: {
-    width: 42, height: 42, borderRadius: 21, borderWidth: 1, borderColor: '#b45200',
-    alignItems: 'center', justifyContent: 'center', backgroundColor: '#10191d', overflow: 'hidden',
-  },
-  summaryIconImage: { width: 30, height: 30 },
-  summaryValue: { color: '#f2f4f4', fontSize: 22, lineHeight: 25, fontWeight: '700', letterSpacing: 0 },
-  summaryLabel: { marginTop: 1, color: '#8e989b', fontSize: 10, letterSpacing: 0 },
   pressed: { opacity: 0.72 },
 });

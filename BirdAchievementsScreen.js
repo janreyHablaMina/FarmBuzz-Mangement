@@ -14,12 +14,13 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as DocumentPicker from 'expo-document-picker';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FLOCK_HERO_IMAGE } from './constants';
 
 const ORANGE = '#ff7a00';
-const EMPTY_WIN = { title: '', wins: '1', certificate: '', location: '', date: 'Sep 8, 2026', notes: '' };
+const EMPTY_WIN = { title: '', wins: '1', certificate: '', certificateFile: null, location: '', date: 'Sep 8, 2026', notes: '' };
 const CERTIFICATE_IMAGES = [
   'https://images.unsplash.com/photo-1569336415962-a4bd9f69c07b?auto=format&fit=crop&w=260&q=82',
   'https://images.unsplash.com/photo-1578269174936-2709b6aeb913?auto=format&fit=crop&w=260&q=82',
@@ -62,6 +63,7 @@ function makeDefaultAchievement(bird) {
         'Conditioning Trial Recognition',
         'Club Circuit Placement Certificate',
       ][index] || `${bird.name} certificate ${index + 1}`,
+      certificateFile: null,
       location: [
         'San Fernando, Pampanga',
         'Angeles City, Pampanga',
@@ -85,6 +87,7 @@ function getRecords(achievement, bird) {
       title: achievement.title || 'Recorded win history',
       wins: String(wins),
       certificate: achievement.certificate || '',
+      certificateFile: achievement.certificateFile || null,
       location: achievement.location || '',
       date: achievement.updatedAt || 'Sep 8, 2026',
       notes: achievement.notes || '',
@@ -233,6 +236,7 @@ export default function BirdAchievementsScreen({ bird, achievement, onAchievemen
       title: record.title || '',
       wins: record.wins || '1',
       certificate: record.certificate || '',
+      certificateFile: record.certificateFile || null,
       location: record.location || '',
       date: record.date || 'Sep 8, 2026',
       notes: record.notes || '',
@@ -251,15 +255,18 @@ export default function BirdAchievementsScreen({ bird, achievement, onAchievemen
       return;
     }
 
+    const existingRecord = records.find((item) => item.id === editingId);
+    const uploadedImage = draft.certificateFile?.mimeType?.startsWith('image/') ? draft.certificateFile.uri : null;
     const record = {
       id: editingId || `win-${Date.now()}`,
       title: draft.title.trim(),
       wins: String(parsedWins),
       certificate: draft.certificate.trim(),
+      certificateFile: draft.certificateFile,
       location: draft.location.trim(),
       date: draft.date.trim() || 'Sep 8, 2026',
       notes: draft.notes.trim(),
-      image: records.find((item) => item.id === editingId)?.image || CERTIFICATE_IMAGES[records.length % CERTIFICATE_IMAGES.length],
+      image: uploadedImage || existingRecord?.image || CERTIFICATE_IMAGES[records.length % CERTIFICATE_IMAGES.length],
     };
     const nextRecords = editingId
       ? records.map((item) => item.id === editingId ? record : item)
@@ -276,6 +283,31 @@ export default function BirdAchievementsScreen({ bird, achievement, onAchievemen
     setSelectedRecord(null);
     setEditorOpen(false);
     Alert.alert('Win deleted', 'The win record was removed.');
+  };
+
+  const uploadCertificate = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['image/*', 'application/pdf'],
+        copyToCacheDirectory: true,
+        multiple: false,
+      });
+      if (result.canceled) return;
+
+      const asset = result.assets[0];
+      setDraft((current) => ({
+        ...current,
+        certificate: current.certificate || asset.name || 'Certificate file',
+        certificateFile: {
+          name: asset.name || 'Certificate file',
+          uri: asset.uri,
+          mimeType: asset.mimeType || '',
+          size: asset.size || 0,
+        },
+      }));
+    } catch (error) {
+      Alert.alert('Unable to upload certificate', error.message || 'Please try again.');
+    }
   };
 
   if (selectedRecord) {
@@ -420,6 +452,22 @@ export default function BirdAchievementsScreen({ bird, achievement, onAchievemen
             <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" style={styles.formScroll}>
               <LabeledInput label="Win Title" value={draft.title} onChangeText={(value) => setDraft((current) => ({ ...current, title: value }))} placeholder="Event or achievement title" icon="trophy-outline" />
               <LabeledInput label="Wins" value={draft.wins} onChangeText={(value) => setDraft((current) => ({ ...current, wins: value.replace(/[^\d]/g, '') }))} placeholder="1" icon="counter" keyboardType="numeric" />
+              <Pressable
+                accessibilityLabel="Upload certificate"
+                onPress={uploadCertificate}
+                style={({ pressed }) => [styles.uploadBox, pressed && styles.pressed]}
+              >
+                <View style={styles.uploadIcon}>
+                  <MaterialCommunityIcons name="file-upload-outline" size={24} color={ORANGE} />
+                </View>
+                <View style={styles.uploadCopy}>
+                  <Text style={styles.uploadTitle}>Upload Certificate</Text>
+                  <Text numberOfLines={1} style={styles.uploadDetail}>
+                    {draft.certificateFile?.name || 'Image or PDF certificate'}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color="#899397" />
+              </Pressable>
               <LabeledInput label="Certificate" value={draft.certificate} onChangeText={(value) => setDraft((current) => ({ ...current, certificate: value }))} placeholder="Certificate name or reference number" icon="certificate-outline" />
               <LabeledInput label="Location" value={draft.location} onChangeText={(value) => setDraft((current) => ({ ...current, location: value }))} placeholder="Where it happened" icon="map-marker-outline" />
               <LabeledInput label="Date" value={draft.date} onChangeText={(value) => setDraft((current) => ({ ...current, date: value }))} placeholder="Sep 8, 2026" icon="calendar-outline" />
@@ -510,6 +558,11 @@ const styles = StyleSheet.create({
   modalSubtitle: { marginTop: 3, color: '#7f8c90', fontSize: 9, letterSpacing: 0 },
   modalClose: { width: 34, height: 34, borderRadius: 17, backgroundColor: '#111c20', alignItems: 'center', justifyContent: 'center' },
   formScroll: { paddingTop: 12 },
+  uploadBox: { minHeight: 62, marginBottom: 11, borderWidth: 1, borderColor: '#223037', borderRadius: 8, backgroundColor: '#071014', paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  uploadIcon: { width: 38, height: 38, borderRadius: 7, backgroundColor: 'rgba(255,122,0,0.06)', alignItems: 'center', justifyContent: 'center' },
+  uploadCopy: { flex: 1, minWidth: 0 },
+  uploadTitle: { color: '#e7eaeb', fontSize: 13, fontWeight: '700', letterSpacing: 0 },
+  uploadDetail: { marginTop: 4, color: '#8f9a9d', fontSize: 10, letterSpacing: 0 },
   inputBox: { minHeight: 58, marginBottom: 11, borderWidth: 1, borderColor: '#223037', borderRadius: 8, backgroundColor: '#071014', paddingHorizontal: 11, paddingTop: 8 },
   notesBox: { minHeight: 126 },
   inputLabel: { color: '#8f9a9d', fontSize: 9, fontWeight: '700', letterSpacing: 0 },

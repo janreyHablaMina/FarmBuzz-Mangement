@@ -26,10 +26,9 @@ const BROWN_HEN_IMAGE =
   'https://images.unsplash.com/photo-1548550023-2bdb3c5beed7?auto=format&fit=crop&w=400&q=82';
 
 const BREEDING_SUMMARY = [
-  { icon: 'link-variant', value: '6', label: 'Active Pairs', compactLabel: 'Pairs' },
-  { icon: 'gender-male', value: '4', label: 'Active Sires', compactLabel: 'Sires', detail: 'Cocks' },
-  { icon: 'gender-female', value: '6', label: 'Active Dams', compactLabel: 'Dams', detail: 'Hens' },
-  { icon: 'egg-outline', value: '18', label: 'Eggs in Holding', compactLabel: 'Holding', detail: '4 groups' },
+  { icon: 'link-variant', value: '6', label: 'Active Pairings', compactLabel: 'Active Pairings', detail: 'breeding pairs' },
+  { icon: 'egg-outline', value: '18', label: 'Holding', compactLabel: 'Holding', detail: '4 groups' },
+  { icon: 'clock-alert-outline', value: '1', label: 'Due Soon', compactLabel: 'Due Soon', detail: 'Set eggs' },
 ];
 
 export const PAIRINGS = [
@@ -92,16 +91,12 @@ function HeaderButton({ icon, label, onPress }) {
 function SummaryMetric({ item, isLast }) {
   return (
     <View style={[styles.summaryMetric, !isLast && styles.summaryMetricDivider]}>
-      <View style={styles.summaryMetricIcon}>
-        <MaterialCommunityIcons name={item.icon} size={18} color="#ff8500" />
+      <View style={styles.summaryMetricValueRow}>
+        <MaterialCommunityIcons name={item.icon} size={29} color="#ff8200" />
+        <Text style={styles.summaryMetricValue}>{item.value}</Text>
       </View>
-      <View style={styles.summaryMetricCopy}>
-        <View style={styles.summaryMetricValueRow}>
-          <Text style={styles.summaryMetricValue}>{item.value}</Text>
-          <Text numberOfLines={1} style={styles.summaryMetricLabel}>{item.compactLabel}</Text>
-        </View>
-        {item.detail && <Text numberOfLines={1} style={styles.summaryMetricDetail}>{item.detail}</Text>}
-      </View>
+      <Text numberOfLines={2} style={styles.summaryMetricLabel}>{item.compactLabel}</Text>
+      {item.detail && <Text numberOfLines={1} style={styles.summaryMetricDetail}>{item.detail}</Text>}
     </View>
   );
 }
@@ -177,16 +172,17 @@ export default function BreedingScreen({ onBack, onAddPairing, onOpenPairing, ad
   const allPairings = useMemo(() => [...addedPairings, ...PAIRINGS], [addedPairings]);
   const summaryItems = useMemo(() => {
     const eggGroups = allPairings.filter((pairing) => getPairEggCount(pairing, eggCollectionsByPairing[pairing.id]) > 0);
+    const dueSoon = allPairings.filter((pairing) => /set soon/i.test(pairing.status || '')).length;
     const values = [
       allPairings.length,
-      new Set(allPairings.map((pairing) => pairing.male)).size,
-      new Set(allPairings.map((pairing) => pairing.female)).size,
       allPairings.reduce((total, pairing) => total + getPairEggCount(pairing, eggCollectionsByPairing[pairing.id]), 0),
+      dueSoon,
     ];
     return BREEDING_SUMMARY.map((item, index) => ({
       ...item,
       value: String(values[index]),
-      ...(index === 3 ? { detail: `${eggGroups.length} groups` } : {}),
+      ...(index === 1 ? { detail: `${eggGroups.length} groups` } : {}),
+      ...(index === 2 ? { detail: dueSoon === 1 ? '1 pair' : `${dueSoon} pairs` } : {}),
     }));
   }, [allPairings, eggCollectionsByPairing]);
 
@@ -273,25 +269,8 @@ export default function BreedingScreen({ onBack, onAddPairing, onOpenPairing, ad
 
             <Text style={[styles.eyebrow, styles.summaryHeading]}>BREEDING SUMMARY</Text>
             <View style={styles.summaryPanel}>
-              <View style={styles.summaryPrimary}>
-                <View style={styles.summaryAccent} />
-                <View style={styles.summaryPrimaryIcon}>
-                  <MaterialCommunityIcons name="link-variant" size={25} color="#ff8500" />
-                </View>
-                <View style={styles.summaryPrimaryCopy}>
-                  <Text style={styles.summaryPrimaryLabel}>ACTIVE PAIRINGS</Text>
-                  <View style={styles.summaryPrimaryValueRow}>
-                    <Text style={styles.summaryPrimaryValue}>{summaryItems[0].value}</Text>
-                    <Text style={styles.summaryPrimaryUnit}>breeding pairs</Text>
-                  </View>
-                </View>
-                <View style={styles.summaryLiveBadge}>
-                  <View style={styles.summaryLiveDot} />
-                  <Text style={styles.summaryLiveText}>Active</Text>
-                </View>
-              </View>
               <View style={styles.summaryMetrics}>
-                {summaryItems.slice(1).map((item, index, items) => (
+                {summaryItems.map((item, index, items) => (
                   <SummaryMetric key={item.label} item={item} isLast={index === items.length - 1} />
                 ))}
               </View>
@@ -387,7 +366,7 @@ const styles = StyleSheet.create({
   addButtonText: { color: '#fff', fontSize: 14, fontWeight: '700', letterSpacing: 0 },
   eyebrow: { color: '#899397', fontSize: 10, fontWeight: '600', letterSpacing: 0 },
   summaryHeading: { marginTop: 14 },
-  summaryPanel: { marginTop: 7, borderRadius: 8, borderWidth: 1, borderColor: '#2b3030', backgroundColor: '#0b1418', overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.24, shadowRadius: 12, elevation: 4 },
+  summaryPanel: { marginTop: 14 },
   summaryPrimary: { minHeight: 72, paddingHorizontal: 13, paddingVertical: 11, flexDirection: 'row', alignItems: 'center', backgroundColor: '#0d171b' },
   summaryAccent: { position: 'absolute', left: 0, top: 14, bottom: 14, width: 3, borderTopRightRadius: 2, borderBottomRightRadius: 2, backgroundColor: '#ff8500' },
   summaryPrimaryIcon: { width: 42, height: 42, borderRadius: 8, backgroundColor: 'rgba(255,133,0,0.09)', alignItems: 'center', justifyContent: 'center' },
@@ -399,15 +378,15 @@ const styles = StyleSheet.create({
   summaryLiveBadge: { height: 27, paddingHorizontal: 9, borderRadius: 14, borderWidth: 1, borderColor: '#275032', backgroundColor: 'rgba(38,126,58,0.1)', flexDirection: 'row', alignItems: 'center', gap: 5 },
   summaryLiveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#63dc72' },
   summaryLiveText: { color: '#75df81', fontSize: 8, fontWeight: '700', letterSpacing: 0 },
-  summaryMetrics: { minHeight: 69, flexDirection: 'row', borderTopWidth: 1, borderTopColor: '#223037', backgroundColor: '#091216' },
-  summaryMetric: { flex: 1, minWidth: 0, paddingHorizontal: 7, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7 },
-  summaryMetricDivider: { borderRightWidth: 1, borderRightColor: '#223037' },
+  summaryMetrics: { flexDirection: 'row', gap: 10 },
+  summaryMetric: { flex: 1, minWidth: 0, height: 112, paddingHorizontal: 5, borderRadius: 8, borderWidth: 1, borderColor: '#1c2a30', backgroundColor: '#0b1418', alignItems: 'center', justifyContent: 'center' },
+  summaryMetricDivider: {},
   summaryMetricIcon: { width: 29, height: 29, borderRadius: 7, borderWidth: 1, borderColor: 'rgba(255,133,0,0.18)', backgroundColor: 'rgba(255,133,0,0.08)', alignItems: 'center', justifyContent: 'center' },
-  summaryMetricCopy: { minWidth: 0 },
-  summaryMetricValueRow: { flexDirection: 'row', alignItems: 'baseline', gap: 4 },
-  summaryMetricValue: { color: '#f0f2f3', fontSize: 16, fontWeight: '800', letterSpacing: 0 },
-  summaryMetricLabel: { color: '#aab3b6', fontSize: 8, letterSpacing: 0 },
-  summaryMetricDetail: { marginTop: 2, color: '#687579', fontSize: 7, letterSpacing: 0 },
+  summaryMetricCopy: { minWidth: 0, alignItems: 'center' },
+  summaryMetricValueRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  summaryMetricValue: { color: '#f0f2f3', fontSize: 27, fontWeight: '600', letterSpacing: 0 },
+  summaryMetricLabel: { marginTop: 8, color: '#d4d9db', fontSize: 12, textAlign: 'center', letterSpacing: 0 },
+  summaryMetricDetail: { marginTop: 4, color: '#899397', fontSize: 10, letterSpacing: 0 },
   sectionHeader: { marginTop: 26, marginBottom: 7, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   sectionCount: {
     minWidth: 66, height: 26, borderRadius: 13, borderWidth: 1,

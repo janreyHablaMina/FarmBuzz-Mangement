@@ -238,6 +238,20 @@ export default function EggsIncubationScreen({ onBack, onOpenEggHolding, onCreat
               {SUMMARY.map((item) => <SummaryCard key={item.label} item={item} narrow={narrow} />)}
             </View>
 
+            <SectionHeader title="Active Incubation Batches" onViewAll={() => Alert.alert('Incubation Batches')} />
+            <View style={styles.batchList}>
+              {visibleBatches.map((batch) => (
+                <BatchCard
+                  key={batch.id}
+                  batch={batch}
+                  compact={compact}
+                  narrow={narrow}
+                  onPress={() => onOpenBatch(batch.id)}
+                />
+              ))}
+              {!visibleBatches.length && <Text style={styles.emptyText}>No incubation batches found</Text>}
+            </View>
+
             <SectionHeader title="Eggs in Holding" onViewAll={onOpenEggHolding} />
             <View style={styles.listCard}>
               {visiblePairs.map((pair, index) => (
@@ -254,20 +268,6 @@ export default function EggsIncubationScreen({ onBack, onOpenEggHolding, onCreat
               <Text style={styles.readyAlertText}>11 eggs ready to set</Text>
               <Ionicons name="chevron-forward" size={18} color="#ff8500" />
             </Pressable>
-
-            <SectionHeader title="Active Incubation Batches" onViewAll={() => Alert.alert('Incubation Batches')} />
-            <View style={styles.batchList}>
-              {visibleBatches.map((batch) => (
-                <BatchCard
-                  key={batch.id}
-                  batch={batch}
-                  compact={compact}
-                  narrow={narrow}
-                  onPress={() => onOpenBatch(batch.id)}
-                />
-              ))}
-              {!visibleBatches.length && <Text style={styles.emptyText}>No incubation batches found</Text>}
-            </View>
 
             <Pressable
               onPress={onOpenHistory}

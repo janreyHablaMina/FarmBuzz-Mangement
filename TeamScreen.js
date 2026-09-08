@@ -80,11 +80,12 @@ function HeaderButton({ icon, label, onPress }) {
 function SummaryCard({ item, narrow }) {
   return (
     <View style={[styles.summaryCard, narrow && styles.summaryCardNarrow]}>
-      <View style={[styles.summaryIcon, { backgroundColor: item.tint }]}>
-        <MaterialCommunityIcons name={item.icon} size={25} color={item.color} />
+      <View style={styles.summaryValueRow}>
+        <MaterialCommunityIcons name={item.icon} size={narrow ? 25 : 29} color={item.color} />
+        <Text style={[styles.summaryValue, narrow && styles.summaryValueNarrow]}>{item.value}</Text>
       </View>
-      <Text style={[styles.summaryValue, narrow && styles.summaryValueNarrow]}>{item.value}</Text>
       <Text numberOfLines={2} style={[styles.summaryLabel, narrow && styles.summaryLabelNarrow]}>{item.label}</Text>
+      <Text numberOfLines={1} style={styles.summaryDetail}>{item.detail}</Text>
     </View>
   );
 }
@@ -151,9 +152,9 @@ export default function TeamScreen({ onBack, onAddMember, onOpenMember, members 
   const selectedFarm = FARMS.find((farm) => farm.id === selectedFarmId) || FARMS[0];
   const onDutyCount = members.filter((member) => member.status.toLowerCase() === 'on duty').length;
   const summaryItems = [
-    { icon: 'account-group-outline', value: String(members.length), label: 'Team Members', color: '#ff8500', tint: 'rgba(255, 133, 0, 0.1)' },
-    { icon: 'account-check-outline', value: String(onDutyCount), label: 'On Duty', color: '#ff8500', tint: 'rgba(255, 133, 0, 0.1)' },
-    { icon: 'barn', value: String(FARMS.length - 1), label: 'Managed Farms', color: '#ff8500', tint: 'rgba(255, 133, 0, 0.1)' },
+    { icon: 'account-group-outline', value: String(members.length), label: 'Team Members', detail: 'People', color: '#ff8500' },
+    { icon: 'account-check-outline', value: String(onDutyCount), label: 'On Duty', detail: 'Working now', color: '#ff8500' },
+    { icon: 'barn', value: String(FARMS.length - 1), label: 'Managed Farms', detail: 'Locations', color: '#ff8500' },
   ];
 
   const visibleMembers = useMemo(() => {
@@ -361,15 +362,17 @@ const styles = StyleSheet.create({
   addButtonText: { color: '#fff', fontSize: 14, fontWeight: '700', letterSpacing: 0 },
   summaryGrid: { marginTop: 14, flexDirection: 'row', gap: 10 },
   summaryCard: {
-    flex: 1, minWidth: 0, height: 104, paddingHorizontal: 5, borderRadius: 8,
+    flex: 1, minWidth: 0, height: 112, paddingHorizontal: 5, borderRadius: 8,
     borderWidth: 1, borderColor: '#1c2a30', backgroundColor: '#0b1418', alignItems: 'center', justifyContent: 'center',
   },
-  summaryCardNarrow: { height: 98 },
+  summaryCardNarrow: { height: 104 },
   summaryIcon: { width: 39, height: 39, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-  summaryValue: { marginTop: 5, color: '#eef2f3', fontSize: 25, lineHeight: 28, fontWeight: '600', letterSpacing: 0 },
-  summaryValueNarrow: { fontSize: 22 },
-  summaryLabel: { marginTop: 3, color: '#9ca6aa', fontSize: 10, textAlign: 'center', letterSpacing: 0 },
-  summaryLabelNarrow: { fontSize: 9 },
+  summaryValueRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  summaryValue: { color: '#f0f2f3', fontSize: 27, lineHeight: 30, fontWeight: '600', letterSpacing: 0 },
+  summaryValueNarrow: { fontSize: 23, lineHeight: 26 },
+  summaryLabel: { marginTop: 8, color: '#d4d9db', fontSize: 12, textAlign: 'center', letterSpacing: 0 },
+  summaryLabelNarrow: { fontSize: 10 },
+  summaryDetail: { marginTop: 4, color: '#899397', fontSize: 10, textAlign: 'center', letterSpacing: 0 },
   selectorLabel: { marginTop: 18, marginBottom: 6, color: '#7f8b8f', fontSize: 9, fontWeight: '700', textTransform: 'uppercase' },
   farmSelector: { minHeight: 64, paddingHorizontal: 12, borderRadius: 8, borderWidth: 1, borderColor: '#29373d', backgroundColor: '#0a1317', flexDirection: 'row', alignItems: 'center', gap: 10 },
   farmSelectorIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,133,0,0.09)', alignItems: 'center', justifyContent: 'center' },

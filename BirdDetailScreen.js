@@ -135,6 +135,12 @@ function makeFarmBuzzId(bird, ringText) {
   return `FBZ-${new Date().getFullYear()}-${digits.padStart(3, '0')}`;
 }
 
+function getWinCount(bird) {
+  const winDetail = bird?.details?.find((detail) => /win/i.test(detail.text || ''));
+  const wins = Number((winDetail?.text || '').match(/\d+/)?.[0] || 0);
+  return Number.isFinite(wins) ? wins : 0;
+}
+
 export default function BirdDetailScreen({ bird, onBack, onEdit, onOpenPedigree, onOpenHealthCare, onOpenAchievements, onOpenBreeding, onOpenLocation, onOpenOwnership, onOpenMedia, onOpenDocuments, onOpenNotes }) {
   const { width } = useWindowDimensions();
   const [moreVisible, setMoreVisible] = useState(false);
@@ -166,9 +172,10 @@ export default function BirdDetailScreen({ bird, onBack, onEdit, onOpenPedigree,
   const farmBuzzId = makeFarmBuzzId(bird, ring?.text);
   const ringFromName = bird.name.match(/ring\s*(#[a-z0-9-]+)/i)?.[1];
   const ringValue = ring?.text && !ring.text.toLowerCase().includes('unavailable') ? ring.text.replace(/^ring\s*/i, '') : ringFromName || 'Not assigned';
+  const winCount = getWinCount(bird);
   const profileMetrics = [
     { label: 'Age & Hatch', value: age?.text || 'Not recorded', detail: hatched, icon: 'calendar-clock-outline' },
-    { label: 'Current Pen', value: bird.currentLocation || 'Pen 3', detail: bird.currentArea || 'North Flock House', icon: 'map-marker-outline' },
+    { label: 'Wins', value: String(winCount), detail: winCount === 1 ? 'Recorded win' : 'Recorded wins', icon: 'trophy-outline' },
   ];
 
   const openSection = (section) => {

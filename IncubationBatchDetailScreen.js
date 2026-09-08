@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Alert,
   Animated,
   Easing,
   Platform,
@@ -336,11 +335,6 @@ export default function IncubationBatchDetailScreen({ batchId, candlingResults, 
                   <HeaderButton icon="arrow-back" label="Back to incubation batches" onPress={onBack} />
                   <Text style={styles.screenTitle}>Batch {batch.id}</Text>
                 </View>
-                <HeaderButton
-                  icon="ellipsis-horizontal"
-                  label="Batch actions"
-                  onPress={() => Alert.alert('Batch actions', 'Edit, archive, or cancel this batch.')}
-                />
               </View>
               <View style={styles.heroCopy}>
                 <Text style={styles.farmName}>FarmBuzz Farm</Text>

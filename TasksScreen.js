@@ -95,31 +95,14 @@ function HeaderButton({ onPress }) {
 }
 
 function SummaryCard({ item, narrow }) {
-  if (narrow) {
-    return (
-      <View style={[styles.summaryCard, styles.summaryCardNarrow, { backgroundColor: item.tint }]}>
-        <View style={styles.summaryNarrowValueRow}>
-          <View style={[styles.summaryIcon, styles.summaryIconNarrow, { backgroundColor: `${item.color}14` }]}>
-            <MaterialCommunityIcons name={item.icon} size={24} color={item.color} />
-          </View>
-          <Text style={[styles.summaryValue, styles.summaryValueNarrow, { color: item.color }]}>{item.value}</Text>
-        </View>
-        <Text numberOfLines={1} style={[styles.summaryName, { color: item.color }]}>{item.label}</Text>
-        <Text style={styles.summaryLabel}>Tasks</Text>
-      </View>
-    );
-  }
-
   return (
-    <View style={[styles.summaryCard, { backgroundColor: item.tint }]}>
-      <View style={[styles.summaryIcon, { backgroundColor: `${item.color}14` }]}>
-        <MaterialCommunityIcons name={item.icon} size={27} color={item.color} />
+    <View style={[styles.summaryCard, narrow && styles.summaryCardNarrow]}>
+      <View style={styles.summaryValueRow}>
+        <MaterialCommunityIcons name={item.icon} size={narrow ? 25 : 29} color={item.color} />
+        <Text style={[styles.summaryValue, narrow && styles.summaryValueNarrow]}>{item.value}</Text>
       </View>
-      <View style={styles.summaryCopy}>
-        <Text numberOfLines={1} style={[styles.summaryName, { color: item.color }]}>{item.label}</Text>
-        <Text style={[styles.summaryValue, { color: item.color }]}>{item.value}</Text>
-        <Text style={styles.summaryLabel}>Tasks</Text>
-      </View>
+      <Text numberOfLines={1} style={styles.summaryName}>{item.label}</Text>
+      <Text style={styles.summaryLabel}>Tasks</Text>
     </View>
   );
 }
@@ -160,12 +143,6 @@ function TaskCard({ task, narrow, onPress }) {
       : task.due === 'Tomorrow' || task.due.startsWith('May 20')
         ? '#3ca5ff'
         : '#ff9a00';
-  const priorityColor = task.priority === 'High'
-    ? '#ff3f4b'
-    : task.priority === 'Medium'
-      ? '#ff9200'
-      : '#3fc56a';
-
   return (
     <Pressable
       accessibilityLabel={`Open task ${task.title}`}
@@ -196,9 +173,6 @@ function TaskCard({ task, narrow, onPress }) {
       <View style={[styles.taskSchedule, narrow && styles.taskScheduleNarrow]}>
         <Text numberOfLines={2} style={[styles.taskDue, { color: dueColor }]}>{task.due}</Text>
         <Text numberOfLines={2} style={styles.taskDate}>{task.date}</Text>
-        <View style={styles.priorityRow}>
-          <View style={[styles.priorityDot, { backgroundColor: priorityColor }]} />
-        </View>
       </View>
     </Pressable>
   );
@@ -386,20 +360,22 @@ const styles = StyleSheet.create({
   addButtonText: { color: '#fff', fontSize: 14, fontWeight: '700', letterSpacing: 0 },
   summaryGrid: { marginTop: 14, flexDirection: 'row', gap: 10 },
   summaryCard: {
-    flex: 1, minWidth: 0, height: 92, paddingHorizontal: 13, borderRadius: 8,
-    borderWidth: 1, borderColor: '#20292c', flexDirection: 'row', alignItems: 'center', gap: 12,
+    flex: 1, minWidth: 0, height: 112, paddingHorizontal: 5, borderRadius: 8,
+    borderWidth: 1, borderColor: '#1c2a30', backgroundColor: '#0b1418',
+    alignItems: 'center', justifyContent: 'center',
   },
   summaryCardNarrow: {
-    height: 108, paddingHorizontal: 4, flexDirection: 'column', justifyContent: 'center', gap: 4,
+    height: 104,
   },
   summaryIcon: { width: 45, height: 45, borderRadius: 23, alignItems: 'center', justifyContent: 'center' },
   summaryIconNarrow: { width: 34, height: 34, borderRadius: 17 },
   summaryNarrowValueRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   summaryCopy: { flex: 1, minWidth: 0 },
-  summaryName: { fontSize: 11, fontWeight: '600', letterSpacing: 0 },
-  summaryValue: { marginTop: 2, fontSize: 26, lineHeight: 29, fontWeight: '600', letterSpacing: 0 },
-  summaryValueNarrow: { marginTop: 0, fontSize: 23, lineHeight: 26 },
-  summaryLabel: { color: '#9ba5a9', fontSize: 10, letterSpacing: 0 },
+  summaryValueRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  summaryName: { marginTop: 8, color: '#d4d9db', fontSize: 12, fontWeight: '400', textAlign: 'center', letterSpacing: 0 },
+  summaryValue: { color: '#f0f2f3', fontSize: 27, lineHeight: 30, fontWeight: '600', letterSpacing: 0 },
+  summaryValueNarrow: { fontSize: 23, lineHeight: 26 },
+  summaryLabel: { marginTop: 4, color: '#899397', fontSize: 10, textAlign: 'center', letterSpacing: 0 },
   filters: { marginTop: 13, flexDirection: 'row', gap: 8 },
   filterButton: {
     minHeight: 34, paddingHorizontal: 13, borderRadius: 8, borderWidth: 1,
@@ -433,8 +409,6 @@ const styles = StyleSheet.create({
   taskScheduleNarrow: { width: 78 },
   taskDue: { fontSize: 9, lineHeight: 12, fontWeight: '600', textAlign: 'right', letterSpacing: 0 },
   taskDate: { color: '#879397', fontSize: 8, lineHeight: 11, textAlign: 'right', letterSpacing: 0 },
-  priorityRow: { marginTop: 1, flexDirection: 'row', alignItems: 'center' },
-  priorityDot: { width: 6, height: 6, borderRadius: 3 },
   emptyState: { height: 190, alignItems: 'center', justifyContent: 'center', gap: 8 },
   emptyText: { color: '#7f8a8e', fontSize: 12, letterSpacing: 0 },
   pressed: { opacity: 0.72 },
