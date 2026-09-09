@@ -511,7 +511,6 @@ export default function SalesScreen({ onBack, onOpenPurchase, birds = [], owners
                   <HeaderButton icon="arrow-back" label="Back to management" onPress={onBack} />
                   <Text style={styles.screenTitle}>Sales & Transfers</Text>
                 </View>
-                <HeaderButton icon="settings-outline" label="Ownership settings" onPress={() => Alert.alert('Ownership settings')} />
               </View>
               <View style={[styles.heroCopy, narrow && styles.heroCopyNarrow]}>
                 <Text style={[styles.farmName, narrow && styles.farmNameNarrow]}>FarmBuzz Farm</Text>

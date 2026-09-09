@@ -69,6 +69,7 @@ const TRANSFERS_BADGE_IMAGE = require('./assets/badge-transfers.png');
 const FLOCK_HERO_IMAGE = require('./assets/flock-hero.png');
 const HEALTH_CARE_HERO_IMAGE = require('./assets/health-care-hero.png');
 const SALES_DASHBOARD_HERO_IMAGE = require('./assets/sales-dashboard-hero.png');
+const COLLECTIONS_DASHBOARD_HERO_IMAGE = require('./assets/sales-hero.png');
 const SHOWCASE_IMAGE = require('./assets/Showcase.png');
 
 const MODULES = [
@@ -127,12 +128,19 @@ const MODULES = [
   },
   {
     title: 'Sales',
-    subtitle: 'Sales & transfers',
+    subtitle: 'Payments & sold records',
     badgeImage: TRANSFERS_BADGE_IMAGE,
     color: THEME_ORANGE,
     tint: THEME_ORANGE_TINT,
     image: SALES_DASHBOARD_HERO_IMAGE,
-    wide: true,
+  },
+  {
+    title: 'Collections',
+    subtitle: 'Birds, eggs & chicks',
+    icon: 'view-grid-outline',
+    color: THEME_ORANGE,
+    tint: THEME_ORANGE_TINT,
+    image: COLLECTIONS_DASHBOARD_HERO_IMAGE,
   },
 ];
 
@@ -289,22 +297,22 @@ function ModuleCard({ item, compact, onPress }) {
         source={item.image}
         style={styles.moduleImage}
         contentFit="cover"
-        contentPosition="right"
+        contentPosition="center"
         transition={250}
         cachePolicy="memory-disk"
       />
       <View
         pointerEvents="none"
-        style={[StyleSheet.absoluteFill, { backgroundColor: item.tint }]}
+        style={[StyleSheet.absoluteFill, styles.moduleTintOverlay, { backgroundColor: item.tint }]}
       />
       <LinearGradient
         colors={[
-          'rgba(6, 15, 19, 0.99)',
-          'rgba(6, 15, 19, 0.92)',
-          'rgba(6, 15, 19, 0.56)',
-          'rgba(6, 15, 19, 0.08)',
+          'rgba(6, 15, 19, 0.78)',
+          'rgba(6, 15, 19, 0.58)',
+          'rgba(6, 15, 19, 0.26)',
+          'rgba(6, 15, 19, 0.06)',
         ]}
-        locations={[0, 0.4, 0.72, 1]}
+        locations={[0, 0.38, 0.74, 1]}
         start={{ x: 0, y: 0.5 }}
         end={{ x: 1, y: 0.5 }}
         style={StyleSheet.absoluteFill}
@@ -524,7 +532,7 @@ function Dashboard({ farmName, location, establishedYear, totalWins, onOpenShowc
               ))}
             </View>
 
-            <View style={styles.sectionHeading}><Text style={[styles.sectionTitle, narrow && styles.sectionTitleNarrow]}>Management Tools</Text><Text style={styles.sectionMeta}>7 modules</Text></View>
+            <View style={styles.sectionHeading}><Text style={[styles.sectionTitle, narrow && styles.sectionTitleNarrow]}>Management Tools</Text><Text style={styles.sectionMeta}>8 modules</Text></View>
             <View style={[styles.moduleGrid, compact && styles.moduleGridCompact]}>
               {MODULES.map((item) => (
                 <ModuleCard
@@ -557,6 +565,10 @@ function Dashboard({ farmName, location, establishedYear, totalWins, onOpenShowc
                       return;
                     }
                     if (item.title === 'Sales') {
+                      onOpenSales();
+                      return;
+                    }
+                    if (item.title === 'Collections') {
                       onOpenSales();
                       return;
                     }
@@ -1340,8 +1352,9 @@ const styles = StyleSheet.create({
   moduleCardCompact: { height: 94, paddingHorizontal: 7 },
   moduleWide: { flexBasis: '100%', maxWidth: '100%' },
   moduleImage: {
-    position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, opacity: 0.88,
+    position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, opacity: 1,
   },
+  moduleTintOverlay: { opacity: 0.2 },
   moduleIcon: {
     width: 42, height: 42, borderRadius: 21, borderWidth: 1,
     alignItems: 'center', justifyContent: 'center', zIndex: 1, overflow: 'hidden',
