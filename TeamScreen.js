@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
 import {
-  Alert,
   Modal,
   Platform,
   Pressable,
@@ -59,10 +58,10 @@ export const MEMBERS = [
   },
 ];
 
-const COVERAGE = [
-  { label: 'Morning', time: '5 AM - 1 PM', members: '4 members', color: '#ff9100' },
-  { label: 'Day', time: '1 PM - 7 PM', members: '3 members', color: '#ff9100' },
-  { label: 'Night', time: '7 PM - 5 AM', members: '2 members', color: '#ff9100' },
+const ACCESS_OVERVIEW = [
+  { icon: 'shield-account-outline', label: 'Full Access', description: 'Owner and managers', members: '2 members', color: '#ff9100' },
+  { icon: 'account-cog-outline', label: 'Staff Access', description: 'Assigned modules', members: '3 members', color: '#ff9100' },
+  { icon: 'lock-outline', label: 'Limited Access', description: 'View or task only', members: '1 member', color: '#ff9100' },
 ];
 
 function HeaderButton({ icon, label, onPress }) {
@@ -111,8 +110,6 @@ function MemberCard({ member, narrow, onPress }) {
             <Ionicons name="location-outline" size={13} color="#ff9000" />
             <Text numberOfLines={1} style={styles.teamTagText}>{member.farm || member.team}</Text>
           </View>
-          <Ionicons name="time-outline" size={12} color="#778488" />
-          <Text numberOfLines={1} style={styles.shiftText}>{member.shift}</Text>
         </View>
       </View>
       <View style={[styles.memberAside, narrow && styles.memberAsideNarrow]}>
@@ -129,13 +126,13 @@ function MemberCard({ member, narrow, onPress }) {
   );
 }
 
-function CoverageItem({ item, isLast }) {
+function AccessItem({ item, isLast }) {
   return (
     <View style={[styles.coverageItem, !isLast && styles.coverageDivider]}>
-      <View style={[styles.coverageDot, { backgroundColor: item.color }]} />
-      <View>
+      <MaterialCommunityIcons name={item.icon} size={20} color={item.color} />
+      <View style={styles.coverageCopy}>
         <Text style={styles.coverageLabel}>{item.label}</Text>
-        <Text style={styles.coverageTime}>{item.time}</Text>
+        <Text style={styles.coverageTime}>{item.description}</Text>
       </View>
       <Text style={styles.coverageMembers}>{item.members}</Text>
     </View>
@@ -272,14 +269,11 @@ export default function TeamScreen({ onBack, onAddMember, onOpenMember, members 
             </View>
 
             <View style={styles.sectionHeader}>
-              <View><Text style={styles.sectionTitle}>Today's Coverage</Text><Text style={styles.coverageFarm}>{selectedFarm.name}</Text></View>
-              <Pressable onPress={() => Alert.alert('Team schedule')}>
-                <Text style={styles.scheduleLink}>View schedule</Text>
-              </Pressable>
+              <View><Text style={styles.sectionTitle}>Access Overview</Text><Text style={styles.coverageFarm}>Permissions by role</Text></View>
             </View>
             <View style={[styles.coveragePanel, compact && styles.coveragePanelCompact]}>
-              {COVERAGE.map((item, index) => (
-                <CoverageItem key={item.label} item={item} isLast={index === COVERAGE.length - 1} />
+              {ACCESS_OVERVIEW.map((item, index) => (
+                <AccessItem key={item.label} item={item} isLast={index === ACCESS_OVERVIEW.length - 1} />
               ))}
             </View>
           </View>
@@ -420,7 +414,6 @@ const styles = StyleSheet.create({
     maxWidth: '52%', flexDirection: 'row', alignItems: 'center', gap: 4,
   },
   teamTagText: { color: '#8ea1a5', fontSize: 9, letterSpacing: 0 },
-  shiftText: { flex: 1, color: '#7f8b8f', fontSize: 9, letterSpacing: 0 },
   memberAside: { width: 112, minHeight: 44, alignItems: 'flex-end', justifyContent: 'center', gap: 8 },
   memberAsideNarrow: { width: 84 },
   memberAsideTop: { width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 7 },
@@ -430,7 +423,6 @@ const styles = StyleSheet.create({
   statusText: { color: '#ff9400', fontSize: 8, fontWeight: '700', letterSpacing: 0 },
   statusTextMuted: { color: '#768286' },
   memberTasks: { maxWidth: '100%', color: '#859195', fontSize: 8, letterSpacing: 0 },
-  scheduleLink: { color: '#ff8a00', fontSize: 11, letterSpacing: 0 },
   coverageFarm: { marginTop: 2, color: '#788589', fontSize: 8 },
   coveragePanel: {
     minHeight: 76, borderRadius: 8, borderWidth: 1, borderColor: '#1c2a30',
@@ -439,10 +431,10 @@ const styles = StyleSheet.create({
   coveragePanelCompact: { flexDirection: 'column' },
   coverageItem: { flex: 1, minWidth: 0, padding: 13, flexDirection: 'row', alignItems: 'center', gap: 9 },
   coverageDivider: { borderRightWidth: 1, borderRightColor: '#1d2b31' },
-  coverageDot: { width: 9, height: 9, borderRadius: 5 },
+  coverageCopy: { flex: 1, minWidth: 0 },
   coverageLabel: { color: '#dfe4e5', fontSize: 11, fontWeight: '600', letterSpacing: 0 },
   coverageTime: { marginTop: 3, color: '#7f8a8e', fontSize: 9, letterSpacing: 0 },
-  coverageMembers: { marginLeft: 'auto', color: '#9ca6aa', fontSize: 9, letterSpacing: 0 },
+  coverageMembers: { color: '#9ca6aa', fontSize: 9, textAlign: 'right', letterSpacing: 0 },
   emptyState: { height: 190, alignItems: 'center', justifyContent: 'center', gap: 8 },
   emptyText: { color: '#7f8a8e', fontSize: 12, letterSpacing: 0 },
   modalBackdrop: { flex: 1, padding: 14, backgroundColor: 'rgba(0,0,0,0.72)', justifyContent: 'flex-end', alignItems: 'center' },

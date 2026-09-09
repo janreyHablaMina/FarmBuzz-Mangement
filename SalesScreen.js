@@ -17,6 +17,8 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const SALES_HERO_IMAGE = require('./assets/sales-hero.png');
+const INCUBATING_EGGS_IMAGE = require('./assets/incubation-stage-developing.png');
+const HATCHED_CHICKS_IMAGE = require('./assets/incubation-stage-hatched.png');
 
 const ROOSTER_IMAGE =
   'https://images.unsplash.com/photo-1730360037813-9777f13b88bb?auto=format&fit=crop&w=300&q=82';
@@ -24,16 +26,11 @@ const BLACK_ROOSTER_IMAGE =
   'https://images.unsplash.com/photo-1551127501-d4385c7484b4?auto=format&fit=crop&w=300&q=82';
 const HEN_IMAGE =
   'https://images.unsplash.com/photo-1770221499235-11dd1041e181?auto=format&fit=crop&w=300&q=82';
-const SALES_SUMMARY = [
-  { icon: 'cash-check', value: '3', mobileValue: '3', label: 'Birds Sold', detail: 'With sale price', color: '#ff8500' },
-  { icon: 'account-switch-outline', value: '2', mobileValue: '2', label: 'Transferred', detail: 'No sale recorded', color: '#75d94e' },
-  { icon: 'clock-outline', value: '2', mobileValue: '2', label: 'Pending Owner', detail: 'Awaiting confirmation', color: '#ffb000' },
-];
-
-const FILTERS = [
-  { id: 'all', label: 'All Records' },
+const LISTING_FILTERS = [
+  { id: 'all', label: 'All' },
+  { id: 'sale', label: 'For Sale' },
+  { id: 'reserve', label: 'Reserve' },
   { id: 'sold', label: 'Sold' },
-  { id: 'transferred', label: 'Transferred' },
 ];
 
 const TRANSACTIONS = [
@@ -59,16 +56,84 @@ const TRANSACTIONS = [
   },
 ];
 
-const REVENUE_BREAKDOWN = [
-  { label: 'Sold Records', amount: '3 birds', percent: 60, color: '#ff8500' },
-  { label: 'Ownership Transfers', amount: '2 birds', percent: 40, color: '#75d94e' },
-  { label: 'Owner Confirmed', amount: '3 of 5', percent: 60, color: '#ffbd3d' },
+const FOR_SALE_BIRDS = [
+  {
+    id: 'FS-014',
+    name: 'Razor 014',
+    category: 'Kelso Cock',
+    detail: 'Proven breeder',
+    price: 'PHP 28,000',
+    status: 'Available',
+    image: ROOSTER_IMAGE,
+  },
+  {
+    id: 'FS-052',
+    name: 'Ruby 052',
+    category: 'Roundhead Hen',
+    detail: 'Healthy layer',
+    price: 'PHP 12,000',
+    status: 'Available',
+    image: HEN_IMAGE,
+  },
+  {
+    id: 'FS-008',
+    name: 'Blade 008',
+    category: 'Roundhead Cock',
+    detail: 'Conditioned stag',
+    price: 'PHP 18,500',
+    status: 'Reserved',
+    image: BLACK_ROOSTER_IMAGE,
+  },
 ];
 
-const QUICK_ACTIONS = [
-  { label: 'Sold History', detail: 'Transferred birds', icon: 'history' },
-  { label: 'New Owners', detail: 'Ownership records', icon: 'account-group-outline' },
-  { label: 'Reservations', detail: 'Pending pickups', icon: 'calendar-clock-outline' },
+const RESERVABLE_STOCK = [
+  {
+    id: 'RS-B001',
+    name: 'Batch B-001 Chicks',
+    category: 'Incubating eggs',
+    stage: 'Day 8 incubation',
+    availability: 'Expected hatch Sep 12',
+    available: '6 slots',
+    deposit: 'PHP 2,000 deposit',
+    status: 'Open reserve',
+    image: INCUBATING_EGGS_IMAGE,
+  },
+  {
+    id: 'RS-B002',
+    name: 'Batch B-002 Chicks',
+    category: 'Near hatch',
+    stage: 'Hatching soon',
+    availability: 'Ready in 3 days',
+    available: '3 slots',
+    deposit: 'PHP 2,500 deposit',
+    status: 'Priority reserve',
+    image: HATCHED_CHICKS_IMAGE,
+  },
+  {
+    id: 'RS-RR',
+    name: 'Razor x Ruby Eggs',
+    category: 'Fertile egg reservation',
+    stage: 'Holding group',
+    availability: 'Ready to set',
+    available: '5 eggs',
+    deposit: 'PHP 500 per egg',
+    status: 'Available',
+    image: INCUBATING_EGGS_IMAGE,
+  },
+];
+
+const SAMPLE_RESERVED_ORDERS = [
+  {
+    id: 'RSV-001',
+    releaseType: 'reservation',
+    buyerName: 'Miguel Dela Cruz',
+    readyWindow: 'Sep 15, 2026',
+    price: '2,000',
+    bird: {
+      name: 'Blade 008',
+      image: BLACK_ROOSTER_IMAGE,
+    },
+  },
 ];
 
 function getBirdKey(bird) {
@@ -86,6 +151,30 @@ function parsePrice(price) {
 
 function formatCurrency(value) {
   return value ? `PHP ${value.toLocaleString()}` : 'No sale';
+}
+
+function formatShortCurrency(value) {
+  if (!value) return 'No deposits';
+  if (value >= 1000) {
+    const amount = value / 1000;
+    const rounded = Number.isInteger(amount) ? String(amount) : amount.toFixed(1);
+    return `PHP ${rounded}K deposits`;
+  }
+  return `PHP ${value.toLocaleString()} deposits`;
+}
+
+function formatShortSales(value) {
+  if (!value) return 'No sales';
+  if (value >= 1000) {
+    const amount = value / 1000;
+    const rounded = Number.isInteger(amount) ? String(amount) : amount.toFixed(1);
+    return `PHP ${rounded}K sales`;
+  }
+  return `PHP ${value.toLocaleString()} sales`;
+}
+
+function withoutDepositLabel(value) {
+  return String(value || '').replace(/\s+deposit$/i, '');
 }
 
 function makeTransactionId(entry, index) {
@@ -108,12 +197,12 @@ function HeaderButton({ icon, label, onPress }) {
 function SummaryCard({ item, narrow }) {
   return (
     <View style={[styles.summaryCard, narrow && styles.summaryCardNarrow]}>
-      <View style={styles.summaryIcon}>
-        <MaterialCommunityIcons name={item.icon} size={25} color={item.color} />
+      <View style={styles.summaryValueRow}>
+        <MaterialCommunityIcons name={item.icon} size={narrow ? 25 : 29} color={item.color} />
+        <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryValue, narrow && styles.summaryValueNarrow]}>
+          {narrow ? item.mobileValue : item.value}
+        </Text>
       </View>
-      <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryValue, narrow && styles.summaryValueNarrow]}>
-        {narrow ? item.mobileValue : item.value}
-      </Text>
       <Text style={styles.summaryLabel}>{item.label}</Text>
       <Text style={[styles.summaryDetail, item.detail.startsWith('+') && styles.positive]}>{item.detail}</Text>
     </View>
@@ -169,35 +258,35 @@ function TransactionRow({ transaction, isLast, narrow }) {
   );
 }
 
-function RevenueRow({ item }) {
-  return (
-    <View style={styles.revenueRow}>
-      <View style={styles.revenueHeading}>
-        <Text style={styles.revenueLabel}>{item.label}</Text>
-        <Text style={styles.revenueAmount}>{item.amount}</Text>
-      </View>
-      <View style={styles.progressTrack}>
-        <View style={[styles.progressFill, { width: `${item.percent}%`, backgroundColor: item.color }]} />
-      </View>
-      <Text style={styles.revenuePercent}>{item.percent}%</Text>
-    </View>
-  );
-}
-
-function QuickAction({ item, compact }) {
+function SaleBirdRow({ item, isLast, narrow }) {
+  const reserved = item.status === 'Reserved';
+  const statusColor = reserved ? '#ffb000' : '#69dd64';
   return (
     <Pressable
-      onPress={() => Alert.alert(item.label, `${item.label} will open here.`)}
-      style={({ pressed }) => [styles.quickAction, compact && styles.quickActionCompact, pressed && styles.cardPressed]}
+      accessibilityLabel={`Open sale bird ${item.name}`}
+      onPress={() => Alert.alert('For sale', `${item.name}\n${item.category}\n${item.price}`)}
+      style={({ pressed }) => [styles.transactionRow, narrow && styles.transactionRowNarrow, !isLast && styles.rowDivider, pressed && styles.rowPressed]}
     >
-      <View style={styles.quickIcon}>
-        <MaterialCommunityIcons name={item.icon} size={23} color="#ff8500" />
+      <Image source={item.image} style={[styles.itemImage, narrow && styles.itemImageNarrow]} contentFit="cover" cachePolicy="memory-disk" />
+      <View style={styles.transactionMain}>
+        <View style={styles.itemTitleRow}>
+          <Text numberOfLines={1} style={styles.itemName}>{item.name}</Text>
+          <Text style={styles.saleId}>{item.id}</Text>
+        </View>
+        <Text numberOfLines={1} style={styles.buyerName}>
+          <Text style={styles.transferType}>{item.category}</Text>
+        </Text>
+        <View style={styles.saleMeta}>
+          <MaterialCommunityIcons name="bird" size={12} color="#7e8a8e" />
+          <Text numberOfLines={1} style={styles.dateText}>{item.detail}</Text>
+        </View>
       </View>
-      <View style={styles.quickCopy}>
-        <Text style={styles.quickLabel}>{item.label}</Text>
-        <Text style={styles.quickDetail}>{item.detail}</Text>
+      <View style={[styles.transactionAside, narrow && styles.transactionAsideNarrow]}>
+        <Text numberOfLines={1} adjustsFontSizeToFit style={styles.priceText}>{item.price}</Text>
+        <View style={[styles.statusChip, { borderColor: `${statusColor}2b`, backgroundColor: `${statusColor}0d` }]}>
+          <Text style={[styles.statusText, { color: statusColor }]}>{item.status}</Text>
+        </View>
       </View>
-      <Ionicons name="chevron-forward" size={19} color="#9da6a9" />
     </Pressable>
   );
 }
@@ -233,12 +322,108 @@ function ReservationRow({ order, isLast, narrow }) {
   );
 }
 
+function ReserveStockRow({ item, isLast, narrow }) {
+  return (
+    <Pressable
+      accessibilityLabel={`Reserve ${item.name}`}
+      onPress={() => Alert.alert('Reserve stock', `${item.name}\n${item.availability}\n${item.deposit}`)}
+      style={({ pressed }) => [styles.reservationRow, !isLast && styles.rowDivider, pressed && styles.rowPressed]}
+    >
+      <Image source={item.image} style={[styles.reservationImage, narrow && styles.reservationImageNarrow]} contentFit="cover" cachePolicy="memory-disk" />
+      <View style={styles.transactionMain}>
+        <View style={styles.itemTitleRow}>
+          <Text numberOfLines={1} style={styles.itemName}>{item.name}</Text>
+          <Text style={styles.saleId}>{item.id}</Text>
+        </View>
+        <Text numberOfLines={1} style={styles.buyerName}>
+          <Text style={styles.transferType}>{item.category}</Text>
+        </Text>
+        <View style={styles.saleMeta}>
+          <MaterialCommunityIcons name="calendar-clock-outline" size={12} color="#7e8a8e" />
+          <Text numberOfLines={1} style={styles.dateText}>{item.stage} - {item.availability}</Text>
+        </View>
+      </View>
+      <View style={[styles.transactionAside, narrow && styles.transactionAsideNarrow]}>
+        <Text numberOfLines={1} adjustsFontSizeToFit style={styles.priceText}>{item.deposit}</Text>
+        <View style={[styles.statusChip, { borderColor: '#ffb0002b', backgroundColor: '#ffb0000d' }]}>
+          <Text style={[styles.statusText, { color: '#ffb000' }]}>{item.available}</Text>
+        </View>
+      </View>
+    </Pressable>
+  );
+}
+
+function ListingRow({ listing, isLast, narrow }) {
+  const item = listing.item;
+  const isSale = listing.kind === 'sale';
+  const isReserve = listing.kind === 'reserve';
+  const isOrder = !!listing.order;
+  const isSold = listing.kind === 'sold';
+  const statusColor = isSold
+    ? item.status === 'Confirmed' ? '#69dd64' : '#ff9a00'
+    : isReserve || isOrder
+      ? '#ffb000'
+      : item.status === 'Reserved'
+        ? '#ffb000'
+        : '#69dd64';
+  const image = isOrder ? item.bird.image : isSold ? item.image : item.image;
+  const title = isOrder ? item.bird.name : isSold ? item.item : item.name;
+  const eyebrow = isOrder
+    ? `Buyer ${item.buyerName}`
+    : isSold
+      ? `${item.type} to ${item.owner}`
+      : item.category;
+  const detail = isOrder
+    ? `Pickup before ${item.readyWindow}`
+    : isSold
+      ? `${item.category} - ${item.date}`
+      : isReserve
+        ? `${item.stage} - ${item.availability}`
+        : item.detail;
+  const amount = isOrder
+    ? `PHP ${item.price}`
+    : isSold
+      ? item.price
+      : isReserve
+        ? withoutDepositLabel(item.deposit)
+        : item.price;
+  const amountLabel = isReserve || isOrder ? 'Deposit' : isSold ? item.type : 'Price';
+  const status = isOrder ? 'Reserved' : isReserve ? item.available : isSold ? item.status : item.status;
+  const imageStyle = isReserve || isOrder ? styles.reservationImage : styles.itemImage;
+  const thumbnailFit = isReserve || isOrder ? 'contain' : 'cover';
+
+  return (
+    <Pressable
+      accessibilityLabel={`Open listing ${title}`}
+      onPress={() => Alert.alert(title, `${eyebrow}\n${detail}\n${amount}`)}
+      style={({ pressed }) => [styles.transactionRow, narrow && styles.transactionRowNarrow, !isLast && styles.rowDivider, pressed && styles.rowPressed]}
+    >
+      <Image source={image} style={[imageStyle, narrow && styles.itemImageNarrow]} contentFit={thumbnailFit} cachePolicy="memory-disk" />
+      <View style={styles.transactionMain}>
+        <View style={styles.itemTitleRow}>
+          <Text numberOfLines={1} style={styles.itemName}>{title}</Text>
+          <Text style={styles.saleId}>{listing.key}</Text>
+        </View>
+        <Text numberOfLines={1} style={styles.buyerName}>{eyebrow}</Text>
+        <Text numberOfLines={1} style={styles.listingDetail}>{detail}</Text>
+      </View>
+      <View style={[styles.transactionAside, narrow && styles.transactionAsideNarrow]}>
+        <Text numberOfLines={1} adjustsFontSizeToFit style={styles.priceText}>{amount}</Text>
+        <Text style={styles.priceLabel}>{amountLabel}</Text>
+        <View style={[styles.statusChip, { borderColor: `${statusColor}2b`, backgroundColor: `${statusColor}0d` }]}>
+          <Text style={[styles.statusText, { color: statusColor }]}>{status}</Text>
+        </View>
+      </View>
+    </Pressable>
+  );
+}
+
 export default function SalesScreen({ onBack, onOpenPurchase, birds = [], ownershipByBird = {}, purchaseOrders = [] }) {
   const { width } = useWindowDimensions();
   const compact = width < 480;
   const narrow = width < 390;
   const [query, setQuery] = useState('');
-  const [filter, setFilter] = useState('all');
+  const [listingFilter, setListingFilter] = useState('all');
 
   const recordedTransactions = useMemo(() => {
     return birds
@@ -267,44 +452,46 @@ export default function SalesScreen({ onBack, onOpenPurchase, birds = [], owners
 
   const salesSummary = useMemo(() => {
     const sold = recordedTransactions.filter((transaction) => transaction.type === 'Sold');
-    const transferred = recordedTransactions.filter((transaction) => transaction.type !== 'Sold');
-    const reserved = purchaseOrders.filter((order) => order.releaseType === 'reservation');
-    const salesValue = sold.reduce((total, transaction) => total + transaction.priceValue, 0);
+    const reserved = purchaseOrders.length
+      ? purchaseOrders.filter((order) => order.releaseType === 'reservation')
+      : SAMPLE_RESERVED_ORDERS;
+    const soldAmount = sold.reduce((total, transaction) => total + transaction.priceValue, 0);
+    const reservedAmount = reserved.reduce((total, order) => total + parsePrice(order.price), 0);
     return [
-      { icon: 'cash-check', value: String(sold.length), mobileValue: String(sold.length), label: 'Birds Sold', detail: formatCurrency(salesValue), color: '#ff8500' },
-      { icon: 'account-switch-outline', value: String(transferred.length), mobileValue: String(transferred.length), label: 'Transferred', detail: transferred.length ? 'No sale recorded' : 'No transfers yet', color: '#75d94e' },
-      { icon: 'calendar-clock-outline', value: String(reserved.length), mobileValue: String(reserved.length), label: 'Reserved', detail: reserved.length ? 'Pending pickups' : 'No reservations', color: '#ffb000' },
+      { icon: 'tag-outline', value: String(FOR_SALE_BIRDS.length), mobileValue: String(FOR_SALE_BIRDS.length), label: 'For Sale', detail: 'Ready birds', color: '#ff8500' },
+      { icon: 'calendar-clock-outline', value: String(reserved.length), mobileValue: String(reserved.length), label: 'Reserved', detail: formatShortCurrency(reservedAmount), color: '#ffb000' },
+      { icon: 'cash-check', value: String(sold.length), mobileValue: String(sold.length), label: 'Sold', detail: formatShortSales(soldAmount), color: '#75d94e' },
     ];
   }, [purchaseOrders, recordedTransactions]);
 
-  const revenueBreakdown = useMemo(() => {
-    const soldCount = recordedTransactions.filter((transaction) => transaction.type === 'Sold').length;
-    const transferCount = recordedTransactions.length - soldCount;
-    const reservationCount = purchaseOrders.filter((order) => order.releaseType === 'reservation').length;
-    const total = Math.max(recordedTransactions.length + reservationCount, 1);
-    const soldPercent = Math.round((soldCount / total) * 100);
-    const transferPercent = Math.round((transferCount / total) * 100);
-    const reservationPercent = Math.round((reservationCount / total) * 100);
-    return [
-      { label: 'Sold Records', amount: `${soldCount} birds`, percent: soldPercent, color: '#ff8500' },
-      { label: 'Ownership Transfers', amount: `${transferCount} birds`, percent: transferPercent, color: '#75d94e' },
-      { label: 'Reserved Pickups', amount: `${reservationCount} birds`, percent: reservationPercent, color: '#ffbd3d' },
-    ];
-  }, [purchaseOrders, recordedTransactions]);
+  const reservations = useMemo(() => (
+    purchaseOrders.length
+      ? purchaseOrders.filter((order) => order.releaseType === 'reservation')
+      : SAMPLE_RESERVED_ORDERS
+  ), [purchaseOrders]);
 
-  const reservations = useMemo(() => purchaseOrders.filter((order) => order.releaseType === 'reservation'), [purchaseOrders]);
-
-  const visibleTransactions = useMemo(() => {
+  const visibleListings = useMemo(() => {
     const normalized = query.trim().toLowerCase();
-    return recordedTransactions.filter((transaction) => {
-      const matchesFilter = filter === 'all'
-        || (filter === 'sold' ? transaction.type === 'Sold' : transaction.type !== 'Sold');
-      const matchesQuery = `${transaction.id} ${transaction.item} ${transaction.category} ${transaction.owner} ${transaction.type}`
-        .toLowerCase()
-        .includes(normalized);
-      return matchesFilter && matchesQuery;
-    });
-  }, [filter, query, recordedTransactions]);
+    const listings = [
+      ...FOR_SALE_BIRDS.map((item) => ({ kind: 'sale', key: item.id, item })),
+      ...RESERVABLE_STOCK.map((item) => ({ kind: 'reserve', key: item.id, item })),
+      ...reservations.map((item) => ({ kind: 'reserve', key: item.id, item, order: true })),
+      ...recordedTransactions.map((item) => ({ kind: 'sold', key: item.id, item })),
+    ];
+
+    return listings.filter((listing) => {
+      const item = listing.item;
+      const searchable = listing.order
+        ? `${item.id} ${item.bird?.name} ${item.buyerName} ${item.readyWindow}`
+        : listing.kind === 'sale'
+          ? `${item.id} ${item.name} ${item.category} ${item.detail} ${item.status}`
+          : listing.kind === 'reserve'
+            ? `${item.id} ${item.name} ${item.category} ${item.stage} ${item.availability}`
+            : `${item.id} ${item.item} ${item.category} ${item.owner} ${item.type}`;
+      const matchesFilter = listingFilter === 'all' || listing.kind === listingFilter;
+      return matchesFilter && searchable.toLowerCase().includes(normalized);
+    }).slice(0, 6);
+  }, [listingFilter, query, recordedTransactions, reservations]);
 
   return (
     <View style={styles.screen}>
@@ -328,7 +515,7 @@ export default function SalesScreen({ onBack, onOpenPurchase, birds = [], owners
               </View>
               <View style={[styles.heroCopy, narrow && styles.heroCopyNarrow]}>
                 <Text style={[styles.farmName, narrow && styles.farmNameNarrow]}>FarmBuzz Farm</Text>
-                <Text style={styles.farmTagline}>Record sold birds, ownership transfers and their new owners.</Text>
+                <Text style={styles.farmTagline}>Sell available birds and reserve eggs or chicks before release.</Text>
                 <View style={styles.farmMeta}>
                   <View style={styles.metaItem}>
                     <Ionicons name="location-outline" size={16} color="#c0c7c9" />
@@ -351,7 +538,7 @@ export default function SalesScreen({ onBack, onOpenPurchase, birds = [], owners
                 <TextInput
                   value={query}
                   onChangeText={setQuery}
-                  placeholder="Search birds or new owners..."
+                  placeholder="Search birds, buyers, eggs..."
                   placeholderTextColor="#879195"
                   selectionColor="#ff8500"
                   style={styles.searchInput}
@@ -362,9 +549,9 @@ export default function SalesScreen({ onBack, onOpenPurchase, birds = [], owners
                   </Pressable>
                 )}
               </View>
-              <Pressable accessibilityLabel="Buy chicken" onPress={onOpenPurchase} style={({ pressed }) => [styles.addButton, compact && styles.addButtonCompact, pressed && styles.pressed]}>
+              <Pressable accessibilityLabel="Add sale or reservation" onPress={onOpenPurchase} style={({ pressed }) => [styles.addButton, compact && styles.addButtonCompact, pressed && styles.pressed]}>
                 <Ionicons name="add" size={27} color="#fff" />
-                {!compact && <Text style={styles.addButtonText}>Buy Chicken</Text>}
+                {!compact && <Text style={styles.addButtonText}>New Sale</Text>}
               </Pressable>
             </View>
 
@@ -372,51 +559,28 @@ export default function SalesScreen({ onBack, onOpenPurchase, birds = [], owners
               {salesSummary.map((item) => <SummaryCard key={item.label} item={item} narrow={narrow} />)}
             </View>
 
-            <View style={styles.sectionHeader}>
-              <View>
-                <Text style={styles.sectionTitle}>Ownership Overview</Text>
-                <Text style={styles.sectionDetail}>Recorded from bird ownership</Text>
-              </View>
-              <Pressable onPress={() => Alert.alert('Transfer report')}><Text style={styles.viewLink}>View report</Text></Pressable>
-            </View>
-            <View style={styles.revenuePanel}>
-              {revenueBreakdown.map((item) => <RevenueRow key={item.label} item={item} />)}
-            </View>
-
-            <View style={styles.sectionHeader}>
-              <View>
-                <Text style={styles.sectionTitle}>Reserved Pickups</Text>
-                <Text style={styles.sectionDetail}>Chickens held before ready date</Text>
-              </View>
-              <Pressable onPress={onOpenPurchase}><Text style={styles.viewLink}>New reservation</Text></Pressable>
-            </View>
-            <View style={styles.transactionList}>
-              {reservations.map((order, index) => (
-                <ReservationRow key={order.id} order={order} narrow={narrow} isLast={index === reservations.length - 1} />
-              ))}
-              {!reservations.length && <Text style={styles.emptyText}>No reserved chickens yet</Text>}
-            </View>
-
             <View style={styles.salesHeader}>
-              <Text style={styles.sectionTitle}>Transfer History</Text>
+              <View>
+                <Text style={styles.sectionTitle}>Listings</Text>
+                <Text style={styles.sectionDetail}>Birds for sale, reservations, and sold records</Text>
+              </View>
               <View style={styles.filters}>
-                {FILTERS.map((item) => <FilterButton key={item.id} item={item} active={filter === item.id} onPress={() => setFilter(item.id)} />)}
+                {LISTING_FILTERS.map((item) => (
+                  <FilterButton
+                    key={item.id}
+                    item={item}
+                    active={listingFilter === item.id}
+                    onPress={() => setListingFilter(item.id)}
+                  />
+                ))}
               </View>
             </View>
             <View style={styles.transactionList}>
-              {visibleTransactions.map((transaction, index) => (
-                <TransactionRow
-                  key={transaction.id}
-                  transaction={transaction}
-                  narrow={narrow}
-                  isLast={index === visibleTransactions.length - 1}
-                />
-              ))}
-              {!visibleTransactions.length && <Text style={styles.emptyText}>No sold or transfer records found</Text>}
-            </View>
-
-            <View style={[styles.quickGrid, compact && styles.quickGridCompact]}>
-              {QUICK_ACTIONS.map((item) => <QuickAction key={item.label} item={item} compact={compact} />)}
+              {visibleListings.map((listing, index) => {
+                const isLast = index === visibleListings.length - 1;
+                return <ListingRow key={listing.key} listing={listing} narrow={narrow} isLast={isLast} />;
+              })}
+              {!visibleListings.length && <Text style={styles.emptyText}>No listings found</Text>}
             </View>
           </View>
         </View>
@@ -456,29 +620,20 @@ const styles = StyleSheet.create({
   addButtonText: { color: '#fff', fontSize: 14, fontWeight: '700', letterSpacing: 0 },
   summaryGrid: { marginTop: 14, flexDirection: 'row', gap: 10 },
   summaryCard: {
-    flex: 1, minWidth: 0, height: 124, paddingHorizontal: 14, paddingVertical: 12,
+    flex: 1, minWidth: 0, height: 112, paddingHorizontal: 5,
     borderRadius: 8, borderWidth: 1, borderColor: '#1c2a30', backgroundColor: '#0b1418',
     alignItems: 'center', justifyContent: 'center',
   },
-  summaryCardNarrow: { height: 116, paddingHorizontal: 8, paddingVertical: 10 },
+  summaryCardNarrow: { height: 104, paddingHorizontal: 5 },
   summaryIcon: { width: 37, height: 37, borderRadius: 19, backgroundColor: 'rgba(255, 133, 0, 0.1)', alignItems: 'center', justifyContent: 'center' },
-  summaryValue: { marginTop: 5, width: '94%', color: '#edf1f2', fontSize: 22, fontWeight: '700', textAlign: 'center', letterSpacing: 0 },
-  summaryValueNarrow: { fontSize: 19 },
-  summaryLabel: { marginTop: 3, color: '#c3cacc', fontSize: 10, letterSpacing: 0 },
-  summaryDetail: { marginTop: 3, color: '#7f8b8f', fontSize: 9, letterSpacing: 0 },
+  summaryValueRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  summaryValue: { color: '#f0f2f3', fontSize: 27, lineHeight: 30, fontWeight: '600', textAlign: 'center', letterSpacing: 0 },
+  summaryValueNarrow: { fontSize: 23, lineHeight: 26 },
+  summaryLabel: { marginTop: 8, color: '#d4d9db', fontSize: 12, textAlign: 'center', letterSpacing: 0 },
+  summaryDetail: { marginTop: 4, color: '#899397', fontSize: 10, textAlign: 'center', letterSpacing: 0 },
   positive: { color: '#68d85c' },
-  sectionHeader: { marginTop: 21, marginBottom: 7, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
   sectionTitle: { color: '#e5e9ea', fontSize: 16, fontWeight: '600', letterSpacing: 0 },
   sectionDetail: { marginTop: 3, color: '#7f8b8f', fontSize: 9, letterSpacing: 0 },
-  viewLink: { color: '#ff8a00', fontSize: 11, letterSpacing: 0 },
-  revenuePanel: { padding: 14, borderRadius: 8, borderWidth: 1, borderColor: '#1c2a30', backgroundColor: '#0b1418', gap: 13 },
-  revenueRow: { position: 'relative', paddingRight: 37 },
-  revenueHeading: { marginBottom: 6, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  revenueLabel: { color: '#adb6b9', fontSize: 10, letterSpacing: 0 },
-  revenueAmount: { color: '#e1e5e6', fontSize: 10, fontWeight: '600', letterSpacing: 0 },
-  progressTrack: { height: 6, borderRadius: 3, backgroundColor: '#182329', overflow: 'hidden' },
-  progressFill: { height: 6, borderRadius: 3 },
-  revenuePercent: { position: 'absolute', right: 0, bottom: -3, color: '#8c979a', fontSize: 9, letterSpacing: 0 },
   salesHeader: { marginTop: 21, marginBottom: 7, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   filters: { flexDirection: 'row', gap: 5 },
   filterButton: { minHeight: 31, paddingHorizontal: 10, borderRadius: 7, borderWidth: 1, borderColor: '#202b30', backgroundColor: '#0b1418', alignItems: 'center', justifyContent: 'center' },
@@ -486,12 +641,12 @@ const styles = StyleSheet.create({
   filterText: { color: '#899397', fontSize: 9, letterSpacing: 0 },
   filterTextActive: { color: '#ff9a00' },
   transactionList: { borderRadius: 8, borderWidth: 1, borderColor: '#1c2a30', backgroundColor: '#0b1418', overflow: 'hidden' },
-  transactionRow: { minHeight: 82, paddingHorizontal: 12, paddingVertical: 9, flexDirection: 'row', alignItems: 'center', gap: 11 },
+  transactionRow: { minHeight: 86, paddingHorizontal: 12, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 11 },
   reservationRow: { minHeight: 82, paddingHorizontal: 12, paddingVertical: 9, flexDirection: 'row', alignItems: 'center', gap: 11 },
   transactionRowNarrow: { minHeight: 88, paddingHorizontal: 8, gap: 7 },
   rowDivider: { borderBottomWidth: 1, borderBottomColor: '#1b292f' },
   itemImage: { width: 52, height: 52, borderRadius: 7, borderWidth: 1, borderColor: '#2d3a3f' },
-  reservationImage: { width: 52, height: 52, borderRadius: 7, borderWidth: 1, borderColor: '#70450d' },
+  reservationImage: { width: 52, height: 52, borderRadius: 7, borderWidth: 1, borderColor: '#70450d', backgroundColor: '#061014' },
   reservationImageNarrow: { width: 46, height: 46 },
   itemImageNarrow: { width: 46, height: 46 },
   transactionMain: { flex: 1, minWidth: 0 },
@@ -500,23 +655,17 @@ const styles = StyleSheet.create({
   saleId: { color: '#687579', fontSize: 8, letterSpacing: 0 },
   buyerName: { marginTop: 3, color: '#d3d8da', fontSize: 10, letterSpacing: 0 },
   transferType: { color: '#ff9200', fontWeight: '600' },
+  listingDetail: { marginTop: 6, color: '#7f8b8f', fontSize: 9, letterSpacing: 0 },
   saleMeta: { marginTop: 6, flexDirection: 'row', alignItems: 'center', gap: 5 },
   categoryText: { maxWidth: '44%', color: '#7e8a8e', fontSize: 8, letterSpacing: 0 },
   dateText: { flex: 1, color: '#7e8a8e', fontSize: 8, letterSpacing: 0 },
   metaDot: { color: '#5f6b6f', fontSize: 8 },
-  transactionAside: { width: 92, alignItems: 'flex-end', gap: 7 },
-  transactionAsideNarrow: { width: 73 },
+  transactionAside: { width: 108, alignItems: 'flex-end', gap: 5 },
+  transactionAsideNarrow: { width: 88 },
   priceText: { width: '100%', color: '#f0f2f3', fontSize: 11, fontWeight: '700', textAlign: 'right', letterSpacing: 0 },
-  statusChip: { minHeight: 25, paddingHorizontal: 9, borderRadius: 13, borderWidth: 1, justifyContent: 'center' },
-  statusText: { fontSize: 9, fontWeight: '600', letterSpacing: 0 },
-  quickGrid: { marginTop: 13, flexDirection: 'row', gap: 9 },
-  quickGridCompact: { flexDirection: 'column' },
-  quickAction: { flex: 1, minWidth: 0, minHeight: 78, paddingHorizontal: 11, borderRadius: 8, borderWidth: 1, borderColor: '#1c2a30', backgroundColor: '#0b1418', flexDirection: 'row', alignItems: 'center', gap: 9 },
-  quickActionCompact: { minHeight: 64 },
-  quickIcon: { width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(255, 133, 0, 0.1)', alignItems: 'center', justifyContent: 'center' },
-  quickCopy: { flex: 1, minWidth: 0 },
-  quickLabel: { color: '#e2e6e7', fontSize: 11, fontWeight: '600', letterSpacing: 0 },
-  quickDetail: { marginTop: 3, color: '#7f8b8f', fontSize: 9, letterSpacing: 0 },
+  priceLabel: { color: '#6f7b7f', fontSize: 8, textAlign: 'right', letterSpacing: 0 },
+  statusChip: { minHeight: 23, paddingHorizontal: 8, borderRadius: 12, borderWidth: 1, justifyContent: 'center' },
+  statusText: { fontSize: 8, fontWeight: '600', letterSpacing: 0 },
   emptyText: { paddingVertical: 30, color: '#7f8a8e', fontSize: 12, textAlign: 'center', letterSpacing: 0 },
   pressed: { opacity: 0.72 },
   rowPressed: { backgroundColor: '#101c21' },
