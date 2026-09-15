@@ -6,6 +6,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
   useWindowDimensions,
 } from 'react-native';
@@ -142,6 +143,32 @@ const MODULES = [
     tint: THEME_ORANGE_TINT,
     image: COLLECTIONS_DASHBOARD_HERO_IMAGE,
   },
+];
+
+const PROCESS_STAGES = [
+  {
+    title: 'Breeding & Hatchery',
+    subtitle: 'Pairing, egg marking, candling and hatch',
+    badgeImage: INCUBATION_BADGE_IMAGE,
+    color: THEME_ORANGE,
+    tint: THEME_ORANGE_TINT,
+    image:
+      'https://images.unsplash.com/photo-1774598051542-7f691bd4aac7?auto=format&fit=crop&w=700&q=80',
+  },
+];
+
+const HATCHERY_SUMMARY = [
+  { value: '3', label: 'Active Pairings' },
+  { value: '18', label: 'Eggs Collected' },
+  { value: '2', label: 'Incubating' },
+  { value: '1', label: 'Due to Hatch' },
+];
+
+const HATCHERY_TOOLS = [
+  { title: 'Pairing Records', subtitle: 'Cock, hen, bloodline and breeding notes', icon: 'gender-male-female' },
+  { title: 'Egg Collection & Marking', subtitle: 'Collected eggs, egg codes and batch labels', icon: 'egg-outline' },
+  { title: 'Incubation & Candling', subtitle: 'Set date, fertile eggs and removed eggs', icon: 'lightbulb-on-outline' },
+  { title: 'Hatching Results', subtitle: 'Hatched chicks, failed eggs and hatch rate', icon: 'egg-easter' },
 ];
 
 const STATS = [
@@ -347,10 +374,31 @@ function ActivityRow({ item, isLast, onPress }) {
   return <Pressable accessibilityRole="button" accessibilityLabel={`Open ${item.title}`} onPress={onPress} style={({ pressed }) => [styles.activityRow, !isLast && styles.activityDivider, pressed && styles.activityPressed]}><View style={styles.activityIcon}><MaterialCommunityIcons name={item.icon} size={19} color={THEME_ORANGE} /></View><View style={styles.activityCopy}><Text numberOfLines={1} style={styles.activityTitle}>{item.title}</Text><Text numberOfLines={1} style={styles.activityDetail}>{item.detail}</Text></View><Text style={styles.activityTime}>{item.time}</Text></Pressable>;
 }
 
-function WorkspaceTabs({ activeTab, compact, onOpenShowcase, onOpenManagement }) {
+function HatcheryToolRow({ item, isLast }) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`Open ${item.title}`}
+      onPress={() => Alert.alert(item.title, `${item.title} selected.`)}
+      style={({ pressed }) => [styles.hatcheryToolRow, !isLast && styles.activityDivider, pressed && styles.activityPressed]}
+    >
+      <View style={styles.activityIcon}>
+        <MaterialCommunityIcons name={item.icon} size={19} color={THEME_ORANGE} />
+      </View>
+      <View style={styles.activityCopy}>
+        <Text numberOfLines={1} style={styles.activityTitle}>{item.title}</Text>
+        <Text numberOfLines={2} style={styles.activityDetail}>{item.subtitle}</Text>
+      </View>
+      <Ionicons name="chevron-forward" size={16} color="#7f8b8f" />
+    </Pressable>
+  );
+}
+
+function WorkspaceTabs({ activeTab, compact, onOpenShowcase, onOpenManagement, onOpenProcess }) {
   const tabs = [
     { id: 'showcase', label: 'Showcase', icon: 'images-outline', onPress: onOpenShowcase },
     { id: 'management', label: 'Management Tool', icon: 'grid-outline', onPress: onOpenManagement },
+    { id: 'process', label: 'Process', icon: 'cog-outline', onPress: onOpenProcess },
   ];
 
   return (
@@ -450,7 +498,7 @@ function FarmBanner({ farmName, location, establishedYear, onOpenShowcase, onOpe
   );
 }
 
-function ShowcaseScreen({ farmName, location, establishedYear, onOpenShowcase, onOpenManagement, onOpenSettings }) {
+function ShowcaseScreen({ farmName, location, establishedYear, onOpenShowcase, onOpenManagement, onOpenProcess, onOpenSettings }) {
   const { width } = useWindowDimensions();
   const compact = width < 480;
   const narrow = width < 390;
@@ -474,6 +522,7 @@ function ShowcaseScreen({ farmName, location, establishedYear, onOpenShowcase, o
               compact={compact}
               onOpenShowcase={onOpenShowcase}
               onOpenManagement={onOpenManagement}
+              onOpenProcess={onOpenProcess}
             />
             <Image
               source={SHOWCASE_IMAGE}
@@ -489,7 +538,301 @@ function ShowcaseScreen({ farmName, location, establishedYear, onOpenShowcase, o
   );
 }
 
-function Dashboard({ farmName, location, establishedYear, totalWins, onOpenShowcase, onOpenSettings, onOpenNeedsAttention, onOpenFlock, onOpenBreeding, onOpenHealthCare, onOpenEggsIncubation, onOpenTasks, onOpenTeam, onOpenSales }) {
+function LandingScreen({ onSetup, onExisting }) {
+  const { width } = useWindowDimensions();
+  const compact = width < 480;
+  const narrow = width < 390;
+
+  return (
+    <View style={styles.screen}>
+      <StatusBar style="light" translucent backgroundColor="transparent" />
+      <Image
+        source={DASHBOARD_HERO_IMAGE}
+        style={StyleSheet.absoluteFill}
+        contentFit="cover"
+        contentPosition="center"
+        transition={350}
+        cachePolicy="memory-disk"
+      />
+      <LinearGradient
+        colors={['rgba(2, 7, 9, 0.45)', 'rgba(2, 7, 9, 0.68)', '#020709']}
+        locations={[0, 0.48, 1]}
+        style={StyleSheet.absoluteFill}
+      />
+      <SafeAreaView edges={['top', 'bottom']} style={styles.landingSafeArea}>
+        <View style={[styles.landingContent, compact && styles.landingContentCompact]}>
+          <Text style={styles.heroEyebrow}>FARMBUZZ</Text>
+          <Text style={[styles.landingTitle, compact && styles.landingTitleCompact, narrow && styles.landingTitleNarrow]}>
+            Management Tools
+          </Text>
+          <Text style={[styles.landingSubtitle, narrow && styles.landingSubtitleNarrow]}>
+            Start a new farm setup or continue with an existing farm.
+          </Text>
+          <View style={styles.landingActions}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Setup new farm"
+              onPress={onSetup}
+              style={({ pressed }) => [styles.landingPrimaryButton, pressed && styles.pressed]}
+            >
+              <Ionicons name="construct-outline" size={18} color="#ffffff" />
+              <Text style={styles.landingPrimaryText}>Setup</Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Open existing farm"
+              onPress={onExisting}
+              style={({ pressed }) => [styles.landingSecondaryButton, pressed && styles.pressed]}
+            >
+              <Ionicons name="folder-open-outline" size={18} color={THEME_ORANGE} />
+              <Text style={styles.landingSecondaryText}>Existing</Text>
+            </Pressable>
+          </View>
+        </View>
+      </SafeAreaView>
+    </View>
+  );
+}
+
+function SetupField({ icon, label, value, onChangeText, placeholder, keyboardType }) {
+  return (
+    <View style={styles.setupField}>
+      <View style={styles.activityIcon}>
+        <MaterialCommunityIcons name={icon} size={19} color={THEME_ORANGE} />
+      </View>
+      <View style={styles.setupFieldCopy}>
+        <Text style={styles.setupFieldLabel}>{label}</Text>
+        <TextInput
+          value={value}
+          onChangeText={onChangeText}
+          placeholder={placeholder}
+          placeholderTextColor="#6f7b7f"
+          keyboardType={keyboardType}
+          selectionColor={THEME_ORANGE}
+          style={styles.setupInput}
+        />
+      </View>
+    </View>
+  );
+}
+
+function FarmSetupScreen({ onBack }) {
+  const { width } = useWindowDimensions();
+  const compact = width < 480;
+  const narrow = width < 390;
+  const [farmName, setFarmName] = useState('');
+  const [location, setLocation] = useState('');
+  const [establishedYear, setEstablishedYear] = useState('');
+
+  const continueSetup = () => Alert.alert('Setup draft', 'We will connect this setup flow later.');
+
+  return (
+    <View style={styles.screen}>
+      <StatusBar style="light" translucent backgroundColor="transparent" />
+      <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        <View style={[styles.setupPage, narrow && styles.contentNarrow]}>
+          <View style={[styles.setupHero, compact && styles.setupHeroCompact, narrow && styles.setupHeroNarrow]}>
+            <Image
+              source={DASHBOARD_HERO_IMAGE}
+              style={[StyleSheet.absoluteFill, styles.setupHeroImage]}
+              contentFit="cover"
+              contentPosition="center"
+              transition={350}
+              cachePolicy="memory-disk"
+            />
+            <LinearGradient
+              colors={['rgba(2, 7, 9, 0.24)', 'rgba(2, 7, 9, 0.12)', '#040a0d']}
+              locations={[0, 0.43, 1]}
+              style={StyleSheet.absoluteFill}
+            />
+            <SafeAreaView edges={['top']} style={styles.heroSafeArea}>
+              <View style={[styles.topBar, narrow && styles.topBarNarrow]}>
+                <IconButton icon="arrow-back" label="Back" compact={narrow} onPress={onBack} />
+                <View style={styles.topBarSpacer} />
+              </View>
+              <View style={[styles.heroCopy, compact && styles.heroCopyCompact, narrow && styles.heroCopyNarrow]}>
+                <Text style={styles.heroEyebrow}>FARM SETUP</Text>
+                <Text style={[styles.brand, compact && styles.brandCompact, narrow && styles.brandNarrow]}>
+                  {farmName.trim() || 'New Farm'}
+                </Text>
+                <Text style={[styles.tagline, narrow && styles.taglineNarrow]}>
+                  {[location.trim(), establishedYear.trim() && `Est. ${establishedYear.trim()}`].filter(Boolean).join(' / ') || 'Add your farm details to preview the banner.'}
+                </Text>
+              </View>
+            </SafeAreaView>
+          </View>
+
+          <View style={[styles.content, narrow && styles.contentNarrow]}>
+            <View style={styles.setupIntro}>
+              <Text style={styles.heroEyebrow}>CREATE FARM</Text>
+              <Text style={[styles.setupIntroTitle, compact && styles.setupIntroTitleCompact]}>
+                Start with your farm identity
+              </Text>
+              <Text style={styles.setupIntroText}>
+                Add the banner and basic farm details first. We will connect the setup flow later.
+              </Text>
+            </View>
+            <View style={styles.setupStepTrack}>
+              <View style={styles.setupStepActive}><Text style={styles.setupStepActiveText}>1</Text></View>
+              <View style={styles.setupStepLine} />
+              <View style={styles.setupStep}><Text style={styles.setupStepText}>2</Text></View>
+              <View style={styles.setupStepLine} />
+              <View style={styles.setupStep}><Text style={styles.setupStepText}>3</Text></View>
+            </View>
+            <View style={styles.sectionHeading}><Text style={[styles.sectionTitle, narrow && styles.sectionTitleNarrow]}>Farm Banner</Text><Text style={styles.sectionMeta}>Step 1</Text></View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Choose farm banner"
+              onPress={() => Alert.alert('Farm Banner', 'Banner upload will be added later.')}
+              style={({ pressed }) => [styles.setupBannerCard, pressed && styles.cardPressed]}
+            >
+              <LinearGradient
+                colors={['#0d171b', '#071014']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={StyleSheet.absoluteFill}
+              />
+              <View style={styles.setupBannerFrame}>
+                <View style={styles.setupBannerIcon}>
+                  <MaterialCommunityIcons name="image-plus" size={25} color={THEME_ORANGE} />
+                </View>
+                <Text style={styles.setupBannerTitle}>Add Farm Banner</Text>
+                <Text style={styles.setupBannerSubtitle}>This will become the header image for your farm.</Text>
+              </View>
+            </Pressable>
+
+            <View style={styles.setupPreviewCard}>
+              <Text style={styles.setupPreviewLabel}>Banner Preview</Text>
+              <Text numberOfLines={1} style={styles.setupPreviewName}>{farmName.trim() || 'Farm name'}</Text>
+              <Text numberOfLines={1} style={styles.setupPreviewMeta}>
+                {[location.trim(), establishedYear.trim() && `Est. ${establishedYear.trim()}`].filter(Boolean).join(' / ') || 'Location / Established year'}
+              </Text>
+            </View>
+
+            <View style={styles.sectionHeading}><Text style={[styles.sectionTitle, narrow && styles.sectionTitleNarrow]}>Farm Details</Text><Text style={styles.sectionMeta}>Step 2</Text></View>
+            <View style={styles.setupPanel}>
+              <SetupField icon="barn" label="Farm Name" value={farmName} onChangeText={setFarmName} placeholder="Enter farm name" />
+              <View style={styles.activityDivider} />
+              <SetupField icon="map-marker-outline" label="Location" value={location} onChangeText={setLocation} placeholder="City, province" />
+              <View style={styles.activityDivider} />
+              <SetupField icon="calendar-outline" label="Established Year" value={establishedYear} onChangeText={setEstablishedYear} placeholder="2020" keyboardType="number-pad" />
+            </View>
+            <View style={styles.setupActions}>
+              <Pressable accessibilityRole="button" accessibilityLabel="Back to landing" onPress={onBack} style={({ pressed }) => [styles.setupSecondaryButton, pressed && styles.pressed]}>
+                <Text style={styles.setupSecondaryText}>Back</Text>
+              </Pressable>
+              <Pressable accessibilityRole="button" accessibilityLabel="Continue setup" onPress={continueSetup} style={({ pressed }) => [styles.setupPrimaryButton, pressed && styles.pressed]}>
+                <Ionicons name="checkmark-circle-outline" size={18} color="#ffffff" />
+                <Text style={styles.setupPrimaryText}>Continue</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </ScrollView>
+    </View>
+  );
+}
+
+function ProcessScreen({ farmName, location, establishedYear, onOpenShowcase, onOpenManagement, onOpenProcess, onOpenBreedingHatchery, onOpenSettings }) {
+  const { width } = useWindowDimensions();
+  const compact = width < 480;
+  const narrow = width < 390;
+
+  return (
+    <View style={styles.screen}>
+      <StatusBar style="light" translucent backgroundColor="transparent" />
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        <View style={styles.page}>
+          <FarmBanner
+            farmName={farmName}
+            location={location}
+            establishedYear={establishedYear}
+            onOpenShowcase={onOpenShowcase}
+            onOpenManagement={onOpenManagement}
+            onOpenSettings={onOpenSettings}
+          />
+          <View style={[styles.content, narrow && styles.contentNarrow]}>
+            <WorkspaceTabs
+              activeTab="process"
+              compact={compact}
+              onOpenShowcase={onOpenShowcase}
+              onOpenManagement={onOpenManagement}
+              onOpenProcess={onOpenProcess}
+            />
+            <View style={styles.sectionHeading}><Text style={[styles.sectionTitle, narrow && styles.sectionTitleNarrow]}>Process Stages</Text><Text style={styles.sectionMeta}>1 stage</Text></View>
+            <View style={[styles.moduleGrid, compact && styles.moduleGridCompact]}>
+              {PROCESS_STAGES.map((item) => (
+                <ModuleCard
+                  key={item.title}
+                  item={item}
+                  compact={compact}
+                  onPress={onOpenBreedingHatchery}
+                />
+              ))}
+            </View>
+          </View>
+        </View>
+      </ScrollView>
+    </View>
+  );
+}
+
+function BreedingHatcheryProcessScreen({ farmName, location, establishedYear, onBack, onOpenShowcase, onOpenManagement, onOpenProcess, onOpenSettings }) {
+  const { width } = useWindowDimensions();
+  const compact = width < 480;
+  const narrow = width < 390;
+
+  return (
+    <View style={styles.screen}>
+      <StatusBar style="light" translucent backgroundColor="transparent" />
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        <View style={styles.page}>
+          <FarmBanner
+            farmName={farmName}
+            location={location}
+            establishedYear={establishedYear}
+            onOpenShowcase={onOpenShowcase}
+            onOpenManagement={onOpenManagement}
+            onOpenSettings={onOpenSettings}
+          />
+          <View style={[styles.content, narrow && styles.contentNarrow]}>
+            <WorkspaceTabs
+              activeTab="process"
+              compact={compact}
+              onOpenShowcase={onOpenShowcase}
+              onOpenManagement={onOpenManagement}
+              onOpenProcess={onOpenProcess}
+            />
+            <Pressable accessibilityRole="button" accessibilityLabel="Back to Process" onPress={onBack} style={({ pressed }) => [styles.processBackButton, pressed && styles.pressed]}>
+              <Ionicons name="arrow-back" size={15} color={THEME_ORANGE} />
+              <Text style={styles.processBackText}>Process</Text>
+            </Pressable>
+            <View style={styles.processDetailHeader}>
+              <Text style={[styles.sectionTitle, narrow && styles.sectionTitleNarrow]}>Breeding & Hatchery</Text>
+              <Text style={styles.processDetailSubtitle}>Manage pairing, egg collection, marking, incubation, candling and hatching in one place.</Text>
+            </View>
+            <View style={styles.hatcherySummaryGrid}>
+              {HATCHERY_SUMMARY.map((item) => (
+                <View key={item.label} style={styles.hatcherySummaryCard}>
+                  <Text style={styles.hatcherySummaryValue}>{item.value}</Text>
+                  <Text numberOfLines={2} style={styles.hatcherySummaryLabel}>{item.label}</Text>
+                </View>
+              ))}
+            </View>
+            <View style={styles.sectionHeading}><Text style={[styles.sectionTitle, narrow && styles.sectionTitleNarrow]}>Tools</Text><Text style={styles.sectionMeta}>4 steps</Text></View>
+            <View style={styles.activityList}>
+              {HATCHERY_TOOLS.map((item, index) => (
+                <HatcheryToolRow key={item.title} item={item} isLast={index === HATCHERY_TOOLS.length - 1} />
+              ))}
+            </View>
+          </View>
+        </View>
+      </ScrollView>
+    </View>
+  );
+}
+
+function Dashboard({ farmName, location, establishedYear, totalWins, onOpenShowcase, onOpenProcess, onOpenSettings, onOpenNeedsAttention, onOpenFlock, onOpenBreeding, onOpenHealthCare, onOpenEggsIncubation, onOpenTasks, onOpenTeam, onOpenSales }) {
   const { width } = useWindowDimensions();
   const compact = width < 480;
   const narrow = width < 390;
@@ -519,6 +862,7 @@ function Dashboard({ farmName, location, establishedYear, totalWins, onOpenShowc
               compact={compact}
               onOpenShowcase={onOpenShowcase}
               onOpenManagement={() => {}}
+              onOpenProcess={onOpenProcess}
             />
             <View style={[styles.statsPanel, compact && styles.statsPanelCompact]}>
               {dashboardStats.map((item, index) => (
@@ -588,7 +932,7 @@ function Dashboard({ farmName, location, establishedYear, totalWins, onOpenShowc
 }
 
 export default function App() {
-  const [screen, setScreen] = useState('dashboard');
+  const [screen, setScreen] = useState('landing');
   const [createBatchReturn, setCreateBatchReturn] = useState('eggs-incubation');
   const [selectedBatchId, setSelectedBatchId] = useState('B-001');
   const [candlingResultsByBatch, setCandlingResultsByBatch] = useState({});
@@ -667,13 +1011,45 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      {screen === 'showcase' ? (
+      {screen === 'landing' ? (
+        <LandingScreen
+          onSetup={() => setScreen('farm-setup')}
+          onExisting={() => setScreen('dashboard')}
+        />
+      ) : screen === 'farm-setup' ? (
+        <FarmSetupScreen
+          onBack={() => setScreen('landing')}
+        />
+      ) : screen === 'showcase' ? (
         <ShowcaseScreen
           farmName={managementSettings.farmName}
           location={managementSettings.location}
           establishedYear={managementSettings.establishedYear}
           onOpenShowcase={() => {}}
           onOpenManagement={() => setScreen('dashboard')}
+          onOpenProcess={() => setScreen('process')}
+          onOpenSettings={() => setScreen('management-settings')}
+        />
+      ) : screen === 'process' ? (
+        <ProcessScreen
+          farmName={managementSettings.farmName}
+          location={managementSettings.location}
+          establishedYear={managementSettings.establishedYear}
+          onOpenShowcase={() => setScreen('showcase')}
+          onOpenManagement={() => setScreen('dashboard')}
+          onOpenProcess={() => {}}
+          onOpenBreedingHatchery={() => setScreen('breeding-hatchery-process')}
+          onOpenSettings={() => setScreen('management-settings')}
+        />
+      ) : screen === 'breeding-hatchery-process' ? (
+        <BreedingHatcheryProcessScreen
+          farmName={managementSettings.farmName}
+          location={managementSettings.location}
+          establishedYear={managementSettings.establishedYear}
+          onBack={() => setScreen('process')}
+          onOpenShowcase={() => setScreen('showcase')}
+          onOpenManagement={() => setScreen('dashboard')}
+          onOpenProcess={() => setScreen('process')}
           onOpenSettings={() => setScreen('management-settings')}
         />
       ) : screen === 'management-settings' ? (
@@ -1220,6 +1596,7 @@ export default function App() {
           establishedYear={managementSettings.establishedYear}
           totalWins={totalWins}
           onOpenShowcase={() => setScreen('showcase')}
+          onOpenProcess={() => setScreen('process')}
           onOpenSettings={() => setScreen('management-settings')}
           onOpenNeedsAttention={() => {
             setAttentionReturn('dashboard');
@@ -1278,6 +1655,32 @@ const styles = StyleSheet.create({
     letterSpacing: 0, maxWidth: 490,
   },
   taglineNarrow: { fontSize: 11, lineHeight: 16, marginTop: 5 },
+  landingSafeArea: { flex: 1, justifyContent: 'flex-end' },
+  landingContent: { width: '100%', maxWidth: 720, alignSelf: 'center', paddingHorizontal: 18, paddingBottom: 38 },
+  landingContentCompact: { paddingHorizontal: 14, paddingBottom: 28 },
+  landingTitle: {
+    color: '#f5f4f0', fontSize: 38, lineHeight: 44, fontWeight: '800',
+    fontFamily: Platform.select({ ios: 'Georgia', android: 'serif', web: 'Georgia' }),
+    letterSpacing: 0, textShadowColor: 'rgba(0, 0, 0, 0.8)',
+    textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 6,
+  },
+  landingTitleCompact: { fontSize: 34, lineHeight: 40 },
+  landingTitleNarrow: { fontSize: 30, lineHeight: 35 },
+  landingSubtitle: { marginTop: 7, color: '#c4cbcd', fontSize: 13, lineHeight: 19, maxWidth: 390 },
+  landingSubtitleNarrow: { fontSize: 11, lineHeight: 16 },
+  landingActions: { marginTop: 20, gap: 10 },
+  landingPrimaryButton: {
+    minHeight: 48, borderRadius: 8, backgroundColor: THEME_ORANGE,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    paddingHorizontal: 16,
+  },
+  landingSecondaryButton: {
+    minHeight: 48, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(255, 122, 0, 0.55)',
+    backgroundColor: 'rgba(4, 10, 13, 0.76)', flexDirection: 'row',
+    alignItems: 'center', justifyContent: 'center', gap: 8, paddingHorizontal: 16,
+  },
+  landingPrimaryText: { color: '#ffffff', fontSize: 14, lineHeight: 18, fontWeight: '800' },
+  landingSecondaryText: { color: '#f2f5f6', fontSize: 14, lineHeight: 18, fontWeight: '800' },
   farmMeta: { marginTop: 11, flexDirection: 'row', alignItems: 'center', gap: 9 }, farmMetaNarrow: { marginTop: 8, gap: 7 }, farmMetaItem: { minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 4 }, farmMetaDivider: { width: 1, height: 13, backgroundColor: 'rgba(196,203,205,0.45)' }, farmMetaText: { flexShrink: 1, color: '#c4cbcd', fontSize: 10, fontWeight: '500' },
   socialProof: {
     marginTop: 12, alignSelf: 'flex-start', minHeight: 34, maxWidth: '100%',
@@ -1311,6 +1714,30 @@ const styles = StyleSheet.create({
   workspaceTabTextActive: { color: '#ffffff' },
   content: { paddingHorizontal: 10, paddingBottom: 34 },
   contentNarrow: { paddingHorizontal: 8 },
+  setupPage: { width: '100%', maxWidth: 720, minHeight: '100%', backgroundColor: '#020709', paddingHorizontal: 10, paddingBottom: 34 },
+  setupHero: {
+    height: 222, marginTop: 10, borderRadius: 8, borderWidth: 1,
+    borderColor: '#26343a', overflow: 'hidden', backgroundColor: '#081115',
+  },
+  setupHeroCompact: { height: 202 },
+  setupHeroNarrow: { height: 188 },
+  setupHeroImage: { opacity: 0.16 },
+  setupIntro: { marginTop: 14, paddingHorizontal: 2 },
+  setupIntroTitle: { marginTop: 5, color: '#f5f4f0', fontSize: 23, lineHeight: 29, fontWeight: '800', letterSpacing: 0 },
+  setupIntroTitleCompact: { fontSize: 21, lineHeight: 27 },
+  setupIntroText: { marginTop: 6, color: '#9ca8ab', fontSize: 10, lineHeight: 15, maxWidth: 440 },
+  setupStepTrack: { marginTop: 15, marginBottom: 3, flexDirection: 'row', alignItems: 'center' },
+  setupStep: {
+    width: 24, height: 24, borderRadius: 12, borderWidth: 1, borderColor: '#2b393f',
+    backgroundColor: '#081115', alignItems: 'center', justifyContent: 'center',
+  },
+  setupStepActive: {
+    width: 24, height: 24, borderRadius: 12, backgroundColor: THEME_ORANGE,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  setupStepText: { color: '#7f8b8f', fontSize: 9, lineHeight: 12, fontWeight: '800' },
+  setupStepActiveText: { color: '#ffffff', fontSize: 9, lineHeight: 12, fontWeight: '900' },
+  setupStepLine: { flex: 1, height: 1, backgroundColor: '#243238' },
   statsPanel: {
     minHeight: 90, marginTop: 12, borderWidth: 1, borderColor: '#18242a',
     borderRadius: 8, backgroundColor: '#0a1317', flexDirection: 'row',
@@ -1372,6 +1799,58 @@ const styles = StyleSheet.create({
     marginTop: 3, color: '#9ba5a8', fontSize: 9, lineHeight: 13, letterSpacing: 0,
   },
   overdue: { color: '#ff3d4d' },
+  setupBannerCard: {
+    height: 148, borderRadius: 8, borderWidth: 1, borderStyle: 'dashed',
+    borderColor: 'rgba(255, 122, 0, 0.55)', backgroundColor: '#091216',
+    overflow: 'hidden', justifyContent: 'center',
+  },
+  setupBannerImage: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 },
+  setupBannerCopy: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 12, zIndex: 1 },
+  setupBannerFrame: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: 18, zIndex: 1 },
+  setupBannerIcon: {
+    width: 52, height: 52, borderRadius: 26, borderWidth: 1,
+    borderColor: 'rgba(255, 122, 0, 0.5)', backgroundColor: 'rgba(255, 122, 0, 0.12)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  setupBannerTextWrap: { flex: 1, minWidth: 0 },
+  setupBannerTitle: { marginTop: 10, color: '#edf0f1', fontSize: 14, lineHeight: 18, fontWeight: '800', letterSpacing: 0 },
+  setupBannerSubtitle: { marginTop: 4, color: '#aeb8bb', fontSize: 9, lineHeight: 13, textAlign: 'center', letterSpacing: 0 },
+  setupPreviewCard: {
+    marginTop: 9, borderRadius: 8, borderWidth: 1, borderColor: '#223037',
+    backgroundColor: '#071014', paddingHorizontal: 12, paddingVertical: 11,
+  },
+  setupPreviewLabel: { color: THEME_ORANGE, fontSize: 8, lineHeight: 11, fontWeight: '900' },
+  setupPreviewName: { marginTop: 6, color: '#edf0f1', fontSize: 15, lineHeight: 19, fontWeight: '800' },
+  setupPreviewMeta: { marginTop: 3, color: '#89969a', fontSize: 9, lineHeight: 12, fontWeight: '600' },
+  setupPanel: { borderWidth: 1, borderColor: '#26343a', borderRadius: 8, backgroundColor: '#091216', overflow: 'hidden' },
+  setupField: { minHeight: 70, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  setupFieldCopy: { flex: 1, minWidth: 0 },
+  setupFieldLabel: { color: '#dfe4e5', fontSize: 10, lineHeight: 13, fontWeight: '800' },
+  setupInput: { height: 35, paddingVertical: 0, color: '#e8ecee', fontSize: 12, letterSpacing: 0, outlineStyle: 'none' },
+  setupActions: { marginTop: 14, flexDirection: 'row', gap: 8 },
+  setupSecondaryButton: {
+    flex: 0.75, minHeight: 48, borderRadius: 8, borderWidth: 1, borderColor: '#2a383e',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  setupPrimaryButton: {
+    flex: 1.25, minHeight: 48, borderRadius: 8, backgroundColor: THEME_ORANGE,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
+  },
+  setupSecondaryText: { color: '#bac2c4', fontSize: 12, lineHeight: 16, fontWeight: '700' },
+  setupPrimaryText: { color: '#ffffff', fontSize: 12, lineHeight: 16, fontWeight: '800' },
   activityHeading: { marginTop: 23, marginBottom: 9, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' }, activitySectionTitle: { color: '#e7ebec', fontSize: 16, fontWeight: '700' }, activitySectionSubtitle: { marginTop: 3, color: '#707d81', fontSize: 8 }, activityToday: { color: THEME_ORANGE, fontSize: 8, fontWeight: '700' }, activityList: { borderWidth: 1, borderColor: '#26343a', borderRadius: 8, backgroundColor: '#091216', overflow: 'hidden' }, activityRow: { minHeight: 65, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 9 }, activityDivider: { borderBottomWidth: 1, borderBottomColor: '#223037' }, activityPressed: { backgroundColor: '#111d22' }, activityIcon: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,122,0,0.08)', alignItems: 'center', justifyContent: 'center' }, activityCopy: { flex: 1, minWidth: 0 }, activityTitle: { color: '#dfe4e5', fontSize: 10, fontWeight: '700' }, activityDetail: { marginTop: 4, color: '#788589', fontSize: 8 }, activityTime: { color: '#8a9699', fontSize: 7 },
+  processBackButton: { alignSelf: 'flex-start', marginTop: 4, flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 7, paddingRight: 10 },
+  processBackText: { color: THEME_ORANGE, fontSize: 10, lineHeight: 13, fontWeight: '800' },
+  processDetailHeader: { marginTop: 7, marginBottom: 12 },
+  processDetailSubtitle: { marginTop: 5, color: '#8a9699', fontSize: 10, lineHeight: 15 },
+  hatcherySummaryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  hatcherySummaryCard: {
+    flexBasis: '47%', flexGrow: 1, minHeight: 66, maxWidth: '49%', borderRadius: 8,
+    borderWidth: 1, borderColor: '#26343a', backgroundColor: '#091216',
+    justifyContent: 'center', paddingHorizontal: 11, paddingVertical: 10,
+  },
+  hatcherySummaryValue: { color: '#f4f5f5', fontSize: 20, lineHeight: 24, fontWeight: '800' },
+  hatcherySummaryLabel: { marginTop: 3, color: '#929ca0', fontSize: 8, lineHeight: 11, fontWeight: '700' },
+  hatcheryToolRow: { minHeight: 66, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 9 },
   cardPressed: { opacity: 0.72, transform: [{ scale: 0.99 }] },
 });
