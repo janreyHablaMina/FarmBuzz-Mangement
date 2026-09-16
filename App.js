@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
@@ -25,7 +26,7 @@ import IncubationBatchDetailScreen from './IncubationBatchDetailScreen';
 import IncubationHistoryScreen from './IncubationHistoryScreen';
 import CandlingScreen from './CandlingScreen';
 import TasksScreen from './TasksScreen';
-import TeamScreen, { MEMBERS } from './TeamScreen';
+import TeamScreen, { FARMS, MEMBERS } from './TeamScreen';
 import SalesScreen from './SalesScreen';
 import ChickenPurchaseScreen from './ChickenPurchaseScreen';
 import AddBirdScreen from './AddBirdScreen';
@@ -538,7 +539,7 @@ function ShowcaseScreen({ farmName, location, establishedYear, onOpenShowcase, o
   );
 }
 
-function LandingScreen({ onSetup, onExisting }) {
+function LandingScreen({ onSetup, onExisting, onFarms }) {
   const { width } = useWindowDimensions();
   const compact = width < 480;
   const narrow = width < 390;
@@ -566,7 +567,7 @@ function LandingScreen({ onSetup, onExisting }) {
             Management Tools
           </Text>
           <Text style={[styles.landingSubtitle, narrow && styles.landingSubtitleNarrow]}>
-            Start a new farm setup or continue with an existing farm.
+            Start a new farm setup, open an existing workspace, or browse your farms.
           </Text>
           <View style={styles.landingActions}>
             <Pressable
@@ -587,6 +588,15 @@ function LandingScreen({ onSetup, onExisting }) {
               <Ionicons name="folder-open-outline" size={18} color={THEME_ORANGE} />
               <Text style={styles.landingSecondaryText}>Existing</Text>
             </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="View farms"
+              onPress={onFarms}
+              style={({ pressed }) => [styles.landingSecondaryButton, pressed && styles.pressed]}
+            >
+              <MaterialCommunityIcons name="barn" size={18} color={THEME_ORANGE} />
+              <Text style={styles.landingSecondaryText}>Farms</Text>
+            </Pressable>
           </View>
         </View>
       </SafeAreaView>
@@ -594,15 +604,90 @@ function LandingScreen({ onSetup, onExisting }) {
   );
 }
 
-function SetupField({ icon, label, value, onChangeText, placeholder, keyboardType }) {
+function FarmsScreen({ onBack, onOpenFarm }) {
+  const { width } = useWindowDimensions();
+  const compact = width < 480;
+  const narrow = width < 390;
+  const farmCards = FARMS.filter((farm) => farm.id !== 'all');
+
   return (
-    <View style={styles.setupField}>
-      <View style={styles.activityIcon}>
-        <MaterialCommunityIcons name={icon} size={19} color={THEME_ORANGE} />
-      </View>
-      <View style={styles.setupFieldCopy}>
-        <Text style={styles.setupFieldLabel}>{label}</Text>
+    <View style={styles.screen}>
+      <StatusBar style="light" translucent backgroundColor="transparent" />
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        <View style={styles.page}>
+          <View style={[styles.farmsHero, compact && styles.farmsHeroCompact]}>
+            <Image source={DASHBOARD_HERO_IMAGE} style={StyleSheet.absoluteFill} contentFit="cover" contentPosition="center" cachePolicy="memory-disk" />
+            <LinearGradient
+              colors={['rgba(2, 7, 9, 0.2)', 'rgba(2, 7, 9, 0.44)', 'rgba(2,7,9,0.96)']}
+              locations={[0, 0.45, 1]}
+              style={StyleSheet.absoluteFill}
+            />
+            <SafeAreaView edges={['top']} style={styles.heroSafeArea}>
+              <View style={[styles.topBar, narrow && styles.topBarNarrow]}>
+                <IconButton icon="arrow-back" label="Back" compact={narrow} onPress={onBack} />
+                <View style={styles.topBarSpacer} />
+              </View>
+              <View style={[styles.heroCopy, compact && styles.heroCopyCompact, narrow && styles.heroCopyNarrow]}>
+                <Text style={styles.heroEyebrow}>FARMS</Text>
+                <Text style={[styles.brand, compact && styles.brandCompact, narrow && styles.brandNarrow]}>Your Farms</Text>
+                <Text style={[styles.tagline, narrow && styles.taglineNarrow]}>Choose which farm workspace you want to manage.</Text>
+              </View>
+            </SafeAreaView>
+          </View>
+
+          <View style={[styles.content, narrow && styles.contentNarrow]}>
+            <View style={styles.farmsSummaryPanel}>
+              <View style={styles.farmsSummaryItem}>
+                <Text style={styles.farmsSummaryValue}>{farmCards.length}</Text>
+                <Text style={styles.farmsSummaryLabel}>Active Farms</Text>
+              </View>
+              <View style={styles.farmsSummaryDivider} />
+              <View style={styles.farmsSummaryItem}>
+                <Text style={styles.farmsSummaryValue}>{MEMBERS.length}</Text>
+                <Text style={styles.farmsSummaryLabel}>Team Coverage</Text>
+              </View>
+            </View>
+
+            <View style={styles.farmsList}>
+              {farmCards.map((farm, index) => (
+                <Pressable
+                  key={farm.id}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Open ${farm.name}`}
+                  onPress={onOpenFarm}
+                  style={({ pressed }) => [styles.farmListCard, pressed && styles.cardPressed]}
+                >
+                  <Image source={index === 1 ? FLOCK_HERO_IMAGE : index === 2 ? HEALTH_CARE_HERO_IMAGE : DASHBOARD_HERO_IMAGE} style={StyleSheet.absoluteFill} contentFit="cover" cachePolicy="memory-disk" />
+                  <LinearGradient colors={['rgba(7, 16, 20, 0.5)', 'rgba(7, 16, 20, 0.96)']} style={StyleSheet.absoluteFill} />
+                  <View style={styles.farmListIcon}>
+                    <MaterialCommunityIcons name="barn" size={22} color={THEME_ORANGE} />
+                  </View>
+                  <View style={styles.farmListCopy}>
+                    <Text numberOfLines={1} style={styles.farmListName}>{farm.name}</Text>
+                    <Text numberOfLines={1} style={styles.farmListLocation}>{farm.location}</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color="#c4cbcd" />
+                </Pressable>
+              ))}
+            </View>
+          </View>
+        </View>
+      </ScrollView>
+    </View>
+  );
+}
+
+function SetupField({ icon, label, value, onChangeText, placeholder, keyboardType, trailingIcon, wide }) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <View style={[styles.setupField, wide && styles.setupFieldWide]}>
+      <Text style={styles.setupFieldLabel}>{label}</Text>
+      <View style={[styles.setupFieldCopy, focused && styles.setupFieldFocused]}>
+        <MaterialCommunityIcons name={icon} size={19} color={focused ? THEME_ORANGE : '#ff8a16'} />
         <TextInput
+          accessibilityLabel={label}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
@@ -611,8 +696,30 @@ function SetupField({ icon, label, value, onChangeText, placeholder, keyboardTyp
           selectionColor={THEME_ORANGE}
           style={styles.setupInput}
         />
+        {!!trailingIcon && <Ionicons name={trailingIcon} size={16} color="#7f8a8d" />}
       </View>
     </View>
+  );
+}
+
+function VisibilityOption({ icon, title, description, selected, onPress }) {
+  return (
+    <Pressable
+      accessibilityRole="radio"
+      accessibilityState={{ checked: selected }}
+      accessibilityLabel={`${title} farm visibility`}
+      onPress={onPress}
+      style={({ pressed }) => [styles.visibilityOption, selected && styles.visibilityOptionActive, pressed && styles.pressed]}
+    >
+      <View style={[styles.visibilityRadio, selected && styles.visibilityRadioActive]} />
+      <View style={styles.visibilityIcon}>
+        <MaterialCommunityIcons name={icon} size={20} color={selected ? THEME_ORANGE : '#b9c1c4'} />
+      </View>
+      <View style={styles.visibilityCopy}>
+        <Text style={styles.visibilityTitle}>{title}</Text>
+        <Text numberOfLines={2} style={styles.visibilityDescription}>{description}</Text>
+      </View>
+    </Pressable>
   );
 }
 
@@ -623,107 +730,169 @@ function FarmSetupScreen({ onBack }) {
   const [farmName, setFarmName] = useState('');
   const [location, setLocation] = useState('');
   const [establishedYear, setEstablishedYear] = useState('');
+  const [bannerUri, setBannerUri] = useState(null);
+  const [bannerError, setBannerError] = useState('');
+  const [visibility, setVisibility] = useState('published');
+  const assignedMembers = [MEMBERS[2], MEMBERS[0]];
 
-  const continueSetup = () => Alert.alert('Setup draft', 'We will connect this setup flow later.');
+  const chooseBanner = async () => {
+    setBannerError('');
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.9 });
+      if (!result.canceled && result.assets?.[0]?.uri) {
+        setBannerUri(result.assets[0].uri);
+      }
+    } catch {
+      setBannerError('Unable to open this photo. Please try again.');
+    }
+  };
+
+  const saveDraft = () => Alert.alert('Draft saved', 'Your farm setup draft is ready to continue later.');
+  const createFarm = () => Alert.alert('Create farm', 'We will connect this farm setup flow later.');
 
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, styles.setupScreen]}>
       <StatusBar style="light" translucent backgroundColor="transparent" />
       <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        <View style={[styles.setupPage, narrow && styles.contentNarrow]}>
-          <View style={[styles.setupHero, compact && styles.setupHeroCompact, narrow && styles.setupHeroNarrow]}>
-            <Image
-              source={DASHBOARD_HERO_IMAGE}
-              style={[StyleSheet.absoluteFill, styles.setupHeroImage]}
-              contentFit="cover"
-              contentPosition="center"
-              transition={350}
-              cachePolicy="memory-disk"
-            />
+        <View style={styles.setupPage}>
+          <View style={[styles.setupHeroShell, compact && styles.setupHeroCompact]}>
+            <Image source={DASHBOARD_HERO_IMAGE} style={StyleSheet.absoluteFill} contentFit="cover" contentPosition="center" cachePolicy="memory-disk" />
             <LinearGradient
-              colors={['rgba(2, 7, 9, 0.24)', 'rgba(2, 7, 9, 0.12)', '#040a0d']}
-              locations={[0, 0.43, 1]}
+              colors={['rgba(2,7,9,0.18)', 'rgba(2,7,9,0.44)', 'rgba(2,7,9,0.96)']}
+              locations={[0, 0.42, 1]}
               style={StyleSheet.absoluteFill}
             />
-            <SafeAreaView edges={['top']} style={styles.heroSafeArea}>
-              <View style={[styles.topBar, narrow && styles.topBarNarrow]}>
+            <SafeAreaView edges={['top']} style={styles.setupHeroContent}>
+              <View style={[styles.setupHeroHeader, narrow && styles.setupHeroHeaderNarrow]}>
                 <IconButton icon="arrow-back" label="Back" compact={narrow} onPress={onBack} />
                 <View style={styles.topBarSpacer} />
               </View>
-              <View style={[styles.heroCopy, compact && styles.heroCopyCompact, narrow && styles.heroCopyNarrow]}>
+              <View style={[styles.setupIntro, narrow && styles.setupIntroNarrow]}>
                 <Text style={styles.heroEyebrow}>FARM SETUP</Text>
-                <Text style={[styles.brand, compact && styles.brandCompact, narrow && styles.brandNarrow]}>
-                  {farmName.trim() || 'New Farm'}
-                </Text>
-                <Text style={[styles.tagline, narrow && styles.taglineNarrow]}>
-                  {[location.trim(), establishedYear.trim() && `Est. ${establishedYear.trim()}`].filter(Boolean).join(' / ') || 'Add your farm details to preview the banner.'}
-                </Text>
+                <Text style={[styles.setupIntroTitle, compact && styles.setupIntroTitleCompact, narrow && styles.setupIntroTitleNarrow]}>Set Up Your Farm</Text>
+                <Text style={[styles.setupIntroText, narrow && styles.setupIntroTextNarrow]}>Create your farm profile. You can save it as a draft and finish it later.</Text>
               </View>
             </SafeAreaView>
           </View>
 
-          <View style={[styles.content, narrow && styles.contentNarrow]}>
-            <View style={styles.setupIntro}>
-              <Text style={styles.heroEyebrow}>CREATE FARM</Text>
-              <Text style={[styles.setupIntroTitle, compact && styles.setupIntroTitleCompact]}>
-                Start with your farm identity
-              </Text>
-              <Text style={styles.setupIntroText}>
-                Add the banner and basic farm details first. We will connect the setup flow later.
-              </Text>
-            </View>
-            <View style={styles.setupStepTrack}>
-              <View style={styles.setupStepActive}><Text style={styles.setupStepActiveText}>1</Text></View>
-              <View style={styles.setupStepLine} />
-              <View style={styles.setupStep}><Text style={styles.setupStepText}>2</Text></View>
-              <View style={styles.setupStepLine} />
-              <View style={styles.setupStep}><Text style={styles.setupStepText}>3</Text></View>
-            </View>
-            <View style={styles.sectionHeading}><Text style={[styles.sectionTitle, narrow && styles.sectionTitleNarrow]}>Farm Banner</Text><Text style={styles.sectionMeta}>Step 1</Text></View>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Choose farm banner"
-              onPress={() => Alert.alert('Farm Banner', 'Banner upload will be added later.')}
-              style={({ pressed }) => [styles.setupBannerCard, pressed && styles.cardPressed]}
-            >
-              <LinearGradient
-                colors={['#0d171b', '#071014']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={StyleSheet.absoluteFill}
-              />
-              <View style={styles.setupBannerFrame}>
-                <View style={styles.setupBannerIcon}>
-                  <MaterialCommunityIcons name="image-plus" size={25} color={THEME_ORANGE} />
-                </View>
-                <Text style={styles.setupBannerTitle}>Add Farm Banner</Text>
-                <Text style={styles.setupBannerSubtitle}>This will become the header image for your farm.</Text>
-              </View>
-            </Pressable>
-
-            <View style={styles.setupPreviewCard}>
-              <Text style={styles.setupPreviewLabel}>Banner Preview</Text>
-              <Text numberOfLines={1} style={styles.setupPreviewName}>{farmName.trim() || 'Farm name'}</Text>
-              <Text numberOfLines={1} style={styles.setupPreviewMeta}>
-                {[location.trim(), establishedYear.trim() && `Est. ${establishedYear.trim()}`].filter(Boolean).join(' / ') || 'Location / Established year'}
-              </Text>
-            </View>
-
-            <View style={styles.sectionHeading}><Text style={[styles.sectionTitle, narrow && styles.sectionTitleNarrow]}>Farm Details</Text><Text style={styles.sectionMeta}>Step 2</Text></View>
+          <View style={[styles.setupBody, narrow && styles.contentNarrow]}>
             <View style={styles.setupPanel}>
-              <SetupField icon="barn" label="Farm Name" value={farmName} onChangeText={setFarmName} placeholder="Enter farm name" />
-              <View style={styles.activityDivider} />
-              <SetupField icon="map-marker-outline" label="Location" value={location} onChangeText={setLocation} placeholder="City, province" />
-              <View style={styles.activityDivider} />
-              <SetupField icon="calendar-outline" label="Established Year" value={establishedYear} onChangeText={setEstablishedYear} placeholder="2020" keyboardType="number-pad" />
+              <View style={styles.setupSectionHeader}>
+                <View>
+                  <Text style={styles.setupSectionKicker}>Identity</Text>
+                  <Text style={styles.setupSectionTitle}>Farm Banner</Text>
+                </View>
+                <Text style={styles.setupOptional}>1280 x 720 recommended</Text>
+              </View>
+
+              <View style={styles.setupBannerPreview}>
+                <Image
+                  source={bannerUri ? { uri: bannerUri } : DASHBOARD_HERO_IMAGE}
+                  style={StyleSheet.absoluteFill}
+                  contentFit="cover"
+                  contentPosition="center"
+                  transition={300}
+                  cachePolicy="memory-disk"
+                  onError={() => {
+                    setBannerUri(null);
+                    setBannerError('This photo could not be displayed. Please choose another.');
+                  }}
+                />
+                <LinearGradient
+                  colors={['rgba(2, 7, 9, 0.2)', 'rgba(2,7,9,0.86)']}
+                  style={StyleSheet.absoluteFill}
+                />
+                <Pressable accessibilityRole="button" accessibilityLabel={bannerUri ? 'Change farm banner' : 'Upload farm banner'} onPress={chooseBanner} style={({ pressed }) => [styles.setupBannerUpload, pressed && styles.pressed]}>
+                  <View style={styles.setupBannerUploadIcon}>
+                    <MaterialCommunityIcons name="image-plus" size={26} color={THEME_ORANGE} />
+                  </View>
+                  <Text style={styles.setupBannerUploadTitle}>{bannerUri ? 'Change farm banner' : 'Upload farm banner'}</Text>
+                  <Text style={styles.setupBannerUploadMeta}>JPG, PNG up to 5MB</Text>
+                </Pressable>
+                {bannerUri && (
+                  <Pressable accessibilityRole="button" accessibilityLabel="Remove banner" onPress={() => { setBannerUri(null); setBannerError(''); }} style={({ pressed }) => [styles.setupRemoveBanner, pressed && styles.pressed]}>
+                    <Ionicons name="close" size={17} color="#ffffff" />
+                  </Pressable>
+                )}
+              </View>
+              {!!bannerError && <Text accessibilityRole="alert" style={styles.setupBannerError}>{bannerError}</Text>}
             </View>
-            <View style={styles.setupActions}>
-              <Pressable accessibilityRole="button" accessibilityLabel="Back to landing" onPress={onBack} style={({ pressed }) => [styles.setupSecondaryButton, pressed && styles.pressed]}>
-                <Text style={styles.setupSecondaryText}>Back</Text>
+
+            <View style={styles.setupPanel}>
+              <View style={styles.setupSectionHeader}>
+                <View>
+                  <Text style={styles.setupSectionKicker}>Basics</Text>
+                  <Text style={styles.setupSectionTitle}>Farm Details</Text>
+                </View>
+              </View>
+              <View style={styles.setupFieldGrid}>
+                <SetupField icon="home-outline" label="Farm Name" value={farmName} onChangeText={setFarmName} placeholder="Enter farm name" wide />
+                <SetupField icon="map-marker-outline" label="Location" value={location} onChangeText={setLocation} placeholder="City / Province / Country" wide />
+                <SetupField icon="calendar-blank-outline" label="Established" value={establishedYear} onChangeText={setEstablishedYear} placeholder="Select year" keyboardType="number-pad" trailingIcon="chevron-down" wide />
+              </View>
+            </View>
+
+            <View style={styles.setupPanel}>
+              <View style={styles.setupSectionHeader}>
+                <View>
+                  <Text style={styles.setupSectionKicker}>Access</Text>
+                  <Text style={styles.setupSectionTitle}>Assign Team</Text>
+                </View>
+              </View>
+              <Pressable accessibilityRole="button" accessibilityLabel="Assign team members" onPress={() => Alert.alert('Assign team', 'Team member assignment will be connected later.')} style={({ pressed }) => [styles.assignTeamBox, pressed && styles.pressed]}>
+                <View style={styles.assignTeamTop}>
+                  <View style={styles.assignTeamIcon}>
+                    <MaterialCommunityIcons name="account-group" size={20} color={THEME_ORANGE} />
+                  </View>
+                  <View style={styles.assignTeamCopy}>
+                    <Text style={styles.assignTeamTitle}>Assign team members</Text>
+                    <Text style={styles.assignTeamSubtitle}>Choose people who can manage this farm</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color="#8a9699" />
+                </View>
+                <View style={styles.assignedPills}>
+                  {assignedMembers.map((member) => (
+                    <View key={member.id} style={styles.memberPill}>
+                      <Image source={member.image} style={styles.memberPillImage} contentFit="cover" cachePolicy="memory-disk" />
+                      <Text numberOfLines={1} style={styles.memberPillText}>{member.name.split(' ')[0]}</Text>
+                      <Ionicons name="close" size={12} color="#aeb8bb" />
+                    </View>
+                  ))}
+                </View>
               </Pressable>
-              <Pressable accessibilityRole="button" accessibilityLabel="Continue setup" onPress={continueSetup} style={({ pressed }) => [styles.setupPrimaryButton, pressed && styles.pressed]}>
-                <Ionicons name="checkmark-circle-outline" size={18} color="#ffffff" />
-                <Text style={styles.setupPrimaryText}>Continue</Text>
+            </View>
+
+            <View style={styles.setupPanel}>
+              <View style={styles.setupSectionHeader}>
+                <View>
+                  <Text style={styles.setupSectionKicker}>Publishing</Text>
+                  <Text style={styles.setupSectionTitle}>Farm Visibility</Text>
+                </View>
+              </View>
+              <View style={styles.visibilityGrid}>
+                <VisibilityOption
+                  icon="lock"
+                  title="Draft"
+                  description="Only you and your team can access it"
+                  selected={visibility === 'draft'}
+                  onPress={() => setVisibility('draft')}
+                />
+                <VisibilityOption
+                  icon="account-group"
+                  title="Published"
+                  description="Showcase is visible to FarmBuzz users"
+                  selected={visibility === 'published'}
+                  onPress={() => setVisibility('published')}
+                />
+              </View>
+            </View>
+
+            <View style={styles.setupActions}>
+              <Pressable accessibilityRole="button" accessibilityLabel="Save as draft" onPress={saveDraft} style={({ pressed }) => [styles.setupSecondaryButton, pressed && styles.pressed]}>
+                <Text style={styles.setupSecondaryText}>Save as Draft</Text>
+              </Pressable>
+              <Pressable accessibilityRole="button" accessibilityLabel="Create farm" onPress={createFarm} style={({ pressed }) => [styles.setupPrimaryButton, pressed && styles.pressed]}>
+                <Text style={styles.setupPrimaryText}>Create Farm</Text>
               </Pressable>
             </View>
           </View>
@@ -1015,10 +1184,16 @@ export default function App() {
         <LandingScreen
           onSetup={() => setScreen('farm-setup')}
           onExisting={() => setScreen('dashboard')}
+          onFarms={() => setScreen('farms')}
         />
       ) : screen === 'farm-setup' ? (
         <FarmSetupScreen
           onBack={() => setScreen('landing')}
+        />
+      ) : screen === 'farms' ? (
+        <FarmsScreen
+          onBack={() => setScreen('landing')}
+          onOpenFarm={() => setScreen('dashboard')}
         />
       ) : screen === 'showcase' ? (
         <ShowcaseScreen
@@ -1681,6 +1856,31 @@ const styles = StyleSheet.create({
   },
   landingPrimaryText: { color: '#ffffff', fontSize: 14, lineHeight: 18, fontWeight: '800' },
   landingSecondaryText: { color: '#f2f5f6', fontSize: 14, lineHeight: 18, fontWeight: '800' },
+  farmsHero: { height: 252, overflow: 'hidden', backgroundColor: '#101719' },
+  farmsHeroCompact: { height: 235 },
+  farmsSummaryPanel: {
+    minHeight: 84, marginTop: 12, borderWidth: 1, borderColor: '#26343a',
+    borderRadius: 8, backgroundColor: '#091216', flexDirection: 'row',
+    alignItems: 'center', paddingVertical: 12,
+  },
+  farmsSummaryItem: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 10 },
+  farmsSummaryDivider: { width: 1, alignSelf: 'stretch', backgroundColor: '#26343a' },
+  farmsSummaryValue: { color: '#f4f5f5', fontSize: 24, lineHeight: 29, fontWeight: '800' },
+  farmsSummaryLabel: { marginTop: 3, color: '#929ca0', fontSize: 10, lineHeight: 13, fontWeight: '700' },
+  farmsList: { marginTop: 12, gap: 9 },
+  farmListCard: {
+    minHeight: 92, borderRadius: 8, borderWidth: 1, borderColor: '#26343a',
+    backgroundColor: '#091216', overflow: 'hidden', flexDirection: 'row',
+    alignItems: 'center', gap: 12, paddingHorizontal: 12,
+  },
+  farmListIcon: {
+    width: 44, height: 44, borderRadius: 22, borderWidth: 1,
+    borderColor: 'rgba(255, 122, 0, 0.35)', backgroundColor: 'rgba(255,122,0,0.12)',
+    alignItems: 'center', justifyContent: 'center', zIndex: 1,
+  },
+  farmListCopy: { flex: 1, minWidth: 0, zIndex: 1 },
+  farmListName: { color: '#edf0f1', fontSize: 15, lineHeight: 19, fontWeight: '800' },
+  farmListLocation: { marginTop: 4, color: '#a4adb0', fontSize: 11, lineHeight: 15, fontWeight: '600' },
   farmMeta: { marginTop: 11, flexDirection: 'row', alignItems: 'center', gap: 9 }, farmMetaNarrow: { marginTop: 8, gap: 7 }, farmMetaItem: { minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 4 }, farmMetaDivider: { width: 1, height: 13, backgroundColor: 'rgba(196,203,205,0.45)' }, farmMetaText: { flexShrink: 1, color: '#c4cbcd', fontSize: 10, fontWeight: '500' },
   socialProof: {
     marginTop: 12, alignSelf: 'flex-start', minHeight: 34, maxWidth: '100%',
@@ -1714,30 +1914,32 @@ const styles = StyleSheet.create({
   workspaceTabTextActive: { color: '#ffffff' },
   content: { paddingHorizontal: 10, paddingBottom: 34 },
   contentNarrow: { paddingHorizontal: 8 },
+  setupScreen: { backgroundColor: '#020709' },
   setupPage: { width: '100%', maxWidth: 720, minHeight: '100%', backgroundColor: '#020709', paddingHorizontal: 10, paddingBottom: 34 },
-  setupHero: {
-    height: 222, marginTop: 10, borderRadius: 8, borderWidth: 1,
-    borderColor: '#26343a', overflow: 'hidden', backgroundColor: '#081115',
+  setupHeroShell: {
+    height: 252, marginTop: 10, borderRadius: 8, borderWidth: 1,
+    borderColor: '#26343a', overflow: 'hidden', backgroundColor: '#101719',
   },
-  setupHeroCompact: { height: 202 },
-  setupHeroNarrow: { height: 188 },
-  setupHeroImage: { opacity: 0.16 },
-  setupIntro: { marginTop: 14, paddingHorizontal: 2 },
-  setupIntroTitle: { marginTop: 5, color: '#f5f4f0', fontSize: 23, lineHeight: 29, fontWeight: '800', letterSpacing: 0 },
-  setupIntroTitleCompact: { fontSize: 21, lineHeight: 27 },
-  setupIntroText: { marginTop: 6, color: '#9ca8ab', fontSize: 10, lineHeight: 15, maxWidth: 440 },
-  setupStepTrack: { marginTop: 15, marginBottom: 3, flexDirection: 'row', alignItems: 'center' },
-  setupStep: {
-    width: 24, height: 24, borderRadius: 12, borderWidth: 1, borderColor: '#2b393f',
-    backgroundColor: '#081115', alignItems: 'center', justifyContent: 'center',
+  setupHeroCompact: { height: 235 },
+  setupHeroContent: { flex: 1 },
+  setupHeroHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 13, paddingTop: Platform.OS === 'web' ? 12 : 4,
   },
-  setupStepActive: {
-    width: 24, height: 24, borderRadius: 12, backgroundColor: THEME_ORANGE,
-    alignItems: 'center', justifyContent: 'center',
+  setupHeroHeaderNarrow: { paddingHorizontal: 10, paddingTop: Platform.OS === 'web' ? 10 : 3 },
+  setupIntro: { marginTop: 'auto', paddingHorizontal: 18, paddingBottom: 24 },
+  setupIntroNarrow: { paddingHorizontal: 12, paddingBottom: 18 },
+  setupIntroTitle: {
+    color: '#f5f4f0', fontSize: 36, lineHeight: 42, fontWeight: '800',
+    fontFamily: Platform.select({ ios: 'Georgia', android: 'serif', web: 'Georgia' }),
+    letterSpacing: 0, textShadowColor: 'rgba(0, 0, 0, 0.8)',
+    textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 6,
   },
-  setupStepText: { color: '#7f8b8f', fontSize: 9, lineHeight: 12, fontWeight: '800' },
-  setupStepActiveText: { color: '#ffffff', fontSize: 9, lineHeight: 12, fontWeight: '900' },
-  setupStepLine: { flex: 1, height: 1, backgroundColor: '#243238' },
+  setupIntroTitleCompact: { fontSize: 32, lineHeight: 38 },
+  setupIntroTitleNarrow: { fontSize: 29, lineHeight: 35 },
+  setupIntroText: { marginTop: 7, color: '#c4cbcd', fontSize: 13, lineHeight: 19, maxWidth: 390 },
+  setupIntroTextNarrow: { fontSize: 11, lineHeight: 16 },
+  setupBody: { paddingHorizontal: 10, paddingBottom: 34, gap: 12, marginTop: 14 },
   statsPanel: {
     minHeight: 90, marginTop: 12, borderWidth: 1, borderColor: '#18242a',
     borderRadius: 8, backgroundColor: '#0a1317', flexDirection: 'row',
@@ -1799,45 +2001,89 @@ const styles = StyleSheet.create({
     marginTop: 3, color: '#9ba5a8', fontSize: 9, lineHeight: 13, letterSpacing: 0,
   },
   overdue: { color: '#ff3d4d' },
-  setupBannerCard: {
-    height: 148, borderRadius: 8, borderWidth: 1, borderStyle: 'dashed',
-    borderColor: 'rgba(255, 122, 0, 0.55)', backgroundColor: '#091216',
-    overflow: 'hidden', justifyContent: 'center',
+  setupPanel: {
+    borderRadius: 8, borderWidth: 1, borderColor: '#26343a',
+    backgroundColor: '#091216', padding: 12,
   },
-  setupBannerImage: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 },
-  setupBannerCopy: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 12, zIndex: 1 },
-  setupBannerFrame: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: 18, zIndex: 1 },
-  setupBannerIcon: {
-    width: 52, height: 52, borderRadius: 26, borderWidth: 1,
-    borderColor: 'rgba(255, 122, 0, 0.5)', backgroundColor: 'rgba(255, 122, 0, 0.12)',
+  setupSectionHeader: { marginBottom: 12, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 10 },
+  setupSectionKicker: { color: THEME_ORANGE, fontSize: 8, lineHeight: 11, fontWeight: '900', letterSpacing: 0 },
+  setupSectionTitle: { marginTop: 2, color: '#e7ebec', fontSize: 16, lineHeight: 21, fontWeight: '700', letterSpacing: 0 },
+  setupOptional: { color: '#7f8a8e', fontSize: 9, lineHeight: 12, fontWeight: '700' },
+  setupBannerPreview: {
+    height: 164, borderRadius: 8, borderWidth: 1, borderStyle: 'dashed',
+    borderColor: 'rgba(255, 122, 0, 0.62)', backgroundColor: '#071014',
+    overflow: 'hidden', alignItems: 'center', justifyContent: 'center',
+  },
+  setupBannerUpload: { width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' },
+  setupBannerUploadIcon: {
+    width: 54, height: 54, borderRadius: 27, borderWidth: 1, borderColor: THEME_ORANGE,
+    backgroundColor: 'rgba(2, 7, 9, 0.56)', alignItems: 'center', justifyContent: 'center',
+  },
+  setupBannerUploadTitle: { marginTop: 10, color: '#f3f5f5', fontSize: 13, lineHeight: 17, fontWeight: '800' },
+  setupBannerUploadMeta: { marginTop: 3, color: '#a4adb0', fontSize: 10, lineHeight: 14 },
+  setupRemoveBanner: {
+    position: 'absolute', top: 9, right: 9, width: 32, height: 32, borderRadius: 16,
+    alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(7, 16, 20, 0.86)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.22)',
+  },
+  setupBannerError: { color: '#ff6773', fontSize: 12, lineHeight: 18, marginTop: 8 },
+  setupFieldGrid: { gap: 12 },
+  setupField: { width: '100%', minWidth: 0, maxWidth: '100%', gap: 7 },
+  setupFieldWide: { width: '100%' },
+  setupFieldCopy: {
+    minWidth: 0, minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 10,
+    paddingHorizontal: 13, borderWidth: 1, borderColor: '#26343a',
+    borderRadius: 8, backgroundColor: '#0b1418',
+  },
+  setupFieldFocused: { borderColor: THEME_ORANGE, backgroundColor: '#10191d' },
+  setupFieldLabel: { color: '#dfe4e5', fontSize: 12, lineHeight: 16, fontWeight: '800' },
+  setupInput: { flex: 1, minWidth: 0, height: 46, paddingVertical: 0, color: '#e8ecee', fontSize: 13, letterSpacing: 0, outlineStyle: 'none' },
+  assignTeamBox: {
+    minHeight: 82, borderRadius: 8, borderWidth: 1, borderColor: '#26343a',
+    backgroundColor: '#0b1418', paddingHorizontal: 13, paddingVertical: 12, gap: 10,
+  },
+  assignTeamTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  assignTeamIcon: {
+    width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(255, 122, 0, 0.11)',
     alignItems: 'center', justifyContent: 'center',
   },
-  setupBannerTextWrap: { flex: 1, minWidth: 0 },
-  setupBannerTitle: { marginTop: 10, color: '#edf0f1', fontSize: 14, lineHeight: 18, fontWeight: '800', letterSpacing: 0 },
-  setupBannerSubtitle: { marginTop: 4, color: '#aeb8bb', fontSize: 9, lineHeight: 13, textAlign: 'center', letterSpacing: 0 },
-  setupPreviewCard: {
-    marginTop: 9, borderRadius: 8, borderWidth: 1, borderColor: '#223037',
-    backgroundColor: '#071014', paddingHorizontal: 12, paddingVertical: 11,
+  assignTeamCopy: { flex: 1, minWidth: 0 },
+  assignTeamTitle: { color: '#eef1f2', fontSize: 14, lineHeight: 18, fontWeight: '700' },
+  assignTeamSubtitle: { marginTop: 2, color: '#9aa5a8', fontSize: 10, lineHeight: 14 },
+  assignedPills: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, paddingLeft: 48 },
+  memberPill: {
+    height: 28, maxWidth: 120, borderRadius: 14, borderWidth: 1, borderColor: '#293941',
+    backgroundColor: '#071014', flexDirection: 'row', alignItems: 'center', gap: 6, paddingLeft: 3, paddingRight: 8,
   },
-  setupPreviewLabel: { color: THEME_ORANGE, fontSize: 8, lineHeight: 11, fontWeight: '900' },
-  setupPreviewName: { marginTop: 6, color: '#edf0f1', fontSize: 15, lineHeight: 19, fontWeight: '800' },
-  setupPreviewMeta: { marginTop: 3, color: '#89969a', fontSize: 9, lineHeight: 12, fontWeight: '600' },
-  setupPanel: { borderWidth: 1, borderColor: '#26343a', borderRadius: 8, backgroundColor: '#091216', overflow: 'hidden' },
-  setupField: { minHeight: 70, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 10 },
-  setupFieldCopy: { flex: 1, minWidth: 0 },
-  setupFieldLabel: { color: '#dfe4e5', fontSize: 10, lineHeight: 13, fontWeight: '800' },
-  setupInput: { height: 35, paddingVertical: 0, color: '#e8ecee', fontSize: 12, letterSpacing: 0, outlineStyle: 'none' },
-  setupActions: { marginTop: 14, flexDirection: 'row', gap: 8 },
+  memberPillImage: { width: 22, height: 22, borderRadius: 11 },
+  memberPillText: { color: '#dfe4e5', fontSize: 11, lineHeight: 14, fontWeight: '700' },
+  visibilityGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 9 },
+  visibilityOption: {
+    flexBasis: '48%', flexGrow: 1, minWidth: 220, minHeight: 76, borderRadius: 8,
+    borderWidth: 1, borderColor: '#26343a', backgroundColor: '#0b1418',
+    flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 12, paddingVertical: 12,
+  },
+  visibilityOptionActive: { borderColor: THEME_ORANGE, backgroundColor: '#091216' },
+  visibilityRadio: { width: 14, height: 14, borderRadius: 7, borderWidth: 1, borderColor: '#8a9699' },
+  visibilityRadioActive: { borderWidth: 4, borderColor: THEME_ORANGE },
+  visibilityIcon: {
+    width: 42, height: 42, borderRadius: 21, backgroundColor: 'rgba(255,122,0,0.12)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  visibilityCopy: { flex: 1, minWidth: 0 },
+  visibilityTitle: { color: '#f1f4f4', fontSize: 13, lineHeight: 17, fontWeight: '800' },
+  visibilityDescription: { marginTop: 3, color: '#9aa5a8', fontSize: 10, lineHeight: 14 },
+  setupActions: { marginTop: 2, flexDirection: 'row', justifyContent: 'space-between', gap: 10 },
   setupSecondaryButton: {
-    flex: 0.75, minHeight: 48, borderRadius: 8, borderWidth: 1, borderColor: '#2a383e',
-    alignItems: 'center', justifyContent: 'center',
+    flex: 1, minHeight: 48, borderRadius: 8, borderWidth: 1, borderColor: THEME_ORANGE,
+    backgroundColor: 'transparent', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 10,
   },
   setupPrimaryButton: {
-    flex: 1.25, minHeight: 48, borderRadius: 8, backgroundColor: THEME_ORANGE,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
+    flex: 1, minHeight: 48, borderRadius: 8, backgroundColor: THEME_ORANGE,
+    alignItems: 'center', justifyContent: 'center', paddingHorizontal: 10,
   },
-  setupSecondaryText: { color: '#bac2c4', fontSize: 12, lineHeight: 16, fontWeight: '700' },
-  setupPrimaryText: { color: '#ffffff', fontSize: 12, lineHeight: 16, fontWeight: '800' },
+  setupSecondaryText: { color: THEME_ORANGE, fontSize: 13, lineHeight: 18, fontWeight: '800' },
+  setupPrimaryText: { color: '#ffffff', fontSize: 13, lineHeight: 18, fontWeight: '800' },
   activityHeading: { marginTop: 23, marginBottom: 9, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' }, activitySectionTitle: { color: '#e7ebec', fontSize: 16, fontWeight: '700' }, activitySectionSubtitle: { marginTop: 3, color: '#707d81', fontSize: 8 }, activityToday: { color: THEME_ORANGE, fontSize: 8, fontWeight: '700' }, activityList: { borderWidth: 1, borderColor: '#26343a', borderRadius: 8, backgroundColor: '#091216', overflow: 'hidden' }, activityRow: { minHeight: 65, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 9 }, activityDivider: { borderBottomWidth: 1, borderBottomColor: '#223037' }, activityPressed: { backgroundColor: '#111d22' }, activityIcon: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,122,0,0.08)', alignItems: 'center', justifyContent: 'center' }, activityCopy: { flex: 1, minWidth: 0 }, activityTitle: { color: '#dfe4e5', fontSize: 10, fontWeight: '700' }, activityDetail: { marginTop: 4, color: '#788589', fontSize: 8 }, activityTime: { color: '#8a9699', fontSize: 7 },
   processBackButton: { alignSelf: 'flex-start', marginTop: 4, flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 7, paddingRight: 10 },
   processBackText: { color: THEME_ORANGE, fontSize: 10, lineHeight: 13, fontWeight: '800' },
