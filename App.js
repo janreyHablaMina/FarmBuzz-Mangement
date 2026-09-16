@@ -26,7 +26,7 @@ import IncubationBatchDetailScreen from './IncubationBatchDetailScreen';
 import IncubationHistoryScreen from './IncubationHistoryScreen';
 import CandlingScreen from './CandlingScreen';
 import TasksScreen from './TasksScreen';
-import TeamScreen, { FARMS, MEMBERS } from './TeamScreen';
+import TeamScreen, { MEMBERS } from './TeamScreen';
 import SalesScreen from './SalesScreen';
 import ChickenPurchaseScreen from './ChickenPurchaseScreen';
 import AddBirdScreen from './AddBirdScreen';
@@ -69,6 +69,7 @@ const HEALTH_BADGE_IMAGE = require('./assets/badge-health.png');
 const TEAM_BADGE_IMAGE = require('./assets/badge-team.png');
 const TRANSFERS_BADGE_IMAGE = require('./assets/badge-transfers.png');
 const FLOCK_HERO_IMAGE = require('./assets/flock-hero.png');
+const BREEDING_HERO_IMAGE = require('./assets/breeding-hero.png');
 const HEALTH_CARE_HERO_IMAGE = require('./assets/health-care-hero.png');
 const SALES_DASHBOARD_HERO_IMAGE = require('./assets/sales-dashboard-hero.png');
 const COLLECTIONS_DASHBOARD_HERO_IMAGE = require('./assets/sales-hero.png');
@@ -604,22 +605,40 @@ function LandingScreen({ onSetup, onExisting, onFarms }) {
   );
 }
 
-function FarmsScreen({ onBack, onOpenFarm }) {
+function FarmsScreen({ onBack, onOpenFarm, onAddFarm }) {
   const { width } = useWindowDimensions();
   const compact = width < 480;
   const narrow = width < 390;
-  const farmCards = FARMS.filter((farm) => farm.id !== 'all');
+  const [query, setQuery] = useState('');
+  const farmCards = [
+    { id: 'fb', name: 'FB Farm', location: 'Pampanga, Philippines', status: 'Published', established: '2020', members: 3, image: DASHBOARD_HERO_IMAGE },
+    { id: 'ju', name: 'JU Gamefarm', location: 'Tarlac, Philippines', status: 'Published', established: '2022', members: 2, image: FLOCK_HERO_IMAGE },
+    { id: 'golden', name: 'Golden Rooster Yard', location: 'Angeles City, Philippines', status: 'Draft', established: '2024', members: 1, image: HEALTH_CARE_HERO_IMAGE },
+    { id: 'north', name: 'North Ridge Farm', location: 'Bulacan, Philippines', status: 'Published', established: '2021', members: 4, image: BREEDING_HERO_IMAGE },
+  ];
+  const publishedCount = farmCards.filter((farm) => farm.status === 'Published').length;
+  const draftCount = farmCards.filter((farm) => farm.status === 'Draft').length;
+  const visibleFarms = farmCards.filter((farm) => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return true;
+    return `${farm.name} ${farm.location} ${farm.status}`.toLowerCase().includes(needle);
+  });
+  const farmsSummary = [
+    { label: 'Farm Workspaces', compactLabel: 'Farms', value: farmCards.length, detail: 'managed farms', icon: 'barn' },
+    { label: 'Published', compactLabel: 'Published', value: publishedCount, detail: 'visible farms', icon: 'check-circle-outline' },
+    { label: 'Draft', compactLabel: 'Draft', value: draftCount, detail: 'setup drafts', icon: 'file-document-outline' },
+  ];
 
   return (
     <View style={styles.screen}>
       <StatusBar style="light" translucent backgroundColor="transparent" />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        <View style={styles.page}>
+        <View style={styles.farmsPage}>
           <View style={[styles.farmsHero, compact && styles.farmsHeroCompact]}>
             <Image source={DASHBOARD_HERO_IMAGE} style={StyleSheet.absoluteFill} contentFit="cover" contentPosition="center" cachePolicy="memory-disk" />
             <LinearGradient
-              colors={['rgba(2, 7, 9, 0.2)', 'rgba(2, 7, 9, 0.44)', 'rgba(2,7,9,0.96)']}
-              locations={[0, 0.45, 1]}
+              colors={['rgba(2, 7, 9, 0.14)', 'rgba(2, 7, 9, 0.48)', '#020709']}
+              locations={[0, 0.52, 1]}
               style={StyleSheet.absoluteFill}
             />
             <SafeAreaView edges={['top']} style={styles.heroSafeArea}>
@@ -627,53 +646,122 @@ function FarmsScreen({ onBack, onOpenFarm }) {
                 <IconButton icon="arrow-back" label="Back" compact={narrow} onPress={onBack} />
                 <View style={styles.topBarSpacer} />
               </View>
-              <View style={[styles.heroCopy, compact && styles.heroCopyCompact, narrow && styles.heroCopyNarrow]}>
-                <Text style={styles.heroEyebrow}>FARMS</Text>
-                <Text style={[styles.brand, compact && styles.brandCompact, narrow && styles.brandNarrow]}>Your Farms</Text>
-                <Text style={[styles.tagline, narrow && styles.taglineNarrow]}>Choose which farm workspace you want to manage.</Text>
+              <View style={[styles.farmsHeroCopy, narrow && styles.farmsHeroCopyNarrow]}>
+                <Text style={[styles.farmsTitle, narrow && styles.farmsTitleNarrow]}>Manage Farms</Text>
+                <Text style={[styles.farmsSubtitle, narrow && styles.farmsSubtitleNarrow]}>Oversee every farm workspace, team, and publishing status.</Text>
               </View>
             </SafeAreaView>
           </View>
 
-          <View style={[styles.content, narrow && styles.contentNarrow]}>
-            <View style={styles.farmsSummaryPanel}>
-              <View style={styles.farmsSummaryItem}>
-                <Text style={styles.farmsSummaryValue}>{farmCards.length}</Text>
-                <Text style={styles.farmsSummaryLabel}>Active Farms</Text>
+          <View style={[styles.farmsContent, narrow && styles.contentNarrow]}>
+            <View style={[styles.farmsActionRow, compact && styles.farmsActionRowCompact]}>
+              <View style={styles.farmsSearchBox}>
+                <Ionicons name="search" size={22} color="#9aa4a8" />
+                <TextInput
+                  value={query}
+                  onChangeText={setQuery}
+                  placeholder="Search by farm or location"
+                  placeholderTextColor="#879195"
+                  selectionColor={THEME_ORANGE}
+                  style={styles.farmsSearchInput}
+                />
+                {!!query && (
+                  <Pressable accessibilityLabel="Clear search" onPress={() => setQuery('')} hitSlop={8}>
+                    <Ionicons name="close-circle" size={18} color="#6c777b" />
+                  </Pressable>
+                )}
               </View>
-              <View style={styles.farmsSummaryDivider} />
-              <View style={styles.farmsSummaryItem}>
-                <Text style={styles.farmsSummaryValue}>{MEMBERS.length}</Text>
-                <Text style={styles.farmsSummaryLabel}>Team Coverage</Text>
+              <Pressable
+                onPress={onAddFarm}
+                accessibilityLabel="Add farm"
+                style={({ pressed }) => [styles.farmsAddPrimary, compact && styles.farmsAddPrimaryCompact, pressed && styles.pressed]}
+              >
+                <Ionicons name="add" size={27} color="#ffffff" />
+                {!compact && <Text style={styles.farmsAddPrimaryText}>Add Farm</Text>}
+              </Pressable>
+            </View>
+
+            <Text style={[styles.farmsEyebrow, styles.farmsSummaryHeading]}>FARMS SUMMARY</Text>
+            <View style={styles.farmsSummaryPanel}>
+              <View style={styles.farmsSummaryMetrics}>
+                {farmsSummary.map((item) => (
+                  <FarmSummaryMetric key={item.label} item={item} />
+                ))}
               </View>
             </View>
 
-            <View style={styles.farmsList}>
-              {farmCards.map((farm, index) => (
-                <Pressable
-                  key={farm.id}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Open ${farm.name}`}
-                  onPress={onOpenFarm}
-                  style={({ pressed }) => [styles.farmListCard, pressed && styles.cardPressed]}
-                >
-                  <Image source={index === 1 ? FLOCK_HERO_IMAGE : index === 2 ? HEALTH_CARE_HERO_IMAGE : DASHBOARD_HERO_IMAGE} style={StyleSheet.absoluteFill} contentFit="cover" cachePolicy="memory-disk" />
-                  <LinearGradient colors={['rgba(7, 16, 20, 0.5)', 'rgba(7, 16, 20, 0.96)']} style={StyleSheet.absoluteFill} />
-                  <View style={styles.farmListIcon}>
-                    <MaterialCommunityIcons name="barn" size={22} color={THEME_ORANGE} />
-                  </View>
-                  <View style={styles.farmListCopy}>
-                    <Text numberOfLines={1} style={styles.farmListName}>{farm.name}</Text>
-                    <Text numberOfLines={1} style={styles.farmListLocation}>{farm.location}</Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={20} color="#c4cbcd" />
-                </Pressable>
+            <View style={styles.farmsListHeader}>
+              <Text style={styles.farmsEyebrow}>ACTIVE FARMS</Text>
+              <View style={styles.farmsCountPill}>
+                <Text style={styles.farmsCountText}>{visibleFarms.length} shown</Text>
+              </View>
+            </View>
+
+            <View style={styles.farmCardGrid}>
+              {visibleFarms.map((farm) => (
+                <FarmWorkspaceCard key={farm.id} farm={farm} onPress={onOpenFarm} />
               ))}
             </View>
           </View>
         </View>
       </ScrollView>
     </View>
+  );
+}
+
+function FarmSummaryMetric({ item }) {
+  return (
+    <View style={styles.farmsSummaryMetric}>
+      <View style={styles.farmsSummaryValueRow}>
+        <MaterialCommunityIcons name={item.icon} size={26} color={THEME_ORANGE} />
+        <Text style={styles.farmsSummaryValue}>{item.value}</Text>
+      </View>
+      <Text numberOfLines={2} style={styles.farmsSummaryLabel}>{item.compactLabel}</Text>
+      <Text numberOfLines={1} style={styles.farmsSummaryDetail}>{item.detail}</Text>
+    </View>
+  );
+}
+
+function FarmWorkspaceCard({ farm, onPress }) {
+  const published = farm.status === 'Published';
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`Open ${farm.name}`}
+      onPress={onPress}
+      style={({ pressed }) => [styles.farmWorkspaceCard, pressed && styles.cardPressed]}
+    >
+      <Image source={farm.image} style={StyleSheet.absoluteFill} contentFit="cover" cachePolicy="memory-disk" />
+      <LinearGradient
+        colors={['rgba(2,7,9,0.04)', 'rgba(2,7,9,0.24)', 'rgba(2,7,9,0.96)']}
+        locations={[0, 0.45, 1]}
+        style={StyleSheet.absoluteFill}
+      />
+      <View style={[styles.farmCardStatus, !published && styles.farmCardStatusDraft]}>
+        <View style={[styles.farmStatusDot, !published && styles.farmStatusDotDraft]} />
+        <Text style={styles.farmCardStatusText}>{farm.status}</Text>
+      </View>
+      <View style={styles.farmCardBody}>
+        <View style={styles.farmCardTitleRow}>
+          <Text numberOfLines={1} style={styles.farmCardName}>{farm.name}</Text>
+          <Ionicons name="chevron-forward" size={16} color="#8a9699" />
+        </View>
+        <View style={styles.farmWorkspaceMeta}>
+          <Ionicons name="location-outline" size={12} color="#9aa5a8" />
+          <Text numberOfLines={1} style={styles.farmWorkspaceMetaText}>{farm.location}</Text>
+        </View>
+        <View style={styles.farmCardFooter}>
+          <View style={styles.farmWorkspaceMeta}>
+            <Ionicons name="calendar-outline" size={12} color="#9aa5a8" />
+            <Text style={styles.farmWorkspaceSmallText}>Est. {farm.established}</Text>
+          </View>
+          <View style={styles.farmWorkspaceMeta}>
+            <Ionicons name="people" size={12} color="#9aa5a8" />
+            <Text style={styles.farmWorkspaceSmallText}>{farm.members}</Text>
+          </View>
+        </View>
+      </View>
+    </Pressable>
   );
 }
 
@@ -1146,7 +1234,7 @@ export default function App() {
   const [notesByBird, setNotesByBird] = useState({});
   const [documentsByBird, setDocumentsByBird] = useState({});
   const [managementSettings, setManagementSettings] = useState({
-    farmName: 'FarmBuzz Farm',
+    farmName: 'FB Farm',
     location: 'Pampanga, Philippines',
     establishedYear: '2020',
     incubationDays: 21,
@@ -1194,6 +1282,7 @@ export default function App() {
         <FarmsScreen
           onBack={() => setScreen('landing')}
           onOpenFarm={() => setScreen('dashboard')}
+          onAddFarm={() => setScreen('farm-setup')}
         />
       ) : screen === 'showcase' ? (
         <ShowcaseScreen
@@ -1856,31 +1945,98 @@ const styles = StyleSheet.create({
   },
   landingPrimaryText: { color: '#ffffff', fontSize: 14, lineHeight: 18, fontWeight: '800' },
   landingSecondaryText: { color: '#f2f5f6', fontSize: 14, lineHeight: 18, fontWeight: '800' },
+  farmsPage: { width: '100%', maxWidth: 720, minHeight: '100%', backgroundColor: '#020709' },
   farmsHero: { height: 252, overflow: 'hidden', backgroundColor: '#101719' },
   farmsHeroCompact: { height: 235 },
-  farmsSummaryPanel: {
-    minHeight: 84, marginTop: 12, borderWidth: 1, borderColor: '#26343a',
-    borderRadius: 8, backgroundColor: '#091216', flexDirection: 'row',
-    alignItems: 'center', paddingVertical: 12,
+  farmsHeroCopy: { marginTop: 'auto', paddingHorizontal: 18, paddingBottom: 24 },
+  farmsHeroCopyNarrow: { paddingHorizontal: 12, paddingBottom: 18 },
+  farmsTitle: {
+    color: '#f5f4f0', fontSize: 38, lineHeight: 44, fontWeight: '800',
+    fontFamily: Platform.select({ ios: 'Georgia', android: 'serif', web: 'Georgia' }),
+    letterSpacing: 0, textShadowColor: 'rgba(0, 0, 0, 0.78)',
+    textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 6,
   },
-  farmsSummaryItem: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 10 },
-  farmsSummaryDivider: { width: 1, alignSelf: 'stretch', backgroundColor: '#26343a' },
-  farmsSummaryValue: { color: '#f4f5f5', fontSize: 24, lineHeight: 29, fontWeight: '800' },
-  farmsSummaryLabel: { marginTop: 3, color: '#929ca0', fontSize: 10, lineHeight: 13, fontWeight: '700' },
-  farmsList: { marginTop: 12, gap: 9 },
-  farmListCard: {
-    minHeight: 92, borderRadius: 8, borderWidth: 1, borderColor: '#26343a',
+  farmsTitleNarrow: { fontSize: 30, lineHeight: 35 },
+  farmsSubtitle: { marginTop: 7, color: '#c4cbcd', fontSize: 13, lineHeight: 19, maxWidth: 390 },
+  farmsSubtitleNarrow: { fontSize: 11, lineHeight: 16 },
+  farmsContent: { paddingHorizontal: 10, paddingBottom: 34 },
+  farmsActionRow: { flexDirection: 'row', gap: 10, marginTop: 0 },
+  farmsActionRowCompact: { gap: 8 },
+  farmsSearchBox: {
+    flex: 1, height: 52, flexDirection: 'row', alignItems: 'center', gap: 10,
+    paddingHorizontal: 16, borderRadius: 8, borderWidth: 1, borderColor: '#28343a',
+    backgroundColor: '#0b1418',
+  },
+  farmsSearchInput: {
+    flex: 1, height: 50, paddingVertical: 0, color: '#e7ebec', fontSize: 14,
+    letterSpacing: 0, outlineStyle: 'none',
+  },
+  farmsAddPrimary: {
+    height: 52, minWidth: 155, paddingHorizontal: 20, borderRadius: 8,
+    backgroundColor: THEME_ORANGE, flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'center', gap: 9,
+  },
+  farmsAddPrimaryCompact: { width: 52, minWidth: 52, paddingHorizontal: 0 },
+  farmsAddPrimaryText: { color: '#ffffff', fontSize: 15, lineHeight: 19, fontWeight: '800' },
+  farmsEyebrow: { color: '#9da8ab', fontSize: 9, lineHeight: 12, fontWeight: '800', letterSpacing: 0 },
+  farmsSummaryHeading: { marginTop: 14 },
+  farmsSummaryPanel: { marginTop: 14 },
+  farmsSummaryMetrics: { flexDirection: 'row', gap: 10 },
+  farmsSummaryMetric: {
+    flex: 1, minWidth: 0, height: 112, paddingHorizontal: 5, borderRadius: 8,
+    borderWidth: 1, borderColor: '#1c2a30', backgroundColor: '#0b1418',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  farmsSummaryValueRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  farmsSummaryValue: { color: '#f0f2f3', fontSize: 27, fontWeight: '600', letterSpacing: 0 },
+  farmsSummaryLabel: { marginTop: 8, color: '#d4d9db', fontSize: 12, textAlign: 'center', letterSpacing: 0 },
+  farmsSummaryDetail: { marginTop: 4, color: '#899397', fontSize: 10, letterSpacing: 0 },
+  farmsListHeader: { marginTop: 22, marginBottom: 9, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  farmsCountPill: {
+    minHeight: 26, paddingHorizontal: 14, borderRadius: 13, borderWidth: 1,
+    borderColor: '#1c2a30', backgroundColor: '#0b1418', alignItems: 'center', justifyContent: 'center',
+  },
+  farmsCountText: { color: '#b8c0c2', fontSize: 9, lineHeight: 12, fontWeight: '700' },
+  farmStatusBadgeDraft: { backgroundColor: 'rgba(71, 80, 84, 0.92)' },
+  farmStatusDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#61df67' },
+  farmStatusDotDraft: { backgroundColor: '#c4cbcd' },
+  farmStatusText: { color: '#ffffff', fontSize: 9, lineHeight: 12, fontWeight: '700' },
+  farmCardGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 9 },
+  farmWorkspaceCard: {
+    flexBasis: '47%', flexGrow: 1, maxWidth: '49%', minHeight: 214,
+    borderRadius: 8, borderWidth: 1, borderColor: '#172329',
+    backgroundColor: '#0a1317', overflow: 'hidden', justifyContent: 'flex-end',
+  },
+  farmCardStatus: {
+    position: 'absolute', top: 8, right: 8, minHeight: 21, borderRadius: 11,
+    backgroundColor: 'rgba(0, 119, 68, 0.88)', flexDirection: 'row',
+    alignItems: 'center', gap: 4, paddingHorizontal: 7, zIndex: 2,
+  },
+  farmCardStatusDraft: { backgroundColor: 'rgba(71, 80, 84, 0.92)' },
+  farmCardStatusText: { color: '#ffffff', fontSize: 9, lineHeight: 12, fontWeight: '700' },
+  farmCardBody: { zIndex: 1, paddingHorizontal: 10, paddingBottom: 11 },
+  farmCardTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 5, minWidth: 0 },
+  farmCardName: {
+    flex: 1, minWidth: 0, color: '#f5f4f0', fontSize: 15, lineHeight: 19, fontWeight: '800',
+    fontFamily: Platform.select({ ios: 'Georgia', android: 'serif', web: 'Georgia' }),
+    textShadowColor: 'rgba(0,0,0,0.7)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 4,
+  },
+  farmCardFooter: { marginTop: 11, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 7 },
+  farmWorkspaceMeta: { minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 4 },
+  farmWorkspaceMetaText: { flex: 1, minWidth: 0, color: '#b7c0c2', fontSize: 11, lineHeight: 15 },
+  farmWorkspaceSmallText: { color: '#9aa5a8', fontSize: 10, lineHeight: 13 },
+  farmFooterBanner: {
+    minHeight: 82, borderRadius: 8, borderWidth: 1, borderColor: '#172329',
     backgroundColor: '#091216', overflow: 'hidden', flexDirection: 'row',
-    alignItems: 'center', gap: 12, paddingHorizontal: 12,
+    alignItems: 'center', paddingHorizontal: 16, gap: 13,
   },
-  farmListIcon: {
-    width: 44, height: 44, borderRadius: 22, borderWidth: 1,
-    borderColor: 'rgba(255, 122, 0, 0.35)', backgroundColor: 'rgba(255,122,0,0.12)',
+  farmFooterIcon: {
+    width: 52, height: 52, borderRadius: 8, backgroundColor: 'rgba(255,122,0,0.1)',
     alignItems: 'center', justifyContent: 'center', zIndex: 1,
   },
-  farmListCopy: { flex: 1, minWidth: 0, zIndex: 1 },
-  farmListName: { color: '#edf0f1', fontSize: 15, lineHeight: 19, fontWeight: '800' },
-  farmListLocation: { marginTop: 4, color: '#a4adb0', fontSize: 11, lineHeight: 15, fontWeight: '600' },
+  farmFooterCopy: { zIndex: 1 },
+  farmFooterTitle: { color: '#dfe4e5', fontSize: 13, lineHeight: 17, fontWeight: '700' },
+  farmFooterAccent: { color: THEME_ORANGE, fontSize: 15, lineHeight: 20, fontWeight: '900' },
   farmMeta: { marginTop: 11, flexDirection: 'row', alignItems: 'center', gap: 9 }, farmMetaNarrow: { marginTop: 8, gap: 7 }, farmMetaItem: { minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 4 }, farmMetaDivider: { width: 1, height: 13, backgroundColor: 'rgba(196,203,205,0.45)' }, farmMetaText: { flexShrink: 1, color: '#c4cbcd', fontSize: 10, fontWeight: '500' },
   socialProof: {
     marginTop: 12, alignSelf: 'flex-start', minHeight: 34, maxWidth: '100%',
