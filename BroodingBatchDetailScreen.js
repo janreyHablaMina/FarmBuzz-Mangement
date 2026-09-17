@@ -14,12 +14,6 @@ function formatToday() {
   return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date());
 }
 
-function vaccineDueDate(hatchDate, day) {
-  const due = new Date(hatchDate);
-  due.setDate(due.getDate() + day);
-  return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(due);
-}
-
 function SummaryMetric({ value, label, danger, last }) {
   return <View style={[styles.summaryMetric, !last && styles.summaryDivider]}><Text style={[styles.summaryValue, danger && styles.dangerValue]}>{value}</Text><Text style={styles.summaryLabel}>{label}</Text></View>;
 }
@@ -127,19 +121,10 @@ export default function BroodingBatchDetailScreen({ batchId, lossRecords = [], v
   const currentChicks = Math.max(0, batch.chicks - addedLosses);
   const totalLosses = batch.startingChicks - currentChicks;
   const enabledVaccines = vaccinationSchedule.filter((item) => item.enabled).sort((a, b) => a.day - b.day);
-  const completedVaccineCount = enabledVaccines.filter((item) => vaccineCompletions[item.id]).length;
-  const vaccinesRequiringAction = enabledVaccines.filter((item) => !vaccineCompletions[item.id] && previewDay >= item.day).length;
   const nextVaccine = enabledVaccines.find((item) => !vaccineCompletions[item.id]);
   const nextVaccineStatus = nextVaccine
     ? previewDay > nextVaccine.day ? 'Overdue' : previewDay === nextVaccine.day ? 'Due Today' : 'Upcoming'
     : 'Completed';
-  const nextVaccineTone = nextVaccineStatus === 'Overdue'
-    ? '#ef7568'
-    : nextVaccineStatus === 'Due Today'
-      ? '#ffba56'
-      : nextVaccineStatus === 'Completed'
-        ? '#6ee58c'
-        : '#8ec9df';
   const vaccineNeedsAction = nextVaccine && (nextVaccineStatus === 'Overdue' || nextVaccineStatus === 'Due Today');
   const readyForGrowing = previewDay >= 42;
   const previewStatus = readyForGrowing ? 'Ready for Growing' : previewDay >= 14 ? 'Mid Brooding' : previewDay === 0 ? 'Hatched' : 'Brooding';
@@ -177,19 +162,6 @@ export default function BroodingBatchDetailScreen({ batchId, lossRecords = [], v
 
             <Text style={styles.sectionTitle}>Source Breakdown</Text>
             <View style={styles.sourceCard}>{batch.sources.map((source, index) => <View key={source.groupName} style={[styles.sourceRow, index < batch.sources.length - 1 && styles.sourceDivider]}><View style={styles.sourceIcon}><MaterialCommunityIcons name="source-branch" size={18} color={ORANGE} /></View><View style={styles.sourceCopy}><Text style={styles.sourceName}>{source.groupName}</Text><Text style={styles.sourceCross}>{source.cross}</Text>{!!source.marking && <Text style={styles.marking}>Marking: {source.marking}</Text>}</View><Text style={styles.sourceChicks}>{source.chicks} chicks</Text></View>)}</View>
-
-            <Text style={styles.sectionTitle}>Vaccination</Text>
-            <View style={styles.vaccineOverview}><View><Text style={styles.vaccineOverviewValue}>{completedVaccineCount}/{enabledVaccines.length}</Text><Text style={styles.vaccineOverviewLabel}>Completed</Text></View><View style={styles.vaccineOverviewDivider} /><View><Text style={[styles.vaccineOverviewValue, vaccinesRequiringAction > 0 && styles.vaccineAttention]}>{vaccinesRequiringAction}</Text><Text style={styles.vaccineOverviewLabel}>Requires Action</Text></View></View>
-            {nextVaccine ? (
-              <View style={styles.nextVaccineCard}>
-                <View style={styles.nextVaccineTop}><View style={styles.vaccineIcon}><MaterialCommunityIcons name="needle" size={21} color={ORANGE} /></View><View style={styles.nextVaccineCopy}><Text style={styles.nextVaccineEyebrow}>NEXT VACCINE</Text><Text style={styles.nextVaccineName}>{nextVaccine.name}</Text></View><View style={[styles.vaccineStatus, { borderColor: `${nextVaccineTone}70`, backgroundColor: `${nextVaccineTone}18` }]}><View style={[styles.statusDot, { backgroundColor: nextVaccineTone }]} /><Text style={[styles.vaccineStatusText, { color: nextVaccineTone }]}>{nextVaccineStatus}</Text></View></View>
-                <View style={styles.vaccineMeta}><View><Text style={styles.infoLabel}>Day Due</Text><Text style={styles.infoValue}>Day {nextVaccine.day}</Text></View><View><Text style={styles.infoLabel}>Due Date</Text><Text style={styles.infoValue}>{vaccineDueDate(batch.hatchDate, nextVaccine.day)}</Text></View></View>
-                {!!nextVaccine.note && <Text style={styles.nextVaccineNote}>{nextVaccine.note}</Text>}
-                <Pressable onPress={() => onMarkVaccineCompleted(nextVaccine.id)} style={({ pressed }) => [styles.completeVaccineButton, pressed && styles.pressed]}><MaterialCommunityIcons name="check-circle-outline" size={19} color="#fff" /><Text style={styles.completeVaccineText}>Mark Completed</Text></Pressable>
-              </View>
-            ) : (
-              <View style={styles.vaccinesComplete}><MaterialCommunityIcons name="check-decagram-outline" size={23} color="#6ee58c" /><View><Text style={styles.vaccinesCompleteTitle}>Schedule Completed</Text><Text style={styles.vaccinesCompleteDetail}>All enabled vaccines are recorded for this batch.</Text></View></View>
-            )}
 
             <Text style={styles.sectionTitle}>Batch Totals</Text>
             <View style={styles.summaryCard}><SummaryMetric value={batch.startingChicks} label="Starting Chicks" /><SummaryMetric value={currentChicks} label="Current Chicks" /><SummaryMetric value={totalLosses} label="Total Losses" danger last /></View>
