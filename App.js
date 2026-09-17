@@ -699,7 +699,7 @@ function FarmsScreen({ onBack, onOpenFarm, onAddFarm }) {
 
             <View style={styles.farmCardGrid}>
               {visibleFarms.map((farm) => (
-                <FarmWorkspaceCard key={farm.id} farm={farm} onPress={onOpenFarm} />
+                <FarmWorkspaceCard key={farm.id} farm={farm} onPress={() => onOpenFarm(farm)} />
               ))}
             </View>
           </View>
@@ -762,6 +762,92 @@ function FarmWorkspaceCard({ farm, onPress }) {
         </View>
       </View>
     </Pressable>
+  );
+}
+
+function FarmDetailScreen({ farm, onBack, onOpenBreeding, onOpenSettings }) {
+  const { width } = useWindowDimensions();
+  const compact = width < 480;
+  const narrow = width < 390;
+  const farmName = farm?.name || 'FB Farm';
+  const location = farm?.location || 'Pampanga, Philippines';
+  const establishedYear = farm?.established || '2020';
+  const heroImage = farm?.image || DASHBOARD_HERO_IMAGE;
+  const breedingModule = {
+    ...MODULES.find((item) => item.title === 'Breeding'),
+    subtitle: 'Pairings, eggs, hatch readiness',
+    image: BREEDING_HERO_IMAGE,
+  };
+  const breedingStats = [
+    { label: 'Active Pairings', value: '3', icon: 'link-variant', color: THEME_ORANGE },
+    { label: 'Holding Eggs', value: '15', icon: 'egg-outline', color: THEME_ORANGE },
+    { label: 'Due Soon', value: '1', icon: 'clock-outline', color: THEME_ORANGE },
+    { label: 'Farm Members', value: String(farm?.members || 3), icon: 'account-group-outline', color: THEME_ORANGE },
+  ];
+
+  return (
+    <View style={styles.screen}>
+      <StatusBar style="light" translucent backgroundColor="transparent" />
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        <View style={styles.page}>
+          <View style={[styles.farmDetailHero, compact && styles.farmDetailHeroCompact, narrow && styles.farmDetailHeroNarrow]}>
+            <Image source={heroImage} style={StyleSheet.absoluteFill} contentFit="cover" contentPosition="center" cachePolicy="memory-disk" />
+            <LinearGradient
+              colors={['rgba(2, 7, 9, 0.14)', 'rgba(2, 7, 9, 0.46)', '#040a0d']}
+              locations={[0, 0.48, 1]}
+              style={StyleSheet.absoluteFill}
+            />
+            <SafeAreaView edges={['top']} style={styles.heroSafeArea}>
+              <View style={[styles.topBar, narrow && styles.topBarNarrow]}>
+                <IconButton icon="arrow-back" label="Back to farms" compact={narrow} onPress={onBack} />
+                <IconButton icon="settings-outline" label="Settings" compact={narrow} onPress={onOpenSettings} />
+              </View>
+              <View style={[styles.heroCopy, compact && styles.heroCopyCompact, narrow && styles.heroCopyNarrow]}>
+                <Text style={styles.heroEyebrow}>FARM MANAGEMENT</Text>
+                <Text style={[styles.brand, compact && styles.brandCompact, narrow && styles.brandNarrow]}>
+                  {farmName}
+                </Text>
+                <Text style={[styles.tagline, narrow && styles.taglineNarrow]}>
+                  Breeding workspace for pairings, eggs, and upcoming hatch work.
+                </Text>
+                <View style={[styles.farmMeta, narrow && styles.farmMetaNarrow]}>
+                  <View style={styles.farmMetaItem}>
+                    <Ionicons name="location-outline" size={narrow ? 13 : 15} color="#c4cbcd" />
+                    <Text numberOfLines={1} style={styles.farmMetaText}>{location}</Text>
+                  </View>
+                  <View style={styles.farmMetaDivider} />
+                  <View style={styles.farmMetaItem}>
+                    <Ionicons name="calendar-outline" size={narrow ? 13 : 15} color="#c4cbcd" />
+                    <Text style={styles.farmMetaText}>Est. {establishedYear}</Text>
+                  </View>
+                </View>
+              </View>
+            </SafeAreaView>
+          </View>
+
+          <View style={[styles.content, narrow && styles.contentNarrow]}>
+            <View style={[styles.statsPanel, compact && styles.statsPanelCompact]}>
+              {breedingStats.map((item, index) => (
+                <Stat
+                  key={item.label}
+                  item={item}
+                  compact={compact}
+                  isLast={index === breedingStats.length - 1}
+                />
+              ))}
+            </View>
+
+            <View style={styles.sectionHeading}>
+              <Text style={[styles.sectionTitle, narrow && styles.sectionTitleNarrow]}>Management Tool</Text>
+              <Text style={styles.sectionMeta}>1 module</Text>
+            </View>
+            <View style={[styles.moduleGrid, compact && styles.moduleGridCompact]}>
+              <ModuleCard item={breedingModule} compact={compact} onPress={onOpenBreeding} />
+            </View>
+          </View>
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -1190,6 +1276,8 @@ function Dashboard({ farmName, location, establishedYear, totalWins, onOpenShowc
 
 export default function App() {
   const [screen, setScreen] = useState('landing');
+  const [selectedFarm, setSelectedFarm] = useState(null);
+  const [settingsReturn, setSettingsReturn] = useState('dashboard');
   const [createBatchReturn, setCreateBatchReturn] = useState('eggs-incubation');
   const [selectedBatchId, setSelectedBatchId] = useState('B-001');
   const [candlingResultsByBatch, setCandlingResultsByBatch] = useState({});
@@ -1271,7 +1359,10 @@ export default function App() {
       {screen === 'landing' ? (
         <LandingScreen
           onSetup={() => setScreen('farm-setup')}
-          onExisting={() => setScreen('dashboard')}
+          onExisting={() => {
+            setSelectedFarm(null);
+            setScreen('dashboard');
+          }}
           onFarms={() => setScreen('farms')}
         />
       ) : screen === 'farm-setup' ? (
@@ -1281,8 +1372,21 @@ export default function App() {
       ) : screen === 'farms' ? (
         <FarmsScreen
           onBack={() => setScreen('landing')}
-          onOpenFarm={() => setScreen('dashboard')}
+          onOpenFarm={(farm) => {
+            setSelectedFarm(farm);
+            setScreen('farm-detail');
+          }}
           onAddFarm={() => setScreen('farm-setup')}
+        />
+      ) : screen === 'farm-detail' ? (
+        <FarmDetailScreen
+          farm={selectedFarm}
+          onBack={() => setScreen('farms')}
+          onOpenBreeding={() => setScreen('breeding')}
+          onOpenSettings={() => {
+            setSettingsReturn('farm-detail');
+            setScreen('management-settings');
+          }}
         />
       ) : screen === 'showcase' ? (
         <ShowcaseScreen
@@ -1292,7 +1396,10 @@ export default function App() {
           onOpenShowcase={() => {}}
           onOpenManagement={() => setScreen('dashboard')}
           onOpenProcess={() => setScreen('process')}
-          onOpenSettings={() => setScreen('management-settings')}
+          onOpenSettings={() => {
+            setSettingsReturn('showcase');
+            setScreen('management-settings');
+          }}
         />
       ) : screen === 'process' ? (
         <ProcessScreen
@@ -1303,7 +1410,10 @@ export default function App() {
           onOpenManagement={() => setScreen('dashboard')}
           onOpenProcess={() => {}}
           onOpenBreedingHatchery={() => setScreen('breeding-hatchery-process')}
-          onOpenSettings={() => setScreen('management-settings')}
+          onOpenSettings={() => {
+            setSettingsReturn('process');
+            setScreen('management-settings');
+          }}
         />
       ) : screen === 'breeding-hatchery-process' ? (
         <BreedingHatcheryProcessScreen
@@ -1314,15 +1424,18 @@ export default function App() {
           onOpenShowcase={() => setScreen('showcase')}
           onOpenManagement={() => setScreen('dashboard')}
           onOpenProcess={() => setScreen('process')}
-          onOpenSettings={() => setScreen('management-settings')}
+          onOpenSettings={() => {
+            setSettingsReturn('breeding-hatchery-process');
+            setScreen('management-settings');
+          }}
         />
       ) : screen === 'management-settings' ? (
         <ManagementSettingsScreen
           initialSettings={managementSettings}
-          onBack={() => setScreen('dashboard')}
+          onBack={() => setScreen(settingsReturn)}
           onSave={(settings) => {
             setManagementSettings(settings);
-            setScreen('dashboard');
+            setScreen(settingsReturn);
             Alert.alert('Settings saved', 'Management settings have been updated.');
           }}
         />
@@ -1569,7 +1682,7 @@ export default function App() {
         />
       ) : screen === 'breeding' ? (
         <BreedingScreen
-          onBack={() => setScreen('dashboard')}
+          onBack={() => setScreen(selectedFarm ? 'farm-detail' : 'dashboard')}
           onAddPairing={() => {
             setAddPairingReturn('breeding');
             setScreen('add-pairing');
@@ -1861,13 +1974,19 @@ export default function App() {
           totalWins={totalWins}
           onOpenShowcase={() => setScreen('showcase')}
           onOpenProcess={() => setScreen('process')}
-          onOpenSettings={() => setScreen('management-settings')}
+          onOpenSettings={() => {
+            setSettingsReturn('dashboard');
+            setScreen('management-settings');
+          }}
           onOpenNeedsAttention={() => {
             setAttentionReturn('dashboard');
             setScreen('needs-attention');
           }}
           onOpenFlock={() => setScreen('flock')}
-          onOpenBreeding={() => setScreen('breeding')}
+          onOpenBreeding={() => {
+            setSelectedFarm(null);
+            setScreen('breeding');
+          }}
           onOpenHealthCare={() => setScreen('health-care')}
           onOpenEggsIncubation={() => setScreen('eggs-incubation')}
           onOpenTasks={() => setScreen('tasks')}
@@ -2037,6 +2156,9 @@ const styles = StyleSheet.create({
   farmFooterCopy: { zIndex: 1 },
   farmFooterTitle: { color: '#dfe4e5', fontSize: 13, lineHeight: 17, fontWeight: '700' },
   farmFooterAccent: { color: THEME_ORANGE, fontSize: 15, lineHeight: 20, fontWeight: '900' },
+  farmDetailHero: { height: 286, overflow: 'hidden', backgroundColor: '#101719' },
+  farmDetailHeroCompact: { height: 266 },
+  farmDetailHeroNarrow: { height: 248 },
   farmMeta: { marginTop: 11, flexDirection: 'row', alignItems: 'center', gap: 9 }, farmMetaNarrow: { marginTop: 8, gap: 7 }, farmMetaItem: { minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 4 }, farmMetaDivider: { width: 1, height: 13, backgroundColor: 'rgba(196,203,205,0.45)' }, farmMetaText: { flexShrink: 1, color: '#c4cbcd', fontSize: 10, fontWeight: '500' },
   socialProof: {
     marginTop: 12, alignSelf: 'flex-start', minHeight: 34, maxWidth: '100%',

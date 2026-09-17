@@ -26,9 +26,16 @@ const BROWN_HEN_IMAGE =
   'https://images.unsplash.com/photo-1548550023-2bdb3c5beed7?auto=format&fit=crop&w=400&q=82';
 
 const BREEDING_SUMMARY = [
-  { icon: 'link-variant', value: '6', label: 'Active Pairings', compactLabel: 'Active Pairings', detail: 'breeding pairs' },
-  { icon: 'egg-outline', value: '18', label: 'Holding', compactLabel: 'Holding', detail: '4 groups' },
-  { icon: 'clock-alert-outline', value: '1', label: 'Due Soon', compactLabel: 'Due Soon', detail: 'Set eggs' },
+  { icon: 'link-variant', value: '12', label: 'Active Groups', compactLabel: 'Active Groups', detail: 'breeding groups' },
+  { icon: 'egg-outline', value: '48', label: 'Holding Eggs', compactLabel: 'Holding Eggs', detail: 'across all groups' },
+  { icon: 'clock-alert-outline', value: '3', label: 'Need Attention', compactLabel: 'Need Attention', detail: 'groups to check' },
+];
+
+const BREEDING_GROUPS = [
+  { name: 'Sweater x Kelso', composition: '2 cocks - 8 hens', id: 'BG-021', started: 'Aug 19', eggs: 18, oldestEgg: '5 days', status: 'Active', statusColor: '#5eea78' },
+  { name: 'Kelso', composition: '1 cock - 6 hens', id: 'BG-018', started: 'Aug 16', eggs: 14, oldestEgg: '4 days', status: 'Active', statusColor: '#5eea78' },
+  { name: 'Roundhead x Hatch', composition: '2 cocks - 10 hens', id: 'BG-024', started: 'Aug 22', eggs: 16, oldestEgg: '3 days', status: 'Active', statusColor: '#5eea78' },
+  { name: 'Sweater', composition: '1 cock - 6 hens', id: 'BG-015', started: 'Aug 1', eggs: 0, oldestEgg: '--', status: 'No collection', statusColor: '#ff6673' },
 ];
 
 export const PAIRINGS = [
@@ -126,75 +133,77 @@ function getPairEggCount(pairing, collections = []) {
     + collections.reduce((total, collection) => total + collection.count, 0);
 }
 
-function PairingCard({ pairing, collections, compact, onPress }) {
-  const eggCount = getPairEggCount(pairing, collections);
+function BreedingGroupCard({ group, compact, onPress }) {
+  const active = group.status === 'Active';
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`Open pairing ${pairing.male} and ${pairing.female}`}
+      accessibilityLabel={`Open breeding group ${group.name}`}
       onPress={onPress}
       style={({ pressed }) => [styles.pairingCard, pressed && styles.cardPressed]}
     >
+      <View style={styles.groupAccent} />
       <View style={[styles.pairingTop, compact && styles.pairingTopCompact]}>
-        <View style={styles.avatarPair}>
-          <BirdAvatar source={pairing.maleImage} />
-          <BirdAvatar source={pairing.femaleImage} trailing />
-        </View>
-
         <View style={styles.pairingCopy}>
           <Text numberOfLines={compact ? 2 : 1} style={[styles.pairingTitle, compact && styles.pairingTitleCompact]}>
-            {pairing.male} <Text style={styles.pairingCross}>×</Text> {pairing.female}
+            {group.name}
           </Text>
-          <Text numberOfLines={1} style={styles.pairingBloodline}>{pairing.bloodline}</Text>
-          <Text style={styles.pairingId}>{pairing.id}</Text>
+          <View style={styles.groupMetaLine}>
+            <Text numberOfLines={1} style={styles.pairingBloodline}>{group.composition}</Text>
+            <View style={styles.groupIdBadge}>
+              <Text style={styles.pairingId}>{group.id}</Text>
+            </View>
+          </View>
         </View>
 
-        <View style={[styles.pairStatus, compact && styles.pairStatusCompact]}>
-          <View style={[styles.pairStatusDot, { backgroundColor: pairing.statusColor }]} />
-          <Text numberOfLines={1} style={[styles.pairStatusText, compact && styles.pairStatusTextCompact, { color: pairing.statusColor }]}>{pairing.status}</Text>
+        <View style={styles.groupCardAction}>
+          <View style={[styles.pairStatus, !active && styles.pairStatusAttention, compact && styles.pairStatusCompact]}>
+            <View style={[styles.pairStatusDot, { backgroundColor: group.statusColor }]} />
+            <Text numberOfLines={1} style={[styles.pairStatusText, compact && styles.pairStatusTextCompact, !active && styles.pairStatusTextAttention]}>{group.status}</Text>
+          </View>
+          <MaterialCommunityIcons name="chevron-right" size={18} color="#526067" />
         </View>
       </View>
 
       <View style={styles.pairingMetrics}>
-        <PairMetric icon="calendar-month-outline" label="Started" value={pairing.started} />
-        <PairMetric icon="egg-outline" label="Holding" value={`${eggCount} eggs`} />
-        <PairMetric icon="clock-outline" label="Oldest egg" value={pairing.oldestEgg} isLast />
+        <PairMetric icon="calendar-month-outline" label="Started" value={group.started} />
+        <PairMetric icon="egg-outline" label="Holding" value={`${group.eggs} eggs`} />
+        <PairMetric icon="clock-outline" label="Oldest egg" value={group.oldestEgg} isLast />
       </View>
     </Pressable>
   );
 }
 
-export default function BreedingScreen({ onBack, onAddPairing, onOpenPairing, addedPairings = [], eggCollectionsByPairing = {} }) {
+export default function BreedingScreen({ onBack, onAddPairing, onOpenPairing, addedPairings = [] }) {
   const { width } = useWindowDimensions();
   const compact = width < 480;
   const narrow = width < 390;
   const [query, setQuery] = useState('');
-  const allPairings = useMemo(() => [...addedPairings, ...PAIRINGS], [addedPairings]);
-  const summaryItems = useMemo(() => {
-    const eggGroups = allPairings.filter((pairing) => getPairEggCount(pairing, eggCollectionsByPairing[pairing.id]) > 0);
-    const dueSoon = allPairings.filter((pairing) => /set soon/i.test(pairing.status || '')).length;
-    const values = [
-      allPairings.length,
-      allPairings.reduce((total, pairing) => total + getPairEggCount(pairing, eggCollectionsByPairing[pairing.id]), 0),
-      dueSoon,
-    ];
-    return BREEDING_SUMMARY.map((item, index) => ({
-      ...item,
-      value: String(values[index]),
-      ...(index === 1 ? { detail: `${eggGroups.length} groups` } : {}),
-      ...(index === 2 ? { detail: dueSoon === 1 ? '1 pair' : `${dueSoon} pairs` } : {}),
-    }));
-  }, [allPairings, eggCollectionsByPairing]);
+  const summaryItems = BREEDING_SUMMARY;
+  const allGroups = useMemo(() => [
+    ...addedPairings.map((pairing) => ({
+      name: pairing.groupName || pairing.male,
+      composition: pairing.composition || '1 cock - 1 hen',
+      id: pairing.id,
+      started: pairing.started,
+      eggs: Number.parseInt(pairing.eggs, 10) || 0,
+      oldestEgg: pairing.oldestEgg || '--',
+      status: pairing.status || 'Active',
+      statusColor: pairing.statusColor || '#5eea78',
+      pairing,
+    })),
+    ...BREEDING_GROUPS.map((group, index) => ({ ...group, pairing: PAIRINGS[index % PAIRINGS.length] })),
+  ], [addedPairings]);
 
-  const visiblePairings = useMemo(() => {
+  const visibleGroups = useMemo(() => {
     const normalized = query.trim().toLowerCase();
-    if (!normalized) return allPairings;
-    return allPairings.filter((pairing) =>
-      `${pairing.male} ${pairing.female} ${pairing.bloodline} ${pairing.id}`
+    if (!normalized) return allGroups;
+    return allGroups.filter((group) =>
+      `${group.name} ${group.composition} ${group.id} ${group.status}`
         .toLowerCase()
         .includes(normalized),
     );
-  }, [allPairings, query]);
+  }, [allGroups, query]);
 
   return (
     <View style={styles.screen}>
@@ -246,7 +255,7 @@ export default function BreedingScreen({ onBack, onAddPairing, onOpenPairing, ad
                 <TextInput
                   value={query}
                   onChangeText={setQuery}
-                  placeholder="Search by name or ring #"
+                  placeholder="Search by bloodline or group name"
                   placeholderTextColor="#879195"
                   selectionColor="#ff7900"
                   style={styles.searchInput}
@@ -259,11 +268,11 @@ export default function BreedingScreen({ onBack, onAddPairing, onOpenPairing, ad
               </View>
               <Pressable
                 onPress={onAddPairing}
-                accessibilityLabel="Add pairing"
+                accessibilityLabel="Add breeding group"
                 style={({ pressed }) => [styles.addButton, compact && styles.addButtonCompact, pressed && styles.pressed]}
               >
-                <Ionicons name="add" size={27} color="#fff" />
-                {!compact && <Text style={styles.addButtonText}>Add Pairing</Text>}
+                <Ionicons name="add" size={24} color="#fff" />
+                <Text style={styles.addButtonText}>Add Group</Text>
               </Pressable>
             </View>
 
@@ -277,34 +286,30 @@ export default function BreedingScreen({ onBack, onAddPairing, onOpenPairing, ad
             </View>
 
             <View style={styles.sectionHeader}>
-              <Text style={styles.eyebrow}>ACTIVE PAIRINGS</Text>
+              <Text style={styles.eyebrow}>BREEDING GROUPS</Text>
               <View style={styles.sectionCount}>
-                <Text style={styles.sectionCountText}>{visiblePairings.length} active</Text>
+                <Text style={styles.sectionCountText}>{visibleGroups.filter((group) => group.status === 'Active').length} active</Text>
+                <Ionicons name="chevron-down" size={13} color="#7f8a8e" />
               </View>
             </View>
 
             <View style={styles.pairingList}>
-              {visiblePairings.map((pairing) => (
-                <PairingCard
-                  key={pairing.id}
-                  pairing={pairing}
-                  collections={eggCollectionsByPairing[pairing.id] || []}
+              {visibleGroups.map((group) => (
+                <BreedingGroupCard
+                  key={group.id}
+                  group={group}
                   compact={compact}
-                  onPress={() => onOpenPairing(pairing)}
+                  onPress={() => onOpenPairing(group.pairing)}
                 />
               ))}
-              {!visiblePairings.length && (
+              {!visibleGroups.length && (
                 <View style={styles.emptyState}>
                   <MaterialCommunityIcons name="link-variant" size={32} color="#5f6a6e" />
-                  <Text style={styles.emptyText}>No pairings found</Text>
+                  <Text style={styles.emptyText}>No breeding groups found</Text>
                 </View>
               )}
             </View>
 
-            <View style={styles.reminder}>
-              <MaterialCommunityIcons name="clock-outline" size={24} color="#ff8500" />
-              <Text style={styles.reminderText}>For best results, set properly stored eggs within 3-7 days.</Text>
-            </View>
           </View>
         </View>
       </ScrollView>
@@ -316,14 +321,14 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#020709' },
   pageWrap: { flexGrow: 1, alignItems: 'center', backgroundColor: '#020709' },
   page: { width: '100%', maxWidth: 720, backgroundColor: '#020709' },
-  hero: { height: 250, overflow: 'hidden', backgroundColor: '#101719' },
-  heroCompact: { height: 245 },
+  hero: { height: 272, overflow: 'hidden', backgroundColor: '#101719' },
+  heroCompact: { height: 248 },
   heroSafeArea: { flex: 1 },
   heroHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingTop: Platform.OS === 'web' ? 10 : 3,
   },
-  heroHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 13 },
+  heroHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   headerButton: {
     width: 40, height: 40, borderRadius: 20, borderWidth: 1,
     borderColor: 'rgba(190, 204, 208, 0.35)', backgroundColor: 'rgba(2, 8, 11, 0.65)',
@@ -358,12 +363,12 @@ const styles = StyleSheet.create({
     letterSpacing: 0, outlineStyle: 'none',
   },
   addButton: {
-    height: 52, minWidth: 155, paddingHorizontal: 20, borderRadius: 8,
+    height: 52, minWidth: 103, paddingHorizontal: 12, borderRadius: 8,
     backgroundColor: '#f66f00', flexDirection: 'row', alignItems: 'center',
-    justifyContent: 'center', gap: 9,
+    justifyContent: 'center', gap: 7,
   },
-  addButtonCompact: { width: 52, minWidth: 52, paddingHorizontal: 0 },
-  addButtonText: { color: '#fff', fontSize: 14, fontWeight: '700', letterSpacing: 0 },
+  addButtonCompact: { minWidth: 96, paddingHorizontal: 10 },
+  addButtonText: { color: '#fff', fontSize: 11, fontWeight: '800', letterSpacing: 0 },
   eyebrow: { color: '#899397', fontSize: 10, fontWeight: '600', letterSpacing: 0 },
   summaryHeading: { marginTop: 14 },
   summaryPanel: { marginTop: 14 },
@@ -391,15 +396,17 @@ const styles = StyleSheet.create({
   sectionCount: {
     minWidth: 66, height: 26, borderRadius: 13, borderWidth: 1,
     borderColor: '#18262c', backgroundColor: '#091216', alignItems: 'center', justifyContent: 'center',
+    flexDirection: 'row', gap: 4, paddingHorizontal: 9,
   },
   sectionCountText: { color: '#899397', fontSize: 10, letterSpacing: 0 },
   pairingList: { gap: 8 },
   pairingCard: {
-    borderRadius: 8, borderWidth: 1, borderColor: '#18262c',
-    backgroundColor: '#0a1317', overflow: 'hidden',
+    position: 'relative', borderRadius: 8, borderWidth: 1, borderColor: '#1a292f',
+    backgroundColor: '#091216', overflow: 'hidden',
   },
-  pairingTop: { minHeight: 82, flexDirection: 'row', alignItems: 'center', gap: 12, padding: 10 },
-  pairingTopCompact: { gap: 7, padding: 8 },
+  groupAccent: { position: 'absolute', left: 0, top: 13, width: 3, height: 28, borderRadius: 2, backgroundColor: '#ff7900' },
+  pairingTop: { minHeight: 58, flexDirection: 'row', alignItems: 'center', gap: 12, paddingLeft: 16, paddingRight: 11, paddingVertical: 10 },
+  pairingTopCompact: { gap: 7, paddingLeft: 14, paddingRight: 8, paddingVertical: 9 },
   avatarPair: { flexDirection: 'row', alignItems: 'center', paddingRight: 2 },
   avatarWrap: { position: 'relative', zIndex: 2 },
   avatarTrailing: { marginLeft: -16, zIndex: 1 },
@@ -408,35 +415,41 @@ const styles = StyleSheet.create({
     borderColor: '#18262c', backgroundColor: '#0a1317',
   },
   pairingCopy: { flex: 1, minWidth: 0 },
-  pairingTitle: { color: '#edf0f1', fontSize: 15, lineHeight: 20, fontWeight: '600', letterSpacing: 0 },
-  pairingTitleCompact: { fontSize: 12, lineHeight: 15 },
-  pairingCross: { color: '#ff8500' },
-  pairingBloodline: { marginTop: 3, color: '#9fa8ab', fontSize: 10, lineHeight: 14, letterSpacing: 0 },
-  pairingId: { marginTop: 3, color: '#778286', fontSize: 9, letterSpacing: 0 },
-  pairStatus: {
-    maxWidth: 78, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 5,
+  pairingTitle: {
+    color: '#f2f5f6',
+    fontSize: 15,
+    lineHeight: 19,
+    fontWeight: '800',
+    letterSpacing: 0,
   },
-  pairStatusCompact: { maxWidth: 58, gap: 4 },
+  pairingTitleCompact: { fontSize: 14, lineHeight: 18 },
+  groupMetaLine: { marginTop: 5, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  pairingBloodline: { color: '#94a0a4', fontSize: 10, lineHeight: 14, letterSpacing: 0 },
+  groupIdBadge: { borderRadius: 4, backgroundColor: 'rgba(255, 121, 0, 0.1)', paddingHorizontal: 5, paddingVertical: 2 },
+  pairingId: { color: '#e8903a', fontSize: 8, fontWeight: '700', letterSpacing: 0 },
+  groupCardAction: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  pairStatus: {
+    maxWidth: 102, minHeight: 22, borderRadius: 11, paddingHorizontal: 8,
+    backgroundColor: 'rgba(35, 110, 63, 0.22)', flexDirection: 'row',
+    alignItems: 'center', justifyContent: 'flex-end', gap: 5,
+  },
+  pairStatusAttention: { backgroundColor: 'rgba(158, 45, 57, 0.22)' },
+  pairStatusCompact: { maxWidth: 90, paddingHorizontal: 7, gap: 4 },
   pairStatusDot: { width: 6, height: 6, borderRadius: 3 },
-  pairStatusText: { fontSize: 10, fontWeight: '600', letterSpacing: 0 },
+  pairStatusText: { color: '#7de596', fontSize: 9, fontWeight: '700', letterSpacing: 0 },
+  pairStatusTextAttention: { color: '#ff8994' },
   pairStatusTextCompact: { fontSize: 8 },
   pairingMetrics: {
-    minHeight: 54, borderTopWidth: 1, borderTopColor: '#162329',
-    flexDirection: 'row', alignItems: 'center', paddingVertical: 8,
+    minHeight: 48, marginHorizontal: 8, marginBottom: 8, borderRadius: 6,
+    backgroundColor: '#071014', flexDirection: 'row', alignItems: 'center', paddingVertical: 7,
   },
   pairMetric: {
     flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center',
     justifyContent: 'center', gap: 8, paddingHorizontal: 8,
   },
-  pairMetricDivider: { borderRightWidth: 1, borderRightColor: '#1d2b31' },
+  pairMetricDivider: { borderRightWidth: 1, borderRightColor: '#17252a' },
   pairMetricLabel: { color: '#778286', fontSize: 8, lineHeight: 11, letterSpacing: 0 },
   pairMetricValue: { marginTop: 2, color: '#d7dcde', fontSize: 10, lineHeight: 13, letterSpacing: 0 },
-  reminder: {
-    minHeight: 48, marginTop: 9, paddingHorizontal: 17, borderRadius: 8,
-    borderWidth: 1, borderColor: '#242c2e', backgroundColor: '#15191a',
-    flexDirection: 'row', alignItems: 'center', gap: 13,
-  },
-  reminderText: { flex: 1, color: '#8f989b', fontSize: 11, lineHeight: 16, letterSpacing: 0 },
   emptyState: { height: 180, alignItems: 'center', justifyContent: 'center', gap: 8 },
   emptyText: { color: '#7f8a8e', fontSize: 13 },
   pressed: { opacity: 0.72 },
