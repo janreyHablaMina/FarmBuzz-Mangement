@@ -192,7 +192,26 @@ export default function BreedingScreen({ onBack, onAddPairing, onOpenPairing, ad
       statusColor: pairing.statusColor || '#5eea78',
       pairing,
     })),
-    ...BREEDING_GROUPS.map((group, index) => ({ ...group, pairing: PAIRINGS[index % PAIRINGS.length] })),
+    ...BREEDING_GROUPS.map((group, index) => {
+      const [sireBloodline, damBloodline = group.name] = group.name.split(/\s+x\s+/i);
+      return {
+        ...group,
+        pairing: {
+          ...PAIRINGS[index % PAIRINGS.length],
+          groupName: group.name,
+          groupLabel: index === 0 ? 'Main Breeders' : `${group.name} Group`,
+          composition: group.composition,
+          sireBloodline,
+          damBloodline,
+          started: group.started,
+          eggs: group.eggs,
+          oldestEgg: group.oldestEgg,
+          status: group.status,
+          statusColor: group.statusColor,
+          location: index === 0 ? 'House A' : `House ${String.fromCharCode(66 + index)}`,
+        },
+      };
+    }),
   ], [addedPairings]);
 
   const visibleGroups = useMemo(() => {

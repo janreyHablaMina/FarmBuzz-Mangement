@@ -25,6 +25,8 @@ import CreateBatchScreen from './CreateBatchScreen';
 import IncubationBatchDetailScreen from './IncubationBatchDetailScreen';
 import IncubationHistoryScreen from './IncubationHistoryScreen';
 import CandlingScreen from './CandlingScreen';
+import RecordHatchScreen from './RecordHatchScreen';
+import { INCUBATION_BATCHES } from './farmData';
 import TasksScreen from './TasksScreen';
 import TeamScreen, { MEMBERS } from './TeamScreen';
 import SalesScreen from './SalesScreen';
@@ -765,7 +767,7 @@ function FarmWorkspaceCard({ farm, onPress }) {
   );
 }
 
-function FarmDetailScreen({ farm, onBack, onOpenBreeding, onOpenSettings }) {
+function FarmDetailScreen({ farm, onBack, onOpenBreeding, onOpenIncubation, onOpenSettings }) {
   const { width } = useWindowDimensions();
   const compact = width < 480;
   const narrow = width < 390;
@@ -777,6 +779,10 @@ function FarmDetailScreen({ farm, onBack, onOpenBreeding, onOpenSettings }) {
     ...MODULES.find((item) => item.title === 'Breeding'),
     subtitle: 'Pairings, eggs, hatch readiness',
     image: BREEDING_HERO_IMAGE,
+  };
+  const incubationModule = {
+    ...MODULES.find((item) => item.title === 'Eggs & Incubation'),
+    subtitle: 'Holding eggs, batches, hatch progress',
   };
   const breedingStats = [
     { label: 'Active Pairings', value: '3', icon: 'link-variant', color: THEME_ORANGE },
@@ -839,10 +845,11 @@ function FarmDetailScreen({ farm, onBack, onOpenBreeding, onOpenSettings }) {
 
             <View style={styles.sectionHeading}>
               <Text style={[styles.sectionTitle, narrow && styles.sectionTitleNarrow]}>Management Tool</Text>
-              <Text style={styles.sectionMeta}>1 module</Text>
+              <Text style={styles.sectionMeta}>2 modules</Text>
             </View>
             <View style={[styles.moduleGrid, compact && styles.moduleGridCompact]}>
               <ModuleCard item={breedingModule} compact={compact} onPress={onOpenBreeding} />
+              <ModuleCard item={incubationModule} compact={compact} onPress={onOpenIncubation} />
             </View>
           </View>
         </View>
@@ -1279,8 +1286,9 @@ export default function App() {
   const [selectedFarm, setSelectedFarm] = useState(null);
   const [settingsReturn, setSettingsReturn] = useState('dashboard');
   const [createBatchReturn, setCreateBatchReturn] = useState('eggs-incubation');
-  const [selectedBatchId, setSelectedBatchId] = useState('B-001');
+  const [selectedBatchId, setSelectedBatchId] = useState('INC-024');
   const [candlingResultsByBatch, setCandlingResultsByBatch] = useState({});
+  const [hatchResultsByBatch, setHatchResultsByBatch] = useState({});
   const [addedBirds, setAddedBirds] = useState([]);
   const [selectedBird, setSelectedBird] = useState(null);
   const [birdOverrides, setBirdOverrides] = useState({});
@@ -1383,6 +1391,7 @@ export default function App() {
           farm={selectedFarm}
           onBack={() => setScreen('farms')}
           onOpenBreeding={() => setScreen('breeding')}
+          onOpenIncubation={() => setScreen('eggs-incubation')}
           onOpenSettings={() => {
             setSettingsReturn('farm-detail');
             setScreen('management-settings');
@@ -1797,7 +1806,7 @@ export default function App() {
         />
       ) : screen === 'eggs-incubation' ? (
         <EggsIncubationScreen
-          onBack={() => setScreen('dashboard')}
+          onBack={() => setScreen(selectedFarm ? 'farm-detail' : 'dashboard')}
           onOpenEggHolding={() => setScreen('egg-holding')}
           onCreateBatch={() => openCreateBatch('eggs-incubation')}
           onOpenHistory={() => setScreen('incubation-history')}
@@ -1822,8 +1831,10 @@ export default function App() {
         <IncubationBatchDetailScreen
           batchId={selectedBatchId}
           candlingResults={candlingResultsByBatch[selectedBatchId]}
+          hatchResults={hatchResultsByBatch[selectedBatchId]}
           onBack={() => setScreen('eggs-incubation')}
           onOpenCandling={() => setScreen('candling')}
+          onOpenHatch={() => setScreen('record-hatch')}
         />
       ) : screen === 'candling' ? (
         <CandlingScreen
@@ -1832,6 +1843,17 @@ export default function App() {
           onBack={() => setScreen('incubation-batch-detail')}
           onSave={(results) => {
             setCandlingResultsByBatch((current) => ({ ...current, [selectedBatchId]: results }));
+            setScreen('incubation-batch-detail');
+          }}
+        />
+      ) : screen === 'record-hatch' ? (
+        <RecordHatchScreen
+          batchId={selectedBatchId}
+          activeEggCount={(INCUBATION_BATCHES.find((batch) => batch.id === selectedBatchId)?.eggCount || 0) - (candlingResultsByBatch[selectedBatchId]?.rejected || 0)}
+          initialResult={hatchResultsByBatch[selectedBatchId]}
+          onBack={() => setScreen('incubation-batch-detail')}
+          onSave={(result) => {
+            setHatchResultsByBatch((current) => ({ ...current, [selectedBatchId]: result }));
             setScreen('incubation-batch-detail');
           }}
         />

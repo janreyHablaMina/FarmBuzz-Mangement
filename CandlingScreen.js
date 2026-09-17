@@ -6,6 +6,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
   useWindowDimensions,
 } from 'react-native';
@@ -70,6 +71,7 @@ export default function CandlingScreen({ batchId, initialResults, onBack, onSave
   );
   const [rejected, setRejected] = useState(initialResults?.rejected ?? 0);
   const [recheck, setRecheck] = useState(initialResults?.recheck ?? 0);
+  const [notes, setNotes] = useState(initialResults?.notes ?? '');
   const developing = batch.eggCount - rejected - recheck;
 
   const changeRejected = (amount) => {
@@ -81,7 +83,7 @@ export default function CandlingScreen({ batchId, initialResults, onBack, onSave
   };
 
   const saveResults = () => {
-    const results = { total: batch.eggCount, developing, rejected, recheck, saved: true };
+    const results = { total: batch.eggCount, developing, rejected, recheck, notes: notes.trim(), savedAt: new Date().toISOString(), saved: true };
     Alert.alert(
       'Save candling totals?',
       `${developing} developing, ${rejected} rejected, and ${recheck} to recheck.`,
@@ -159,6 +161,9 @@ export default function CandlingScreen({ batchId, initialResults, onBack, onSave
               </View>
             )}
 
+            <Text style={styles.sectionTitle}>Notes <Text style={styles.optionalText}>(Optional)</Text></Text>
+            <TextInput value={notes} onChangeText={setNotes} multiline placeholder="Candling observations" placeholderTextColor="#6f7d82" style={styles.notesInput} />
+
             <Pressable onPress={saveResults} style={({ pressed }) => [styles.saveButton, pressed && styles.pressed]}>
               <MaterialCommunityIcons name="content-save-check-outline" size={23} color="#fff" />
               <Text style={styles.saveButtonText}>Save Candling Totals</Text>
@@ -211,6 +216,8 @@ const styles = StyleSheet.create({
   removedCopy: { flex: 1 },
   removedTitle: { color: '#e3e6e7', fontSize: 12, fontWeight: '600', letterSpacing: 0 },
   removedDetail: { marginTop: 3, color: '#967d79', fontSize: 9, letterSpacing: 0 },
+  optionalText: { color: '#77858a', fontSize: 10, fontWeight: '400' },
+  notesInput: { height: 72, borderRadius: 8, borderWidth: 1, borderColor: '#26373e', backgroundColor: '#081216', padding: 11, color: '#e4e9ea', fontSize: 11, textAlignVertical: 'top', outlineStyle: 'none' },
   saveButton: { minHeight: 52, marginTop: 14, paddingHorizontal: 18, borderRadius: 8, backgroundColor: '#f66f00', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9 },
   saveButtonText: { color: '#fff', fontSize: 13, fontWeight: '700', letterSpacing: 0 },
   pressed: { opacity: 0.72 },

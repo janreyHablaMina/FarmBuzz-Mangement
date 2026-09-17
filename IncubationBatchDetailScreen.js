@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Alert,
   Animated,
   Easing,
   Platform,
@@ -286,7 +287,7 @@ function Metric({ icon, value, label, isLast }) {
   );
 }
 
-export default function IncubationBatchDetailScreen({ batchId, candlingResults, onBack, onOpenCandling }) {
+export default function IncubationBatchDetailScreen({ batchId, candlingResults, hatchResults, onBack, onOpenCandling, onOpenHatch }) {
   const { width } = useWindowDimensions();
   const compact = width < 480;
   const narrow = width < 360;
@@ -308,6 +309,7 @@ export default function IncubationBatchDetailScreen({ batchId, candlingResults, 
   const candlingAvailable = progressDay >= batch.candlingDueDay;
   const activeEggCount = batch.eggCount - removedCount;
   const lockdown = progressDay >= 18;
+  const hatchComplete = hatchResults?.saved === true;
   const recommendedTemperature = lockdown ? '37.2-37.5 C' : '37.5 C';
   const recommendedHumidity = lockdown ? '65-70%' : '58-60%';
 
@@ -353,15 +355,19 @@ export default function IncubationBatchDetailScreen({ batchId, candlingResults, 
               <Metric icon="egg-outline" value={activeEggCount} label="Active Eggs" isLast />
             </View>
 
-            <Text style={styles.sectionTitle}>Next Action</Text>
+            <Text style={styles.sectionTitle}>{hatchComplete ? 'Hatch Result' : 'Next Action'}</Text>
             <View style={styles.actionCard}>
               <View style={styles.actionIcon}>
-                <MaterialCommunityIcons name="flashlight" size={25} color={ORANGE} />
+                <MaterialCommunityIcons name={lockdown ? 'egg-easter' : 'flashlight'} size={25} color={ORANGE} />
               </View>
               <View style={styles.actionCopy}>
-                <Text style={styles.actionTitle}>{candlingComplete ? 'Candling Complete' : batch.eventLabel}</Text>
+                <Text style={styles.actionTitle}>{hatchComplete ? 'Hatch Recorded' : lockdown ? 'Hatching Stage' : candlingComplete ? 'Candling Complete' : batch.eventLabel}</Text>
                 <Text style={styles.actionDetail}>
-                  {candlingComplete
+                  {hatchComplete
+                    ? `${hatchResults.hatched} chicks - ${hatchResults.unhatched} unhatched - ${hatchResults.hatchRate}% hatch rate`
+                    : lockdown
+                      ? `${activeEggCount} eggs at hatch stage`
+                    : candlingComplete
                     ? `${developingCount} developing - ${removedCount} removed - ${recheckCount} recheck`
                     : candlingAvailable
                       ? 'Ready now'
@@ -369,17 +375,21 @@ export default function IncubationBatchDetailScreen({ batchId, candlingResults, 
                 </Text>
               </View>
               <Pressable
-                accessibilityState={{ disabled: !candlingComplete && !candlingAvailable }}
-                disabled={!candlingComplete && !candlingAvailable}
-                onPress={onOpenCandling}
+                accessibilityState={{ disabled: hatchComplete || (!lockdown && !candlingComplete && !candlingAvailable) }}
+                disabled={hatchComplete || (!lockdown && !candlingComplete && !candlingAvailable)}
+                onPress={lockdown ? onOpenHatch : onOpenCandling}
                 style={({ pressed }) => [
                   styles.actionButton,
-                  !candlingComplete && !candlingAvailable && styles.actionButtonDisabled,
+                  (hatchComplete || (!lockdown && !candlingComplete && !candlingAvailable)) && styles.actionButtonDisabled,
                   pressed && styles.pressed,
                 ]}
               >
                 <Text style={styles.actionButtonText}>
-                  {candlingComplete
+                  {hatchComplete
+                    ? 'Completed'
+                    : lockdown
+                      ? 'Record Hatch'
+                    : candlingComplete
                     ? 'View Results'
                     : candlingAvailable
                       ? 'Start Candling'
@@ -388,16 +398,32 @@ export default function IncubationBatchDetailScreen({ batchId, candlingResults, 
               </Pressable>
             </View>
 
+            <Text style={styles.sectionTitle}>Egg Sources</Text>
+            <View style={styles.sourceList}>
+              {(batch.sources || [{ groupName: 'Breeding Group', cross: batch.source, eggs: batch.eggCount }]).map((source, index, sources) => (
+                <View key={`${source.groupName}-${index}`} style={[styles.sourceRow, index < sources.length - 1 && styles.sourceDivider]}>
+                  <View style={styles.sourceIcon}><MaterialCommunityIcons name="link-variant" size={18} color={ORANGE} /></View>
+                  <View style={styles.sourceCopy}><Text style={styles.sourceName}>{source.groupName}</Text><Text style={styles.sourceCross}>{source.cross}</Text></View>
+                  <Text style={styles.sourceEggs}>{source.eggs} eggs</Text>
+                </View>
+              ))}
+            </View>
+
             <View style={styles.infoBand}>
               <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Egg Sources</Text>
-                <Text style={styles.infoValue}>{batch.source}</Text>
+                <Text style={styles.infoLabel}>Batch Status</Text>
+                <Text style={styles.infoValue}>{hatchComplete ? 'Completed' : batch.status || 'Incubating'}</Text>
               </View>
               <View style={styles.infoDivider} />
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Notes</Text>
                 <Text style={styles.infoValue}>{batch.note}</Text>
               </View>
+            </View>
+
+            <View style={styles.batchActions}>
+              <Pressable onPress={() => Alert.alert('Edit batch', `Edit ${batch.id}.`)} style={({ pressed }) => [styles.secondaryAction, pressed && styles.pressed]}><MaterialCommunityIcons name="pencil-outline" size={18} color={ORANGE} /><Text style={styles.secondaryActionText}>Edit Batch</Text></Pressable>
+              <Pressable onPress={() => Alert.alert('Close batch', `Close ${batch.id}?`)} style={({ pressed }) => [styles.secondaryAction, pressed && styles.pressed]}><MaterialCommunityIcons name="close-circle-outline" size={18} color="#ef6b55" /><Text style={[styles.secondaryActionText, { color: '#ef6b55' }]}>Close Batch</Text></Pressable>
             </View>
           </View>
         </View>
@@ -512,10 +538,16 @@ const styles = StyleSheet.create({
   },
   actionButtonDisabled: { backgroundColor: '#3b4143', opacity: 0.7 },
   actionButtonText: { color: '#fff', fontSize: 9, fontWeight: '700', letterSpacing: 0 },
+  sourceList: { borderRadius: 8, borderWidth: 1, borderColor: '#1c2a30', backgroundColor: '#0b1418', paddingHorizontal: 10, overflow: 'hidden' },
+  sourceRow: { minHeight: 58, flexDirection: 'row', alignItems: 'center', gap: 9 },
+  sourceDivider: { borderBottomWidth: 1, borderBottomColor: '#1b292f' },
+  sourceIcon: { width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(255,122,0,0.08)', alignItems: 'center', justifyContent: 'center' },
+  sourceCopy: { flex: 1, minWidth: 0 }, sourceName: { color: '#e5e9ea', fontSize: 11, fontWeight: '700' }, sourceCross: { marginTop: 3, color: '#778589', fontSize: 9 }, sourceEggs: { color: ORANGE, fontSize: 10, fontWeight: '700' },
   infoBand: { marginTop: 12, paddingHorizontal: 4 },
   infoRow: { paddingVertical: 12, flexDirection: 'row', gap: 16 },
   infoLabel: { width: 78, color: '#818c90', fontSize: 10, fontWeight: '600', letterSpacing: 0 },
   infoValue: { flex: 1, color: '#c3cacc', fontSize: 11, lineHeight: 16, letterSpacing: 0 },
   infoDivider: { height: 1, backgroundColor: '#172329' },
+  batchActions: { marginTop: 10, flexDirection: 'row', gap: 8 }, secondaryAction: { flex: 1, height: 44, borderRadius: 7, borderWidth: 1, borderColor: '#293940', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }, secondaryActionText: { color: ORANGE, fontSize: 10, fontWeight: '700' },
   pressed: { opacity: 0.72 },
 });

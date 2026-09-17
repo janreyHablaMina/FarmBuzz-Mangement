@@ -19,7 +19,8 @@ import { HOLDING_GROUPS } from './farmData';
 
 const HERO_IMAGE = require('./assets/eggs-incubation-hero.png');
 const ORANGE = '#ff7a00';
-const READY_GROUPS = HOLDING_GROUPS.filter((group) => group.status === 'Ready to set');
+const READY_GROUPS = HOLDING_GROUPS;
+const INCUBATOR_CAPACITY = { 'Incubator 1': 60, 'Incubator 2': 72, 'Main Hatchery': 120 };
 
 function HeaderButton({ onPress }) {
   return (
@@ -33,8 +34,8 @@ function HeaderButton({ onPress }) {
   );
 }
 
-function SelectionRow({ group, selected, onToggle, isLast }) {
-  const available = group.status === 'Ready to set';
+function SelectionRow({ group, selected, onToggle, count, onCountChange, isLast }) {
+  const available = group.eggCount > 0;
 
   return (
     <Pressable
@@ -54,20 +55,22 @@ function SelectionRow({ group, selected, onToggle, isLast }) {
         {selected && <Ionicons name="checkmark" size={17} color="#fff" />}
       </View>
       <View style={styles.selectionCopy}>
-        <Text numberOfLines={1} style={[styles.pairName, !available && styles.disabledText]}>
-          {group.male} x {group.female}
-        </Text>
-        <Text style={styles.pairMeta}>{group.eggCount} eggs  -  oldest {group.oldestDays} days</Text>
+        <Text numberOfLines={1} style={[styles.pairName, !available && styles.disabledText]}>{group.groupName || `${group.male} x ${group.female}`}</Text>
+        <Text style={styles.pairMeta}>{[group.male, group.female].filter(Boolean).join(' x ')}  -  {group.eggCount} available</Text>
       </View>
-      <Text style={[styles.availability, available ? styles.readyText : styles.holdingText]}>
-        {available ? 'Ready' : 'Holding'}
-      </Text>
+      {selected ? (
+        <View style={styles.eggStepper}>
+          <Pressable onPress={(event) => { event.stopPropagation?.(); onCountChange(Math.max(1, count - 1)); }} style={styles.eggStepButton}><Ionicons name="remove" size={15} color="#aeb8bb" /></Pressable>
+          <Text style={styles.eggStepValue}>{count}</Text>
+          <Pressable onPress={(event) => { event.stopPropagation?.(); onCountChange(Math.min(group.eggCount, count + 1)); }} style={styles.eggStepButton}><Ionicons name="add" size={15} color="#fff" /></Pressable>
+        </View>
+      ) : <Text style={[styles.availability, styles.readyText]}>Available</Text>}
     </Pressable>
   );
 }
 
 function IncubatorDropdown({ value, onChange }) {
-  const [options, setOptions] = useState(['Incubator 1', 'Incubator 2']);
+  const [options, setOptions] = useState(['Incubator 1', 'Incubator 2', 'Main Hatchery']);
   const [open, setOpen] = useState(false);
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState('');
@@ -312,8 +315,9 @@ export default function CreateBatchScreen({ onBack, onComplete }) {
   const { width } = useWindowDimensions();
   const compact = width < 480;
   const narrow = width < 390;
-  const [batchId, setBatchId] = useState('B-003');
+  const [batchId] = useState('INC-025');
   const [selectedIds, setSelectedIds] = useState(() => READY_GROUPS.map((group) => group.id));
+  const [eggCounts, setEggCounts] = useState(() => Object.fromEntries(HOLDING_GROUPS.map((group) => [group.id, group.eggCount])));
   const [incubator, setIncubator] = useState('Incubator 1');
   const [startDate, setStartDate] = useState(() => normalizeDate(new Date()));
   const [notes, setNotes] = useState('');
@@ -322,7 +326,7 @@ export default function CreateBatchScreen({ onBack, onComplete }) {
     () => HOLDING_GROUPS.filter((group) => selectedIds.includes(group.id)),
     [selectedIds],
   );
-  const selectedEggs = selectedGroups.reduce((total, group) => total + group.eggCount, 0);
+  const selectedEggs = selectedGroups.reduce((total, group) => total + (eggCounts[group.id] || 0), 0);
   const expectedHatch = formatExpectedHatch(startDate);
 
   const toggleGroup = (id) => {
@@ -346,7 +350,7 @@ export default function CreateBatchScreen({ onBack, onComplete }) {
       `${batchId.trim()} will start on ${formatDate(startDate)} with ${selectedEggs} eggs in ${incubator}.`,
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Create Batch', onPress: onComplete },
+        { text: 'Start Incubation', onPress: onComplete },
       ],
     );
   };
@@ -376,7 +380,7 @@ export default function CreateBatchScreen({ onBack, onComplete }) {
             <SafeAreaView edges={['top']} style={styles.heroSafeArea}>
               <View style={styles.heroHeader}>
                 <HeaderButton onPress={onBack} />
-                <Text style={styles.screenTitle}>Create Batch</Text>
+                <Text style={styles.screenTitle}>Move Eggs In</Text>
               </View>
               <View style={[styles.heroCopy, narrow && styles.heroCopyNarrow]}>
                 <Text style={[styles.farmName, narrow && styles.farmNameNarrow]}>FarmBuzz Farm</Text>
@@ -387,14 +391,14 @@ export default function CreateBatchScreen({ onBack, onComplete }) {
 
           <View style={[styles.content, narrow && styles.contentNarrow]}>
             <View style={styles.fieldBlock}>
-              <Text style={styles.fieldLabel}>Batch ID</Text>
+              <Text style={styles.fieldLabel}>Batch ID <Text style={styles.autoLabel}>Auto-generated</Text></Text>
               <View style={styles.textField}>
                 <MaterialCommunityIcons name="identifier" size={21} color={ORANGE} />
                 <TextInput
                   value={batchId}
-                  onChangeText={setBatchId}
+                  editable={false}
                   autoCapitalize="characters"
-                  placeholder="e.g. B-003"
+                  placeholder="INC-025"
                   placeholderTextColor="#758084"
                   selectionColor={ORANGE}
                   style={styles.textInput}
@@ -404,8 +408,8 @@ export default function CreateBatchScreen({ onBack, onComplete }) {
 
             <View style={styles.sectionHeader}>
               <View>
-                <Text style={styles.sectionTitle}>Select Ready Eggs</Text>
-                <Text style={styles.sectionDetail}>Choose the holding groups for this batch.</Text>
+                <Text style={styles.sectionTitle}>Select Holding Eggs</Text>
+                <Text style={styles.sectionDetail}>Choose sources and adjust how many eggs to move.</Text>
               </View>
               <Text style={styles.selectedCount}>{selectedEggs} eggs</Text>
             </View>
@@ -416,12 +420,15 @@ export default function CreateBatchScreen({ onBack, onComplete }) {
                   group={group}
                   selected={selectedIds.includes(group.id)}
                   onToggle={() => toggleGroup(group.id)}
+                  count={eggCounts[group.id] || 1}
+                  onCountChange={(count) => setEggCounts((current) => ({ ...current, [group.id]: count }))}
                   isLast={index === HOLDING_GROUPS.length - 1}
                 />
               ))}
             </View>
 
             <IncubatorDropdown value={incubator} onChange={setIncubator} />
+            <View style={styles.capacityBand}><MaterialCommunityIcons name="gauge" size={20} color={ORANGE} /><Text style={styles.capacityLabel}>Available Capacity</Text><Text style={styles.capacityValue}>{Math.max(0, (INCUBATOR_CAPACITY[incubator] || 60) - selectedEggs)} of {INCUBATOR_CAPACITY[incubator] || 60} eggs</Text></View>
             <DatePickerField value={startDate} onChange={setStartDate} />
 
             <View style={styles.fieldBlock}>
@@ -465,7 +472,7 @@ export default function CreateBatchScreen({ onBack, onComplete }) {
               ]}
             >
               <MaterialCommunityIcons name="egg-outline" size={24} color="#fff" />
-              <Text style={styles.createButtonText}>Create Batch</Text>
+              <Text style={styles.createButtonText}>Start Incubation</Text>
             </Pressable>
           </View>
         </View>
@@ -504,6 +511,7 @@ const styles = StyleSheet.create({
   contentNarrow: { paddingHorizontal: 8 },
   fieldBlock: { marginTop: 18 },
   fieldLabel: { marginBottom: 7, color: '#dce1e2', fontSize: 13, fontWeight: '600', letterSpacing: 0 },
+  autoLabel: { color: '#748187', fontSize: 9, fontWeight: '500' },
   optionalText: { color: '#7f898d', fontWeight: '400' },
   textField: {
     height: 50, paddingHorizontal: 14, borderRadius: 8, borderWidth: 1,
@@ -531,6 +539,9 @@ const styles = StyleSheet.create({
   pairMeta: { marginTop: 4, color: '#899397', fontSize: 10, letterSpacing: 0 },
   availability: { minWidth: 46, fontSize: 10, fontWeight: '600', textAlign: 'right', letterSpacing: 0 },
   readyText: { color: ORANGE },
+  eggStepper: { height: 34, borderRadius: 6, borderWidth: 1, borderColor: '#2a3b42', backgroundColor: '#081216', flexDirection: 'row', alignItems: 'center', overflow: 'hidden' },
+  eggStepButton: { width: 29, height: 34, alignItems: 'center', justifyContent: 'center' },
+  eggStepValue: { minWidth: 29, color: '#f1f4f5', fontSize: 11, fontWeight: '800', textAlign: 'center' },
   holdingText: { color: '#919a9d' },
   dropdownTrigger: {
     height: 50, paddingHorizontal: 14, borderRadius: 8, borderWidth: 1,
@@ -610,6 +621,9 @@ const styles = StyleSheet.create({
   summaryValueSmall: { color: '#f0f2f3', fontSize: 13, fontWeight: '700', letterSpacing: 0 },
   summaryLabel: { marginTop: 4, color: '#899397', fontSize: 9, letterSpacing: 0 },
   summaryDivider: { width: 1, height: 36, backgroundColor: '#223036' },
+  capacityBand: { minHeight: 46, marginTop: -7, paddingHorizontal: 12, borderRadius: 7, borderWidth: 1, borderColor: '#1e3037', backgroundColor: '#081317', flexDirection: 'row', alignItems: 'center', gap: 8 },
+  capacityLabel: { flex: 1, color: '#88959a', fontSize: 10 },
+  capacityValue: { color: '#e5e9ea', fontSize: 10, fontWeight: '700' },
   createButton: {
     minHeight: 52, marginTop: 11, paddingHorizontal: 18, borderRadius: 8,
     backgroundColor: '#f66f00', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9,
