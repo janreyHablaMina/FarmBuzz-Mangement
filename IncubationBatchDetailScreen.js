@@ -29,8 +29,8 @@ const ORANGE = '#ff7a00';
 
 const STAGES = [
   { day: 0, label: 'Set', icon: 'egg-outline', image: SET_EGG_IMAGE },
-  { day: 7, label: 'Developing', icon: 'egg', image: DEVELOPING_EGG_IMAGE },
-  { day: 14, label: 'Candling', icon: 'flashlight', image: CANDLING_EGG_IMAGE },
+  { day: 7, label: 'Candling', icon: 'flashlight', image: DEVELOPING_EGG_IMAGE },
+  { day: 14, label: 'Developing', icon: 'egg', image: CANDLING_EGG_IMAGE },
   { day: 18, label: 'Hatching', icon: 'progress-clock', image: HATCHING_EGG_IMAGE },
   { day: 21, label: 'Hatched', icon: 'bird', image: HATCHED_CHICK_IMAGE },
 ];
@@ -54,27 +54,29 @@ function getCurrentStage(dayNumber) {
   );
 }
 
-function getStageMessage(stageIndex) {
+function getStageMessage(stageIndex, dayNumber) {
+  if (stageIndex === 0 && dayNumber > 0) return 'Incubating';
   return [
     'Batch started',
-    'Developing well',
     'Ready for candling',
+    'Development confirmed',
     'Hatching soon',
     'Hatch completed',
   ][stageIndex];
 }
 
-function getPreviewMessage(stageIndex) {
+function getPreviewMessage(stageIndex, dayNumber) {
+  if (stageIndex === 0 && dayNumber > 0) return 'Early development is underway inside the egg.';
   return [
     'Eggs are settled and incubation has begun.',
-    'The embryo is growing steadily inside the egg.',
     'Check development with the candling light.',
+    'Continue incubation after the development check.',
     'The chick is positioning and preparing to hatch.',
     'The hatch cycle is complete.',
   ][stageIndex];
 }
 
-function AnimatedPreview({ batch, narrow, onProgressDayChange }) {
+function AnimatedPreview({ batch, narrow, onPreviewDayChange }) {
   const pulse = useRef(new Animated.Value(0)).current;
   const progress = useRef(new Animated.Value(0)).current;
   const timelineProgress = useRef(new Animated.Value(getCurrentStage(batch.dayNumber) * 20)).current;
@@ -112,7 +114,8 @@ function AnimatedPreview({ batch, narrow, onProgressDayChange }) {
 
   useEffect(() => {
     setPreviewStage(actualStage);
-  }, [actualStage, batch.id]);
+    onPreviewDayChange(batch.dayNumber);
+  }, [actualStage, batch.dayNumber, batch.id, onPreviewDayChange]);
 
   useEffect(() => {
     progress.setValue(0);
@@ -135,7 +138,7 @@ function AnimatedPreview({ batch, narrow, onProgressDayChange }) {
 
   const selectStage = (index) => {
     setPreviewStage(index);
-    onProgressDayChange(index === actualStage ? batch.dayNumber : STAGES[index].day);
+    onPreviewDayChange(index === actualStage ? batch.dayNumber : STAGES[index].day);
     stageTransition.setValue(0);
     Animated.spring(stageTransition, {
       toValue: 1,
@@ -207,8 +210,8 @@ function AnimatedPreview({ batch, narrow, onProgressDayChange }) {
             <Text style={styles.dayValue}>Day {previewDay}</Text>
             <Text style={styles.dayTotal}>of 21</Text>
           </View>
-          <Text style={styles.developmentStatus}>{getStageMessage(previewStage)}</Text>
-          <Text style={styles.previewMessage}>{getPreviewMessage(previewStage)}</Text>
+          <Text style={styles.developmentStatus}>{getStageMessage(previewStage, previewDay)}</Text>
+          <Text style={styles.previewMessage}>{getPreviewMessage(previewStage, previewDay)}</Text>
 
           <View style={styles.hatchRow}>
             <View>
@@ -249,7 +252,7 @@ function AnimatedPreview({ batch, narrow, onProgressDayChange }) {
                 complete && styles.stageCircleComplete,
                 active && styles.stageCircleActive,
                 active && {
-                  transform: [{ scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.08] }) }],
+                  transform: [{ scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.02] }) }],
                 },
               ]}>
                 <Animated.Image
@@ -260,7 +263,7 @@ function AnimatedPreview({ batch, narrow, onProgressDayChange }) {
                     active && styles.stageThumbnailActive,
                     !active && !complete && styles.stageThumbnailUpcoming,
                     active && {
-                      transform: [{ scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.1] }) }],
+                      transform: [{ scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.98, 1.02] }) }],
                     },
                   ]}
                 />
@@ -295,23 +298,39 @@ export default function IncubationBatchDetailScreen({ batchId, candlingResults, 
     () => INCUBATION_BATCHES.find((item) => item.id === batchId) ?? INCUBATION_BATCHES[0],
     [batchId],
   );
-  const [progressDay, setProgressDay] = useState(batch.dayNumber);
-
-  useEffect(() => {
-    setProgressDay(batch.dayNumber);
-  }, [batch.dayNumber, batch.id]);
-
+  const [previewDay, setPreviewDay] = useState(batch.dayNumber);
   const savedResults = candlingResults ?? {};
   const removedCount = savedResults.rejected ?? 0;
   const developingCount = savedResults.developing ?? 0;
   const recheckCount = savedResults.recheck ?? 0;
   const candlingComplete = savedResults.saved === true;
-  const candlingAvailable = progressDay >= batch.candlingDueDay;
+  const hasCandled = candlingComplete || batch.status === 'Candled';
   const activeEggCount = batch.eggCount - removedCount;
-  const lockdown = progressDay >= 18;
+  const lockdown = batch.dayNumber >= 18;
   const hatchComplete = hatchResults?.saved === true;
-  const recommendedTemperature = lockdown ? '37.2-37.5 C' : '37.5 C';
-  const recommendedHumidity = lockdown ? '65-70%' : '58-60%';
+  const sourceCount = batch.sources?.length || 1;
+  const previewingCurrentDay = previewDay === batch.dayNumber;
+  const previewLockdown = previewDay >= 18;
+  const previewCandlingAvailable = previewDay >= batch.candlingDueDay;
+  const previewHasCandled = hasCandled || previewDay >= 14;
+  const previewActionDisabled = hatchComplete || (!previewLockdown && !previewHasCandled && !previewCandlingAvailable);
+  const nextMilestone = previewDay >= 18
+      ? { value: 'Hatching', label: previewDay >= 21 ? 'Record Hatch' : 'Hatch Period' }
+      : previewDay >= 14
+        ? { value: 'Developing', label: `Lockdown in ${18 - previewDay} days` }
+        : previewDay >= batch.candlingDueDay
+          ? { value: 'Candling', label: previewDay === batch.candlingDueDay ? 'Due Today' : `${previewDay - batch.candlingDueDay} days after check` }
+          : previewDay > 0
+            ? { value: 'Incubating', label: `Candling in ${batch.candlingDueDay - previewDay} days` }
+            : { value: 'Set', label: 'Incubation Begins' };
+
+  if (previewingCurrentDay && hatchComplete) {
+    nextMilestone.value = 'Completed';
+    nextMilestone.label = 'Batch Status';
+  } else if (previewingCurrentDay && hasCandled && !lockdown) {
+    nextMilestone.value = 'Developing';
+    nextMilestone.label = `Lockdown in ${18 - batch.dayNumber} days`;
+  }
 
   return (
     <View style={styles.screen}>
@@ -346,52 +365,54 @@ export default function IncubationBatchDetailScreen({ batchId, candlingResults, 
           </View>
 
           <View style={[styles.content, compact && styles.contentCompact]}>
-            <AnimatedPreview batch={batch} narrow={narrow} onProgressDayChange={setProgressDay} />
+            <AnimatedPreview batch={batch} narrow={narrow} onPreviewDayChange={setPreviewDay} />
 
-            <Text style={styles.sectionTitle}>Recommended Conditions</Text>
+            <Text style={styles.sectionTitle}>Batch Snapshot</Text>
             <View style={styles.metricsCard}>
-              <Metric icon="thermometer" value={recommendedTemperature} label="Temperature Target" />
-              <Metric icon="water-percent" value={recommendedHumidity} label="Humidity Target" />
-              <Metric icon="egg-outline" value={activeEggCount} label="Active Eggs" isLast />
+              <Metric icon="egg-outline" value={activeEggCount} label="Active Eggs" />
+              <Metric icon="source-branch" value={sourceCount} label="Source Groups" />
+              <Metric icon="calendar-clock" value={nextMilestone.value} label={nextMilestone.label} isLast />
             </View>
 
             <Text style={styles.sectionTitle}>{hatchComplete ? 'Hatch Result' : 'Next Action'}</Text>
             <View style={styles.actionCard}>
               <View style={styles.actionIcon}>
-                <MaterialCommunityIcons name={lockdown ? 'egg-easter' : 'flashlight'} size={25} color={ORANGE} />
+                <MaterialCommunityIcons name={previewLockdown ? 'egg-easter' : 'flashlight'} size={25} color={ORANGE} />
               </View>
               <View style={styles.actionCopy}>
-                <Text style={styles.actionTitle}>{hatchComplete ? 'Hatch Recorded' : lockdown ? 'Hatching Stage' : candlingComplete ? 'Candling Complete' : batch.eventLabel}</Text>
+                <Text style={styles.actionTitle}>{hatchComplete ? 'Hatch Recorded' : previewLockdown ? 'Hatching Stage' : previewHasCandled ? 'Development Check Complete' : previewCandlingAvailable ? 'Candling Due' : 'Incubating'}</Text>
                 <Text style={styles.actionDetail}>
                   {hatchComplete
                     ? `${hatchResults.hatched} chicks - ${hatchResults.unhatched} unhatched - ${hatchResults.hatchRate}% hatch rate`
-                    : lockdown
+                    : previewLockdown
                       ? `${activeEggCount} eggs at hatch stage`
-                    : candlingComplete
-                    ? `${developingCount} developing - ${removedCount} removed - ${recheckCount} recheck`
-                    : candlingAvailable
+                    : previewHasCandled
+                    ? candlingComplete
+                      ? `${developingCount} developing - ${removedCount} removed - ${recheckCount} recheck`
+                      : `${activeEggCount} eggs continuing incubation`
+                    : previewCandlingAvailable
                       ? 'Ready now'
-                      : `In ${batch.candlingDueDay - progressDay} days`}
+                      : `In ${batch.candlingDueDay - previewDay} days`}
                 </Text>
               </View>
               <Pressable
-                accessibilityState={{ disabled: hatchComplete || (!lockdown && !candlingComplete && !candlingAvailable) }}
-                disabled={hatchComplete || (!lockdown && !candlingComplete && !candlingAvailable)}
-                onPress={lockdown ? onOpenHatch : onOpenCandling}
+                accessibilityState={{ disabled: previewActionDisabled }}
+                disabled={previewActionDisabled}
+                onPress={previewLockdown ? onOpenHatch : onOpenCandling}
                 style={({ pressed }) => [
                   styles.actionButton,
-                  (hatchComplete || (!lockdown && !candlingComplete && !candlingAvailable)) && styles.actionButtonDisabled,
+                  previewActionDisabled && styles.actionButtonDisabled,
                   pressed && styles.pressed,
                 ]}
               >
                 <Text style={styles.actionButtonText}>
                   {hatchComplete
                     ? 'Completed'
-                    : lockdown
+                    : previewLockdown
                       ? 'Record Hatch'
-                    : candlingComplete
+                    : previewHasCandled
                     ? 'View Results'
-                    : candlingAvailable
+                    : previewCandlingAvailable
                       ? 'Start Candling'
                       : `Available Day ${batch.candlingDueDay}`}
                 </Text>
@@ -507,7 +528,7 @@ const styles = StyleSheet.create({
     shadowColor: ORANGE, shadowOpacity: 0.32, shadowRadius: 7, shadowOffset: { width: 0, height: 0 },
   },
   stageThumbnail: { width: 31, height: 34, opacity: 0.76 },
-  stageThumbnailActive: { width: 34, height: 37, opacity: 1 },
+  stageThumbnailActive: { opacity: 1 },
   stageThumbnailUpcoming: { opacity: 0.34 },
   stageLabel: { marginTop: 7, color: '#879195', fontSize: 9, textAlign: 'center', letterSpacing: 0 },
   stageLabelActive: { color: ORANGE, fontWeight: '700' },

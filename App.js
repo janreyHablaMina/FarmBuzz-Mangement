@@ -1334,7 +1334,7 @@ export default function App() {
     location: 'Pampanga, Philippines',
     establishedYear: '2020',
     incubationDays: 21,
-    candlingDay: 14,
+    candlingDay: 7,
     notifications: { health: true, tasks: true, incubation: true, vaccinations: true },
     modules: {
       general: { temperatureUnit: 'Celsius', weightUnit: 'Kilograms' },
