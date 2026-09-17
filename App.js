@@ -30,6 +30,8 @@ import BroodingScreen from './BroodingScreen';
 import BroodingBatchDetailScreen from './BroodingBatchDetailScreen';
 import VaccinationScheduleScreen, { DEFAULT_VACCINE_SCHEDULE } from './VaccinationScheduleScreen';
 import GrowingScreen from './GrowingScreen';
+import GrowingBatchDetailScreen from './GrowingBatchDetailScreen';
+import GrowingScheduleSettingsScreen, { DEFAULT_GROWING_SETTINGS } from './GrowingScheduleSettingsScreen';
 import { INCUBATION_BATCHES } from './farmData';
 import TasksScreen from './TasksScreen';
 import TeamScreen, { MEMBERS } from './TeamScreen';
@@ -1317,6 +1319,11 @@ export default function App() {
   const [broodingLossesByBatch, setBroodingLossesByBatch] = useState({});
   const [vaccinationSchedule, setVaccinationSchedule] = useState(DEFAULT_VACCINE_SCHEDULE);
   const [vaccineCompletionsByBatch, setVaccineCompletionsByBatch] = useState({});
+  const [selectedGrowingBatchId, setSelectedGrowingBatchId] = useState('GR-024');
+  const [growingLossesByBatch, setGrowingLossesByBatch] = useState({});
+  const [growingLocationsByBatch, setGrowingLocationsByBatch] = useState({});
+  const [growingTasksByBatch, setGrowingTasksByBatch] = useState({});
+  const [growingSettings, setGrowingSettings] = useState(DEFAULT_GROWING_SETTINGS);
   const [addedBirds, setAddedBirds] = useState([]);
   const [selectedBird, setSelectedBird] = useState(null);
   const [birdOverrides, setBirdOverrides] = useState({});
@@ -1428,7 +1435,39 @@ export default function App() {
           }}
         />
       ) : screen === 'growing' ? (
-        <GrowingScreen onBack={() => setScreen('farm-detail')} />
+        <GrowingScreen
+          onBack={() => setScreen('farm-detail')}
+          readyDay={growingSettings.readyDay}
+          onOpenSettings={() => {
+            setScreen('growing-settings');
+          }}
+          onOpenBatch={(batchId) => {
+            setSelectedGrowingBatchId(batchId);
+            setScreen('growing-batch-detail');
+          }}
+        />
+      ) : screen === 'growing-settings' ? (
+        <GrowingScheduleSettingsScreen
+          initialSettings={growingSettings}
+          onBack={() => setScreen('growing')}
+          onSave={(settings) => {
+            setGrowingSettings(settings);
+            setScreen('growing');
+          }}
+        />
+      ) : screen === 'growing-batch-detail' ? (
+        <GrowingBatchDetailScreen
+          batchId={selectedGrowingBatchId}
+          losses={growingLossesByBatch[selectedGrowingBatchId] || []}
+          completed={growingTasksByBatch[selectedGrowingBatchId] || {}}
+          locationOverride={growingLocationsByBatch[selectedGrowingBatchId]}
+          readyDay={growingSettings.readyDay}
+          scheduledTasks={growingSettings.tasks}
+          onBack={() => setScreen('growing')}
+          onSaveLoss={(record) => setGrowingLossesByBatch((current) => ({ ...current, [selectedGrowingBatchId]: [record, ...(current[selectedGrowingBatchId] || [])] }))}
+          onChangeLocation={(location) => setGrowingLocationsByBatch((current) => ({ ...current, [selectedGrowingBatchId]: location }))}
+          onCompleteTask={(task) => setGrowingTasksByBatch((current) => ({ ...current, [selectedGrowingBatchId]: { ...(current[selectedGrowingBatchId] || {}), [task]: true } }))}
+        />
       ) : screen === 'brooding' ? (
         <BroodingScreen
           lossRecordsByBatch={broodingLossesByBatch}
