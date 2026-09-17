@@ -1305,6 +1305,7 @@ export default function App() {
   const [selectedBroodingBatchId, setSelectedBroodingBatchId] = useState('BR-024');
   const [broodingLossesByBatch, setBroodingLossesByBatch] = useState({});
   const [vaccinationSchedule, setVaccinationSchedule] = useState(DEFAULT_VACCINE_SCHEDULE);
+  const [vaccineCompletionsByBatch, setVaccineCompletionsByBatch] = useState({});
   const [addedBirds, setAddedBirds] = useState([]);
   const [selectedBird, setSelectedBird] = useState(null);
   const [birdOverrides, setBirdOverrides] = useState({});
@@ -1428,10 +1429,19 @@ export default function App() {
         <BroodingBatchDetailScreen
           batchId={selectedBroodingBatchId}
           lossRecords={broodingLossesByBatch[selectedBroodingBatchId] || []}
+          vaccinationSchedule={vaccinationSchedule}
+          vaccineCompletions={vaccineCompletionsByBatch[selectedBroodingBatchId] || {}}
           onBack={() => setScreen('brooding')}
           onSaveLoss={(record) => setBroodingLossesByBatch((current) => ({
             ...current,
             [selectedBroodingBatchId]: [record, ...(current[selectedBroodingBatchId] || [])],
+          }))}
+          onMarkVaccineCompleted={(vaccineId) => setVaccineCompletionsByBatch((current) => ({
+            ...current,
+            [selectedBroodingBatchId]: {
+              ...(current[selectedBroodingBatchId] || {}),
+              [vaccineId]: { completedAt: new Date().toISOString() },
+            },
           }))}
         />
       ) : screen === 'vaccination-schedule' ? (
