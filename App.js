@@ -26,6 +26,7 @@ import IncubationBatchDetailScreen from './IncubationBatchDetailScreen';
 import IncubationHistoryScreen from './IncubationHistoryScreen';
 import CandlingScreen from './CandlingScreen';
 import RecordHatchScreen from './RecordHatchScreen';
+import BroodingScreen from './BroodingScreen';
 import { INCUBATION_BATCHES } from './farmData';
 import TasksScreen from './TasksScreen';
 import TeamScreen, { MEMBERS } from './TeamScreen';
@@ -72,6 +73,7 @@ const TEAM_BADGE_IMAGE = require('./assets/badge-team.png');
 const TRANSFERS_BADGE_IMAGE = require('./assets/badge-transfers.png');
 const FLOCK_HERO_IMAGE = require('./assets/flock-hero.png');
 const BREEDING_HERO_IMAGE = require('./assets/breeding-hero.png');
+const BROODING_HERO_IMAGE = require('./assets/brooding-card.png');
 const HEALTH_CARE_HERO_IMAGE = require('./assets/health-care-hero.png');
 const SALES_DASHBOARD_HERO_IMAGE = require('./assets/sales-dashboard-hero.png');
 const COLLECTIONS_DASHBOARD_HERO_IMAGE = require('./assets/sales-hero.png');
@@ -767,7 +769,7 @@ function FarmWorkspaceCard({ farm, onPress }) {
   );
 }
 
-function FarmDetailScreen({ farm, onBack, onOpenBreeding, onOpenIncubation, onOpenSettings }) {
+function FarmDetailScreen({ farm, onBack, onOpenBreeding, onOpenIncubation, onOpenBrooding, onOpenSettings }) {
   const { width } = useWindowDimensions();
   const compact = width < 480;
   const narrow = width < 390;
@@ -783,6 +785,14 @@ function FarmDetailScreen({ farm, onBack, onOpenBreeding, onOpenIncubation, onOp
   const incubationModule = {
     ...MODULES.find((item) => item.title === 'Eggs & Incubation'),
     subtitle: 'Holding eggs, batches, hatch progress',
+  };
+  const broodingModule = {
+    title: 'Brooding',
+    subtitle: '1 active batch, 38 chicks',
+    icon: 'bird',
+    color: THEME_ORANGE,
+    tint: THEME_ORANGE_TINT,
+    image: BROODING_HERO_IMAGE,
   };
   const breedingStats = [
     { label: 'Active Pairings', value: '3', icon: 'link-variant', color: THEME_ORANGE },
@@ -845,11 +855,12 @@ function FarmDetailScreen({ farm, onBack, onOpenBreeding, onOpenIncubation, onOp
 
             <View style={styles.sectionHeading}>
               <Text style={[styles.sectionTitle, narrow && styles.sectionTitleNarrow]}>Management Tool</Text>
-              <Text style={styles.sectionMeta}>2 modules</Text>
+              <Text style={styles.sectionMeta}>3 modules</Text>
             </View>
             <View style={[styles.moduleGrid, compact && styles.moduleGridCompact]}>
               <ModuleCard item={breedingModule} compact={compact} onPress={onOpenBreeding} />
               <ModuleCard item={incubationModule} compact={compact} onPress={onOpenIncubation} />
+              <ModuleCard item={broodingModule} compact={compact} onPress={onOpenBrooding} />
             </View>
           </View>
         </View>
@@ -1392,11 +1403,14 @@ export default function App() {
           onBack={() => setScreen('farms')}
           onOpenBreeding={() => setScreen('breeding')}
           onOpenIncubation={() => setScreen('eggs-incubation')}
+          onOpenBrooding={() => setScreen('brooding')}
           onOpenSettings={() => {
             setSettingsReturn('farm-detail');
             setScreen('management-settings');
           }}
         />
+      ) : screen === 'brooding' ? (
+        <BroodingScreen onBack={() => setScreen('farm-detail')} />
       ) : screen === 'showcase' ? (
         <ShowcaseScreen
           farmName={managementSettings.farmName}
