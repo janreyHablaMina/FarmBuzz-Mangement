@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -9,17 +9,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 const HERO_IMAGE = require('./assets/brooding-card.png');
 const ORANGE = '#ff7900';
 
-const BROODING_BATCHES = [
-  { id: 'BR-024', chicks: 38, age: 'Day 6', ageDays: 6, location: 'Brooder House 1', status: 'Brooding', note: 'Stable and feeding normally' },
-  { id: 'BR-021', chicks: 24, age: 'Week 2', ageDays: 14, location: 'Brooder House 2', status: 'Needs Attention', note: 'Unusual loss recorded today' },
-  { id: 'BR-018', chicks: 31, age: 'Week 6', ageDays: 42, location: 'Main Brooder', status: 'Ready for Growing', note: 'Awaiting farmer confirmation' },
-];
-
-const SUMMARY = [
-  { icon: 'layers-triple-outline', value: '3', label: 'Active Batches', detail: 'currently brooding' },
-  { icon: 'bird', value: '93', label: 'Total Chicks', detail: 'across active batches' },
-  { icon: 'alert-circle-outline', value: '1', label: 'Needs Attention', detail: 'requires review' },
-  { icon: 'arrow-right-circle-outline', value: '1', label: 'Ready for Growing', detail: 'around week 6' },
+export const BROODING_BATCHES = [
+  { id: 'BR-024', chicks: 38, startingChicks: 40, age: 'Day 6', ageDays: 6, location: 'Brooder House 1', status: 'Brooding', note: 'Stable and feeding normally', incubationBatch: 'INC-024', hatchDate: 'Sep 11, 2026', sources: [{ groupName: 'Main Breeders', cross: 'Sweater x Kelso', chicks: 17, marking: 'Red' }, { groupName: 'Group B', cross: 'Kelso', chicks: 12, marking: 'Blue' }, { groupName: 'Group C', cross: 'Roundhead x Hatch', chicks: 9, marking: '' }] },
+  { id: 'BR-021', chicks: 24, startingChicks: 27, age: 'Week 2', ageDays: 14, location: 'Brooder House 2', status: 'Needs Attention', note: 'Unusual loss recorded today', incubationBatch: 'INC-021', hatchDate: 'Sep 3, 2026', sources: [{ groupName: 'Main Breeders', cross: 'Sweater x Kelso', chicks: 14, marking: 'Green' }, { groupName: 'Group B', cross: 'Kelso', chicks: 10, marking: '' }] },
+  { id: 'BR-018', chicks: 31, startingChicks: 34, age: 'Week 6', ageDays: 42, location: 'Main Brooder', status: 'Ready for Growing', note: 'Awaiting farmer confirmation', incubationBatch: 'INC-018', hatchDate: 'Aug 6, 2026', sources: [{ groupName: 'Main Breeders', cross: 'Sweater x Kelso', chicks: 18, marking: 'Red' }, { groupName: 'Group C', cross: 'Roundhead x Hatch', chicks: 13, marking: 'Yellow' }] },
 ];
 
 function statusTone(status) {
@@ -60,15 +53,25 @@ function BatchCard({ batch, onPress }) {
   );
 }
 
-export default function BroodingScreen({ onBack }) {
+export default function BroodingScreen({ onBack, onOpenBatch, onOpenSettings, lossRecordsByBatch = {} }) {
   const { width } = useWindowDimensions();
   const compact = width < 480;
   const [query, setQuery] = useState('');
+  const adjustedBatches = useMemo(() => BROODING_BATCHES.map((batch) => {
+    const addedLosses = (lossRecordsByBatch[batch.id] || []).reduce((total, record) => total + record.count, 0);
+    return { ...batch, chicks: Math.max(0, batch.chicks - addedLosses) };
+  }), [lossRecordsByBatch]);
   const batches = useMemo(() => {
     const search = query.trim().toLowerCase();
-    if (!search) return BROODING_BATCHES;
-    return BROODING_BATCHES.filter((batch) => `${batch.id} ${batch.location} ${batch.status} ${batch.age}`.toLowerCase().includes(search));
-  }, [query]);
+    if (!search) return adjustedBatches;
+    return adjustedBatches.filter((batch) => `${batch.id} ${batch.location} ${batch.status} ${batch.age}`.toLowerCase().includes(search));
+  }, [adjustedBatches, query]);
+  const summary = [
+    { icon: 'layers-triple-outline', value: String(adjustedBatches.length), label: 'Active Batches', detail: 'currently brooding' },
+    { icon: 'bird', value: String(adjustedBatches.reduce((total, batch) => total + batch.chicks, 0)), label: 'Total Chicks', detail: 'across active batches' },
+    { icon: 'alert-circle-outline', value: String(adjustedBatches.filter((batch) => batch.status === 'Needs Attention').length), label: 'Needs Attention', detail: 'requires review' },
+    { icon: 'arrow-right-circle-outline', value: String(adjustedBatches.filter((batch) => batch.status === 'Ready for Growing').length), label: 'Ready for Growing', detail: 'around week 6' },
+  ];
 
   return (
     <View style={styles.screen}>
@@ -79,7 +82,7 @@ export default function BroodingScreen({ onBack }) {
             <Image source={HERO_IMAGE} style={StyleSheet.absoluteFill} contentFit="cover" contentPosition="center" cachePolicy="memory-disk" />
             <LinearGradient colors={['rgba(2,7,9,0.15)', 'rgba(2,7,9,0.25)', '#03090c']} locations={[0, 0.5, 1]} style={StyleSheet.absoluteFill} />
             <SafeAreaView edges={['top']} style={styles.heroSafe}>
-              <View style={styles.header}><Pressable accessibilityLabel="Back to farm" onPress={onBack} style={styles.backButton}><Ionicons name="arrow-back" size={21} color="#fff" /></Pressable><Text style={styles.headerTitle}>Brooding</Text></View>
+              <View style={styles.header}><View style={styles.headerLeft}><Pressable accessibilityLabel="Back to farm" onPress={onBack} style={styles.backButton}><Ionicons name="arrow-back" size={21} color="#fff" /></Pressable><Text style={styles.headerTitle}>Brooding</Text></View><Pressable accessibilityLabel="Brooding settings" onPress={onOpenSettings} style={styles.backButton}><Ionicons name="settings-outline" size={21} color="#fff" /></Pressable></View>
               <View style={styles.heroCopy}><Text style={[styles.farmName, compact && styles.farmNameCompact]}>FarmBuzz Farm</Text><Text style={styles.tagline}>Monitor chicks from hatch through the growing transition.</Text><View style={styles.meta}><Ionicons name="location-outline" size={14} color="#dce2e4" /><Text style={styles.metaText}>Pampanga, Philippines</Text><View style={styles.metaDivider} /><Ionicons name="calendar-outline" size={14} color="#dce2e4" /><Text style={styles.metaText}>Est. 2020</Text></View></View>
             </SafeAreaView>
           </View>
@@ -87,9 +90,9 @@ export default function BroodingScreen({ onBack }) {
           <View style={[styles.content, compact && styles.contentCompact]}>
             <View style={styles.searchBox}><Ionicons name="search" size={20} color="#8d999d" /><TextInput value={query} onChangeText={setQuery} placeholder="Search brooding batches" placeholderTextColor="#748187" selectionColor={ORANGE} style={styles.searchInput} /></View>
             <Text style={styles.overline}>BROODING DASHBOARD</Text>
-            <View style={styles.summaryGrid}>{SUMMARY.map((item) => <SummaryCard key={item.label} item={item} compact={compact} />)}</View>
+            <View style={styles.summaryGrid}>{summary.map((item) => <SummaryCard key={item.label} item={item} compact={compact} />)}</View>
             <View style={styles.listHeading}><View><Text style={styles.overline}>BROODING BATCHES</Text><Text style={styles.listTitle}>Active batches</Text></View><View style={styles.countPill}><Text style={styles.countText}>{batches.length} active</Text></View></View>
-            <View style={styles.batchList}>{batches.map((batch) => <BatchCard key={batch.id} batch={batch} onPress={() => Alert.alert(batch.id, `${batch.chicks} chicks in ${batch.location}`)} />)}{!batches.length && <Text style={styles.empty}>No brooding batches found</Text>}</View>
+            <View style={styles.batchList}>{batches.map((batch) => <BatchCard key={batch.id} batch={batch} onPress={() => onOpenBatch(batch.id)} />)}{!batches.length && <Text style={styles.empty}>No brooding batches found</Text>}</View>
           </View>
         </View>
       </ScrollView>
@@ -99,7 +102,7 @@ export default function BroodingScreen({ onBack }) {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#020709' }, pageWrap: { flexGrow: 1, alignItems: 'center', backgroundColor: '#020709' }, page: { width: '100%', maxWidth: 720 },
-  hero: { height: 272, overflow: 'hidden', backgroundColor: '#101719' }, heroCompact: { height: 248 }, heroSafe: { flex: 1 }, header: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingTop: Platform.OS === 'web' ? 10 : 3 }, backButton: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(190,204,208,0.35)', backgroundColor: 'rgba(2,8,11,0.65)', alignItems: 'center', justifyContent: 'center' }, headerTitle: { color: '#f3f5f6', fontSize: 15, fontWeight: '800' },
+  hero: { height: 272, overflow: 'hidden', backgroundColor: '#101719' }, heroCompact: { height: 248 }, heroSafe: { flex: 1 }, header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: Platform.OS === 'web' ? 10 : 3 }, headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 }, backButton: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(190,204,208,0.35)', backgroundColor: 'rgba(2,8,11,0.65)', alignItems: 'center', justifyContent: 'center' }, headerTitle: { color: '#f3f5f6', fontSize: 15, fontWeight: '800' },
   heroCopy: { marginTop: 'auto', paddingHorizontal: 20, paddingBottom: 22 }, farmName: { color: '#fff', fontSize: 34, lineHeight: 40, fontWeight: '800', fontFamily: Platform.select({ ios: 'Georgia', android: 'serif', web: 'Georgia' }) }, farmNameCompact: { fontSize: 29, lineHeight: 34 }, tagline: { marginTop: 3, color: '#c2cbce', fontSize: 13 }, meta: { marginTop: 12, flexDirection: 'row', alignItems: 'center', gap: 6 }, metaText: { color: '#d3dade', fontSize: 10 }, metaDivider: { width: 1, height: 12, marginHorizontal: 5, backgroundColor: 'rgba(210,220,224,0.35)' },
   content: { paddingHorizontal: 16, paddingTop: 14, paddingBottom: 28 }, contentCompact: { paddingHorizontal: 10 }, searchBox: { height: 48, borderRadius: 7, borderWidth: 1, borderColor: '#26373e', backgroundColor: '#081216', paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 8 }, searchInput: { flex: 1, height: 46, padding: 0, color: '#e7ebec', fontSize: 11, outlineStyle: 'none' },
   overline: { marginTop: 18, color: '#879499', fontSize: 8, fontWeight: '800' }, summaryGrid: { marginTop: 8, flexDirection: 'row', flexWrap: 'wrap', gap: 8 }, summaryCard: { flex: 1, minWidth: 0, height: 112, borderRadius: 7, borderWidth: 1, borderColor: '#26373e', backgroundColor: '#091317', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 7 }, summaryCardCompact: { flexBasis: '48%', height: 98 }, summaryValueRow: { flexDirection: 'row', alignItems: 'center', gap: 10 }, summaryValue: { color: '#f1f4f5', fontSize: 19, fontWeight: '800' }, summaryLabel: { marginTop: 8, color: '#e1e6e7', fontSize: 10, textAlign: 'center' }, summaryDetail: { marginTop: 4, color: '#6f7d82', fontSize: 7, textAlign: 'center' },

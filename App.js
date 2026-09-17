@@ -27,6 +27,8 @@ import IncubationHistoryScreen from './IncubationHistoryScreen';
 import CandlingScreen from './CandlingScreen';
 import RecordHatchScreen from './RecordHatchScreen';
 import BroodingScreen from './BroodingScreen';
+import BroodingBatchDetailScreen from './BroodingBatchDetailScreen';
+import VaccinationScheduleScreen, { DEFAULT_VACCINE_SCHEDULE } from './VaccinationScheduleScreen';
 import { INCUBATION_BATCHES } from './farmData';
 import TasksScreen from './TasksScreen';
 import TeamScreen, { MEMBERS } from './TeamScreen';
@@ -1300,6 +1302,9 @@ export default function App() {
   const [selectedBatchId, setSelectedBatchId] = useState('INC-024');
   const [candlingResultsByBatch, setCandlingResultsByBatch] = useState({});
   const [hatchResultsByBatch, setHatchResultsByBatch] = useState({});
+  const [selectedBroodingBatchId, setSelectedBroodingBatchId] = useState('BR-024');
+  const [broodingLossesByBatch, setBroodingLossesByBatch] = useState({});
+  const [vaccinationSchedule, setVaccinationSchedule] = useState(DEFAULT_VACCINE_SCHEDULE);
   const [addedBirds, setAddedBirds] = useState([]);
   const [selectedBird, setSelectedBird] = useState(null);
   const [birdOverrides, setBirdOverrides] = useState({});
@@ -1410,7 +1415,31 @@ export default function App() {
           }}
         />
       ) : screen === 'brooding' ? (
-        <BroodingScreen onBack={() => setScreen('farm-detail')} />
+        <BroodingScreen
+          lossRecordsByBatch={broodingLossesByBatch}
+          onBack={() => setScreen('farm-detail')}
+          onOpenSettings={() => setScreen('vaccination-schedule')}
+          onOpenBatch={(batchId) => {
+            setSelectedBroodingBatchId(batchId);
+            setScreen('brooding-batch-detail');
+          }}
+        />
+      ) : screen === 'brooding-batch-detail' ? (
+        <BroodingBatchDetailScreen
+          batchId={selectedBroodingBatchId}
+          lossRecords={broodingLossesByBatch[selectedBroodingBatchId] || []}
+          onBack={() => setScreen('brooding')}
+          onSaveLoss={(record) => setBroodingLossesByBatch((current) => ({
+            ...current,
+            [selectedBroodingBatchId]: [record, ...(current[selectedBroodingBatchId] || [])],
+          }))}
+        />
+      ) : screen === 'vaccination-schedule' ? (
+        <VaccinationScheduleScreen
+          initialSchedule={vaccinationSchedule}
+          onBack={() => setScreen('brooding')}
+          onSave={setVaccinationSchedule}
+        />
       ) : screen === 'showcase' ? (
         <ShowcaseScreen
           farmName={managementSettings.farmName}
