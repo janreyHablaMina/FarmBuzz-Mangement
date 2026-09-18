@@ -31,13 +31,14 @@ import BroodingBatchDetailScreen from './BroodingBatchDetailScreen';
 import VaccinationScheduleScreen, { DEFAULT_BROODING_SETTINGS } from './VaccinationScheduleScreen';
 import GrowingScreen from './GrowingScreen';
 import GrowingBatchDetailScreen from './GrowingBatchDetailScreen';
-import GrowingScheduleSettingsScreen, { DEFAULT_GROWING_SETTINGS, DEFAULT_RANGING_SETTINGS } from './GrowingScheduleSettingsScreen';
+import GrowingScheduleSettingsScreen, { DEFAULT_GROWING_SETTINGS, DEFAULT_RANGING_SETTINGS, DEFAULT_STAG_SETTINGS } from './GrowingScheduleSettingsScreen';
 import GrowingSettingsScreen, { GrowingSeparationSettingsScreen } from './GrowingSettingsScreen';
 import MaturingScreen from './MaturingScreen';
 import PulletScreen, { PULLET_BATCHES, PulletBatchDetailScreen } from './PulletScreen';
 import RangingScreen, { buildRangingLocations, RANGING_BATCHES } from './RangingScreen';
 import RangingAreaDetailScreen from './RangingAreaDetailScreen';
 import RangingSettingsScreen, { RangingSelectionSettingsScreen } from './RangingSettingsScreen';
+import StagMaintenanceScreen, { DEFAULT_STAG_AREAS, StagMaintenanceAreaDetail } from './StagMaintenanceScreen';
 import { INCUBATION_BATCHES } from './farmData';
 import TasksScreen from './TasksScreen';
 import TeamScreen, { MEMBERS } from './TeamScreen';
@@ -1353,6 +1354,9 @@ export default function App() {
   const [growingSettings, setGrowingSettings] = useState(DEFAULT_GROWING_SETTINGS);
   const [addedRangingBatches, setAddedRangingBatches] = useState([]);
   const [addedPulletBatches, setAddedPulletBatches] = useState([]);
+  const [stagAreas, setStagAreas] = useState(DEFAULT_STAG_AREAS);
+  const [selectedStagArea, setSelectedStagArea] = useState('Stag Area 1');
+  const [stagSettings, setStagSettings] = useState(DEFAULT_STAG_SETTINGS);
   const [selectedRangingBatchId, setSelectedRangingBatchId] = useState('Range Area 2');
   const [rangingLossesByBatch, setRangingLossesByBatch] = useState({});
   const [rangingLocationsByBatch, setRangingLocationsByBatch] = useState({});
@@ -1483,7 +1487,7 @@ export default function App() {
           onOpenBrooding={() => setScreen('brooding')}
           onOpenGrowing={() => setScreen('growing')}
           onOpenMaturing={() => setScreen('maturing')}
-          onOpenHardening={() => Alert.alert('Stag Maintenance', 'The stag maintenance workflow will open here.')}
+          onOpenHardening={() => setScreen('stag-maintenance')}
           onOpenSettings={() => {
             setSettingsReturn('farm-detail');
             setScreen('management-settings');
@@ -1494,6 +1498,51 @@ export default function App() {
           onBack={() => setScreen('farm-detail')}
           onOpenRanging={() => setScreen('ranging')}
           onOpenFemale={() => setScreen('pullets')}
+        />
+      ) : screen === 'stag-maintenance' ? (
+        <StagMaintenanceScreen
+          areas={stagAreas}
+          onBack={() => setScreen('farm-detail')}
+          onOpenSettings={() => setScreen('stag-maintenance-settings')}
+          onOpenArea={(location) => {
+            setSelectedStagArea(location);
+            setScreen('stag-maintenance-detail');
+          }}
+        />
+      ) : screen === 'stag-maintenance-settings' ? (
+        <GrowingScheduleSettingsScreen
+          variant="stag"
+          initialSettings={stagSettings}
+          onBack={() => setScreen('stag-maintenance')}
+          onSave={(settings) => {
+            setStagSettings(settings);
+            setScreen('stag-maintenance');
+          }}
+        />
+      ) : screen === 'stag-maintenance-detail' ? (
+        <StagMaintenanceAreaDetail
+          area={stagAreas.find((area) => area.location === selectedStagArea) || stagAreas[0]}
+          onBack={() => setScreen('stag-maintenance')}
+          onCheck={(record) => setStagAreas((current) => current.map((area) => area.location === selectedStagArea ? { ...area, lastCheck: record, history: [{ date: record.date, text: 'Maintenance check completed' }, ...area.history] } : area))}
+          onMove={(record) => {
+            setStagAreas((current) => {
+              const source = current.find((area) => area.location === selectedStagArea);
+              const destination = current.find((area) => area.location === record.destination);
+              const reduced = current.map((area) => area.location === selectedStagArea ? { ...area, birds: area.birds - record.count, history: [{ date: record.date, text: `${record.count} moved to ${record.destination}` }, ...area.history] } : area);
+              if (destination) return reduced.map((area) => area.location === record.destination ? { ...area, birds: area.birds + record.count, startingBirds: area.startingBirds + record.count, history: [{ date: record.date, text: `${record.count} entered from ${selectedStagArea}` }, ...area.history] } : area);
+              return [...reduced, { ...source, location: record.destination, birds: record.count, startingBirds: record.count, movedForward: 0, removed: 0, history: [{ date: record.date, text: `${record.count} entered from ${selectedStagArea}` }] }];
+            });
+            setScreen('stag-maintenance');
+          }}
+          onLoss={(record) => {
+            setStagAreas((current) => current.map((area) => area.location === selectedStagArea ? { ...area, birds: area.birds - record.count, removed: (area.removed || 0) + record.count, history: [{ date: record.date, text: `${record.count} loss / adjustment${record.note ? ` - ${record.note}` : ''}` }, ...area.history] } : area));
+            setScreen('stag-maintenance');
+          }}
+          onHealth={() => setStagAreas((current) => current.map((area) => area.location === selectedStagArea ? { ...area, nextTask: area.nextTask ? { ...area.nextTask, completed: true, status: 'Completed' } : null, history: [{ date: new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(new Date()), text: 'Health / vaccination task completed' }, ...area.history] } : area))}
+          onProceed={(record) => {
+            setStagAreas((current) => current.map((area) => area.location === selectedStagArea ? { ...area, birds: area.birds - record.count, movedForward: (area.movedForward || 0) + record.count, history: [{ date: record.date, text: `${record.count} proceeded to ${record.destination}` }, ...area.history] } : area));
+            setScreen('stag-maintenance');
+          }}
         />
       ) : screen === 'pullets' ? (
         <PulletScreen
@@ -1650,6 +1699,22 @@ export default function App() {
               };
               return { ...current, [selectedRangingBatchId]: record };
             });
+            if (selection.ready > 0) {
+              setStagAreas((current) => {
+                const existing = current.find((area) => area.location === selection.destination);
+                const sourceRows = selectedRangingLocation.sources || [];
+                const sourceTotal = sourceRows.reduce((sum, source) => sum + (source.birds || 0), 0) || 1;
+                let sourceAssigned = 0;
+                const sources = sourceRows.map((source, index) => {
+                  const birds = index === sourceRows.length - 1 ? selection.ready - sourceAssigned : Math.round(((source.birds || 0) / sourceTotal) * selection.ready);
+                  sourceAssigned += birds;
+                  return { marking: source.marking || 'No marking', name: source.cross || source.name, birds };
+                });
+                const event = { date: selection.date, text: `${selection.ready} stags entered from ${selectedRangingBatchId}` };
+                if (existing) return current.map((area) => area.location === selection.destination ? { ...area, birds: area.birds + selection.ready, startingBirds: area.startingBirds + selection.ready, sources: [...area.sources, ...sources], history: [event, ...area.history] } : area);
+                return [...current, { location: selection.destination, birds: selection.ready, startingBirds: selection.ready, movedForward: 0, removed: 0, ageRange: selectedRangingLocation.ageRange, status: 'Maintenance', nextTask: null, sources, history: [event] }];
+              });
+            }
             setScreen('ranging');
           }}
           onMoveBirds={(record) => {

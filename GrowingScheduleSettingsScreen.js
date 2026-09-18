@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 const HERO_IMAGE = require('./assets/growing-card.png');
 const RANGING_HERO_IMAGE = require('./assets/ranging-card.png');
+const STAG_HERO_IMAGE = require('./assets/hardening-card.png');
 const ORANGE = '#ff7900';
 
 function ThemeToggle({ value, onValueChange, label = 'Enabled' }) {
@@ -37,6 +38,17 @@ export const DEFAULT_RANGING_SETTINGS = {
   ],
 };
 
+export const DEFAULT_STAG_SETTINGS = {
+  readyDay: 270,
+  weeklyChecks: true,
+  tasks: [
+    { id: 'stag-maintenance-check', name: 'Maintenance Check', day: 195, note: 'General condition, feed, water, housing, and health review', enabled: true },
+    { id: 'stag-health-review', name: 'Configured Health / Vaccine Task', day: 210, note: 'Use the farm health program when applicable', enabled: true },
+    { id: 'stag-parasite-control', name: 'Parasite Control Review', day: 240, note: 'Check the configured parasite control program', enabled: true },
+    { id: 'stag-next-stage', name: 'Ready for Next Stage Check', day: 270, note: 'Confirm stags are ready to proceed', enabled: true },
+  ],
+};
+
 function TaskEditor({ entry, stageName, minDay, idPrefix, onClose, onSave }) {
   const [name, setName] = useState(entry?.name || '');
   const [day, setDay] = useState(String(entry?.day || ''));
@@ -52,12 +64,13 @@ function TaskEditor({ entry, stageName, minDay, idPrefix, onClose, onSave }) {
 
 export default function GrowingScheduleSettingsScreen({ initialSettings, variant = 'growing', onBack, onSave }) {
   const ranging = variant === 'ranging';
-  const defaults = ranging ? DEFAULT_RANGING_SETTINGS : DEFAULT_GROWING_SETTINGS;
+  const stag = variant === 'stag';
+  const defaults = stag ? DEFAULT_STAG_SETTINGS : ranging ? DEFAULT_RANGING_SETTINGS : DEFAULT_GROWING_SETTINGS;
   const startingSettings = initialSettings || defaults;
-  const stageName = ranging ? 'Ranging' : 'Growing';
-  const destination = ranging ? 'Selection' : 'Ranging';
-  const minDay = ranging ? 120 : 43;
-  const terminalTaskId = ranging ? 'range-selection-6' : 'grow-ranging-16';
+  const stageName = stag ? 'Stag Maintenance' : ranging ? 'Ranging' : 'Growing';
+  const destination = stag ? 'Next Stage' : ranging ? 'Selection' : 'Ranging';
+  const minDay = stag ? 180 : ranging ? 120 : 43;
+  const terminalTaskId = stag ? 'stag-next-stage' : ranging ? 'range-selection-6' : 'grow-ranging-16';
   const [settings, setSettings] = useState(startingSettings);
   const [readyDayInput, setReadyDayInput] = useState(String(startingSettings.readyDay || defaults.readyDay));
   const [editor, setEditor] = useState(null);
