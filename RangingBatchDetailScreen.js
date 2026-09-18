@@ -165,8 +165,12 @@ function SelectionModal({
 }) {
   const emptyAllocations = () => Object.fromEntries(options.map((option) => [option, ""]));
   const [allocations, setAllocations] = useState(emptyAllocations);
+  const [hardeningArea, setHardeningArea] = useState("");
   useEffect(() => {
-    if (visible) setAllocations(emptyAllocations());
+    if (visible) {
+      setAllocations(emptyAllocations());
+      setHardeningArea("");
+    }
   }, [visible, options]);
   const quantityFor = (option) => Number.parseInt(allocations[option], 10) || 0;
   const allocated = options.reduce((total, option) => total + quantityFor(option), 0);
@@ -181,6 +185,11 @@ function SelectionModal({
     setAllocations((current) => ({ ...current, [option]: quantity ? String(quantity) : "" }));
   };
   const result = () => Object.fromEntries(options.map((option) => [option, quantityFor(option)]));
+  const proceedCount = options.reduce((sum, option) => /proceed|ready/i.test(option) ? sum + quantityFor(option) : sum, 0);
+  const confirm = () => {
+    if (proceedCount > 0 && !hardeningArea.trim()) return Alert.alert("Hardening area required", "Enter the destination for birds that will proceed.");
+    onConfirm({ allocations: result(), hardeningArea: hardeningArea.trim() });
+  };
   return (
     <Modal
       visible={visible}
@@ -194,7 +203,7 @@ function SelectionModal({
           <View style={styles.modalHead}>
             <View>
               <Text style={styles.eyebrow}>RANGING COMPLETE</Text>
-              <Text style={styles.modalTitle}>Begin Selection</Text>
+              <Text style={styles.modalTitle}>Record Selection</Text>
             </View>
             <Pressable
               accessibilityLabel="Close"
@@ -208,7 +217,7 @@ function SelectionModal({
             {currentBirds} birds ready for review
           </Text>
           <Text style={styles.confirmCopy}>
-            Allocate every bird in {batch.id} across the selection options.
+            Allocate every bird currently in {batch.location}.
           </Text>
           <View style={styles.allocationSummary}>
             <View><Text style={styles.allocationValue}>{allocated}</Text><Text style={styles.allocationLabel}>Allocated</Text></View>
@@ -237,16 +246,17 @@ function SelectionModal({
               );
             })}
           </View>
+          {proceedCount > 0 && <View style={styles.hardeningDestination}><Text style={styles.fieldLabel}>Destination for Proceed birds</Text><View style={styles.field}><MaterialCommunityIcons name="shield-check-outline" size={18} color={ORANGE} /><TextInput value={hardeningArea} onChangeText={setHardeningArea} placeholder="e.g. Hardening Area 1" placeholderTextColor="#68777c" style={styles.input} /></View></View>}
           <View style={styles.modalActions}>
             <Pressable onPress={onClose} style={styles.cancel}>
               <Text style={styles.cancelText}>Cancel</Text>
             </Pressable>
             <Pressable
               disabled={remaining !== 0}
-              onPress={() => onConfirm(result())}
+              onPress={confirm}
               style={[styles.save, remaining !== 0 && styles.saveDisabled]}
             >
-              <Text style={styles.saveText}>Continue</Text>
+              <Text style={styles.saveText}>Save Selection</Text>
             </Pressable>
           </View>
         </View>
@@ -263,12 +273,7 @@ export default function RangingBatchDetailScreen({
   readyDay = SELECTION_AGE_DAYS,
   scheduledTasks = [],
   completedTasks = {},
-  selectionOptions = [
-    "Keep / Continue",
-    "Future Breeder",
-    "Sell / Transfer",
-    "Remove from Program",
-  ],
+  selectionOptions = ["Proceed", "Recheck", "Remove"],
   onBack,
   onSaveLoss,
   onChangeLocation,
@@ -319,7 +324,7 @@ export default function RangingBatchDetailScreen({
         detail: `Due ${selectionDate} - farmer confirmation required`,
         status: "Ready",
         tone: "#ffba56",
-        button: "Begin Selection",
+        button: "Record Selection",
         press: () => setModal("selection"),
       }
     : nextTask && nextTask.day <= ageDays
@@ -348,7 +353,7 @@ export default function RangingBatchDetailScreen({
             detail: `All tasks completed - selection due ${selectionDate}`,
             status: "Tasks Complete",
             tone: "#6ee58c",
-            button: "Begin Selection",
+            button: "Record Selection",
             press: () => setModal("selection"),
           };
   return (
@@ -379,7 +384,7 @@ export default function RangingBatchDetailScreen({
                 >
                   <Ionicons name="arrow-back" size={21} color="#fff" />
                 </Pressable>
-                <Text style={styles.headerTitle}>Ranging Batch</Text>
+                <Text style={styles.headerTitle}>Range Location</Text>
               </View>
               <View style={styles.heroCopy}>
                 <Text style={styles.heroTitle}>{batch.id}</Text>
@@ -392,16 +397,16 @@ export default function RangingBatchDetailScreen({
           <View style={[styles.content, compact && styles.contentCompact]}>
             <View style={styles.identity}>
               <View>
-                <Text style={styles.eyebrow}>CURRENT BATCH</Text>
+                <Text style={styles.eyebrow}>CURRENT LOCATION</Text>
                 <Text style={styles.identityTitle}>{currentBirds} birds</Text>
                 <Text style={styles.identityMeta}>
-                  {monthAge(ageDays)} - {location}
+                  {batch.ageRange || monthAge(ageDays)} - {location}
                 </Text>
               </View>
               <View style={styles.readyPill}>
                 <View style={styles.readyDot} />
                 <Text style={styles.readyText}>
-                  {ready ? "Ready for Selection" : "Ranging"}
+                  {ready ? "Ready for Selection" : "Active"}
                 </Text>
               </View>
             </View>
@@ -471,8 +476,8 @@ export default function RangingBatchDetailScreen({
               </View>
               <View style={styles.divider} />
               <View>
-                <Text style={styles.infoLabel}>Growing Batch</Text>
-                <Text style={styles.infoValue}>{batch.growingBatch}</Text>
+                <Text style={styles.infoLabel}>Source Batches</Text>
+                <Text style={styles.infoValue}>{batch.batches?.length || 1}</Text>
               </View>
               <View style={styles.divider} />
               <View>
@@ -526,7 +531,7 @@ export default function RangingBatchDetailScreen({
             <View style={styles.sourceCard}>
               {batch.sources.map((source, index) => (
                 <View
-                  key={source.name}
+                  key={`${source.sourceBatch || "source"}-${source.name}-${index}`}
                   style={[
                     styles.sourceRow,
                     index < batch.sources.length - 1 && styles.sourceDivider,
@@ -550,12 +555,12 @@ export default function RangingBatchDetailScreen({
                 </View>
               ))}
             </View>
-            <Text style={styles.sectionTitle}>Batch Summary</Text>
+            <Text style={styles.sectionTitle}>Location Summary</Text>
             <View style={styles.summary}>
               {[
                 [batch.startingBirds, "Starting Birds"],
                 [currentBirds, "Current Birds"],
-                [totalLosses, "Total Losses"],
+                [totalLosses, "Out of Location"],
               ].map(([value, label], index) => (
                 <View
                   key={label}
@@ -576,7 +581,7 @@ export default function RangingBatchDetailScreen({
                 </View>
               ))}
             </View>
-            <Text style={styles.sectionTitle}>Batch Management</Text>
+            <Text style={styles.sectionTitle}>Location Management</Text>
             {ready && (
               <Pressable
                 onPress={() => setModal("selection")}
@@ -587,7 +592,7 @@ export default function RangingBatchDetailScreen({
                   size={20}
                   color="#fff"
                 />
-                <Text style={styles.primaryText}>Begin Selection</Text>
+                <Text style={styles.primaryText}>Record Selection</Text>
               </Pressable>
             )}
             <Pressable
@@ -614,7 +619,7 @@ export default function RangingBatchDetailScreen({
                 <Text style={styles.secondaryText}>Change Range Area</Text>
               </Pressable>
               <Pressable
-                onPress={() => Alert.alert("Close Batch", `Close ${batch.id}?`)}
+                onPress={() => Alert.alert("Close Location", `Close ${location}?`)}
                 style={styles.secondaryButton}
               >
                 <MaterialCommunityIcons
@@ -623,7 +628,7 @@ export default function RangingBatchDetailScreen({
                   color="#ef7568"
                 />
                 <Text style={[styles.secondaryText, { color: "#ef7568" }]}>
-                  Close Batch
+                  Close Location
                 </Text>
               </Pressable>
             </View>
@@ -984,6 +989,7 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: "700",
   },
+  hardeningDestination: { marginTop: 12 },
   field: {
     height: 42,
     borderRadius: 6,

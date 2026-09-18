@@ -23,28 +23,58 @@ function Summary({ icon, value, label, detail, compact }) {
   return <View style={[styles.summary, compact && styles.summaryCompact]}><View style={styles.summaryTop}><MaterialCommunityIcons name={icon} size={24} color={ORANGE} /><Text style={styles.summaryValue}>{value}</Text></View><Text style={styles.summaryLabel}>{label}</Text><Text style={styles.summaryDetail}>{detail}</Text></View>;
 }
 
-function BatchCard({ batch, losses, location, readyDay, onPress }) {
-  const currentBirds = Math.max(0, batch.birds - losses.reduce((sum, item) => sum + item.count, 0));
-  const ageDays = birdAgeDays(batch);
-  const ready = ageDays >= readyDay;
-  const progress = Math.max(0, Math.min(100, Math.round(((ageDays - 120) / Math.max(1, readyDay - 120)) * 100)));
-  const status = ready ? 'Ready for Selection' : batch.status === 'Needs Attention' ? batch.status : 'Ranging';
-  const action = ready ? 'Begin Selection' : batch.nextAction;
-  const tone = status === 'Ready for Selection' ? '#ffba56' : status === 'Needs Attention' ? '#ef7568' : '#6ee58c';
-  return <Pressable accessibilityLabel={`Open ranging batch ${batch.id}`} onPress={onPress} style={({ pressed }) => [styles.batch, pressed && styles.pressed]}><View style={styles.batchTop}><View style={styles.identity}><View style={styles.batchIcon}><MaterialCommunityIcons name="weather-sunny" size={22} color={ORANGE} /></View><View><Text style={styles.batchId}>{batch.id}</Text><Text style={styles.location}>{location || batch.location}</Text></View></View><View style={[styles.status, { backgroundColor: `${tone}22` }]}><View style={[styles.dot, { backgroundColor: tone }]} /><Text style={[styles.statusText, { color: tone }]}>{status}</Text></View></View><View style={styles.metrics}><View><Text style={styles.birds}>{currentBirds}</Text><Text style={styles.muted}>current birds</Text></View><View style={styles.age}><Text style={styles.ageValue}>{monthAge(ageDays)}</Text><Text style={styles.muted}>Day {ageDays} - {progress}% ready</Text></View></View><View style={styles.progressTrack}><View style={[styles.progressFill, { width: `${progress}%` }]} /></View><View style={styles.footer}>{action ? <View style={styles.action}><MaterialCommunityIcons name={ready ? 'account-search-outline' : 'alert-circle-outline'} size={15} color={ORANGE} /><Text style={styles.actionText}>{action}</Text></View> : <Text style={styles.muted}>On track</Text>}<Ionicons name="chevron-forward" size={17} color="#67767b" /></View></Pressable>;
+function selectionCount(allocations, matcher) {
+  return Object.entries(allocations || {}).reduce((sum, [name, count]) => matcher.test(name) ? sum + count : sum, 0);
 }
 
-export default function RangingScreen({ batches = RANGING_BATCHES, lossesByBatch = {}, locationsByBatch = {}, readyDay = SELECTION_AGE_DAYS, onBack, onOpenSettings, onOpenBatch }) {
+export function buildRangingLocations(batches, lossesByBatch = {}, locationsByBatch = {}, selectionsByLocation = {}, readyDay = SELECTION_AGE_DAYS) {
+  const grouped = new Map();
+  batches.filter((batch) => batch.status !== 'Completed').forEach((batch) => {
+    const location = locationsByBatch[batch.id] || batch.location || 'Unassigned Range';
+    const losses = (lossesByBatch[batch.id] || []).reduce((sum, item) => sum + item.count, 0);
+    const birds = Math.max(0, batch.birds - losses);
+    const current = grouped.get(location) || { id: location, location, birds: 0, startingBirds: 0, batches: [], sources: [], ages: [], hatchDate: batch.hatchDate, rangingStartDate: batch.rangingStartDate };
+    current.birds += birds;
+    current.startingBirds += batch.startingBirds || batch.birds;
+    current.batches.push(batch);
+    current.sources.push(...(batch.sources || []).map((source) => ({ ...source, sourceBatch: batch.id })));
+    current.ages.push(birdAgeDays(batch));
+    if (new Date(batch.hatchDate) < new Date(current.hatchDate)) current.hatchDate = batch.hatchDate;
+    grouped.set(location, current);
+  });
+  return [...grouped.values()].map((group) => {
+    const selection = selectionsByLocation[group.location];
+    const moved = selection?.moved ?? selectionCount(selection?.allocations, /proceed|ready/i);
+    const removed = selection?.removed ?? selectionCount(selection?.allocations, /remove/i);
+    const locationLosses = (lossesByBatch[group.location] || []).reduce((sum, item) => sum + item.count, 0);
+    const birds = Math.max(0, group.birds - moved - removed - locationLosses);
+    const minAge = Math.min(...group.ages);
+    const maxAge = Math.max(...group.ages);
+    const ready = maxAge >= readyDay;
+    return { ...group, birds, status: ready ? 'Ready for Selection' : 'Active', ageRange: minAge === maxAge ? monthAge(minAge) : `${monthAge(minAge)} - ${monthAge(maxAge)}`, lastSelectionDate: selection?.date || '', selection };
+  }).filter((group) => group.birds > 0);
+}
+
+function LocationCard({ group, readyDay, onPress }) {
+  const ageDays = Math.max(...group.ages);
+  const ready = ageDays >= readyDay;
+  const progress = Math.max(0, Math.min(100, Math.round(((ageDays - 120) / Math.max(1, readyDay - 120)) * 100)));
+  const status = ready ? 'Ready for Selection' : 'Active';
+  const tone = status === 'Ready for Selection' ? '#ffba56' : status === 'Needs Attention' ? '#ef7568' : '#6ee58c';
+  return <Pressable accessibilityLabel={`Open ranging location ${group.location}`} onPress={onPress} style={({ pressed }) => [styles.batch, pressed && styles.pressed]}><View style={styles.batchTop}><View style={styles.identity}><View style={styles.batchIcon}><MaterialCommunityIcons name="map-marker-radius-outline" size={22} color={ORANGE} /></View><View><Text style={styles.batchId}>{group.location}</Text><Text style={styles.location}>{group.batches.length} source {group.batches.length === 1 ? 'batch' : 'batches'}</Text></View></View><View style={[styles.status, { backgroundColor: `${tone}22` }]}><View style={[styles.dot, { backgroundColor: tone }]} /><Text style={[styles.statusText, { color: tone }]}>{status}</Text></View></View><View style={styles.metrics}><View><Text style={styles.birds}>{group.birds}</Text><Text style={styles.muted}>current birds</Text></View><View style={styles.age}><Text style={styles.ageValue}>{group.ageRange}</Text><Text style={styles.muted}>{group.lastSelectionDate ? `Last selection ${group.lastSelectionDate}` : `Day ${ageDays} - ${progress}% ready`}</Text></View></View><View style={styles.progressTrack}><View style={[styles.progressFill, { width: `${progress}%` }]} /></View><View style={styles.footer}><View style={styles.action}><MaterialCommunityIcons name="account-search-outline" size={15} color={ORANGE} /><Text style={styles.actionText}>Record Selection</Text></View><Ionicons name="chevron-forward" size={17} color="#67767b" /></View></Pressable>;
+}
+
+export default function RangingScreen({ batches = RANGING_BATCHES, lossesByBatch = {}, locationsByBatch = {}, selectionsByLocation = {}, readyDay = SELECTION_AGE_DAYS, onBack, onOpenSettings, onOpenBatch }) {
   const { width } = useWindowDimensions();
   const compact = width < 480;
   const [query, setQuery] = useState('');
-  const active = batches.filter((batch) => batch.status !== 'Completed');
-  const shown = useMemo(() => { const search = query.trim().toLowerCase(); return search ? active.filter((batch) => `${batch.id} ${locationsByBatch[batch.id] || batch.location} ${batch.status}`.toLowerCase().includes(search)) : active; }, [active, locationsByBatch, query]);
-  const totalBirds = active.reduce((sum, batch) => sum + Math.max(0, batch.birds - (lossesByBatch[batch.id] || []).reduce((loss, item) => loss + item.count, 0)), 0);
-  const ready = active.filter((batch) => birdAgeDays(batch) >= readyDay).length;
-  const alerts = active.filter((batch) => batch.status === 'Needs Attention' || batch.nextAction?.toLowerCase().includes('overdue')).length;
-  const summaries = [{ icon: 'layers-triple-outline', value: active.length, label: 'Active Batches', detail: 'currently ranging' }, { icon: 'bird', value: totalBirds, label: 'Total Birds', detail: 'across active batches' }, { icon: 'alert-circle-outline', value: alerts, label: 'Tasks Due / Alerts', detail: 'requires review' }, { icon: 'account-search-outline', value: ready, label: 'Ready for Selection', detail: `from day ${readyDay}` }];
-  return <View style={styles.screen}><StatusBar style="light" translucent backgroundColor="transparent" /><ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.pageWrap}><View style={styles.page}><View style={[styles.hero, compact && styles.heroCompact]}><Image source={HERO_IMAGE} style={StyleSheet.absoluteFill} contentFit="cover" contentPosition="center" /><LinearGradient colors={['rgba(2,7,9,.12)', 'rgba(2,7,9,.25)', '#03090c']} locations={[0,.52,1]} style={StyleSheet.absoluteFill} /><SafeAreaView edges={['top']} style={styles.heroSafe}><View style={styles.header}><View style={styles.headerGroup}><Pressable accessibilityLabel="Back to farm" onPress={onBack} style={styles.back}><Ionicons name="arrow-back" size={21} color="#fff" /></Pressable><Text style={styles.headerTitle}>Ranging</Text></View><Pressable accessibilityLabel="Ranging settings" onPress={onOpenSettings} style={styles.back}><Ionicons name="settings-outline" size={21} color="#fff" /></Pressable></View><View style={styles.heroCopy}><Text style={styles.farmName}>FarmBuzz Farm</Text><Text style={styles.tagline}>Develop ranging batches toward selection.</Text></View></SafeAreaView></View><View style={[styles.content, compact && styles.contentCompact]}><View style={styles.search}><Ionicons name="search" size={19} color="#879499" /><TextInput value={query} onChangeText={setQuery} placeholder="Search ranging batches" placeholderTextColor="#748187" style={styles.searchInput} /></View><Text style={styles.overline}>RANGING DASHBOARD</Text><View style={styles.summaryGrid}>{summaries.map((item) => <Summary key={item.label} {...item} compact={compact} />)}</View><View style={styles.listHeading}><View><Text style={styles.overline}>RANGING BATCHES</Text><Text style={styles.listTitle}>Active batches</Text></View><Text style={styles.count}>{shown.length} active</Text></View><View style={styles.list}>{shown.map((batch) => <BatchCard key={batch.id} batch={batch} losses={lossesByBatch[batch.id] || []} location={locationsByBatch[batch.id]} readyDay={readyDay} onPress={() => onOpenBatch(batch.id)} />)}{!shown.length && <Text style={styles.empty}>No ranging batches found</Text>}</View></View></View></ScrollView></View>;
+  const locations = useMemo(() => buildRangingLocations(batches, lossesByBatch, locationsByBatch, selectionsByLocation, readyDay), [batches, lossesByBatch, locationsByBatch, selectionsByLocation, readyDay]);
+  const shown = useMemo(() => { const search = query.trim().toLowerCase(); return search ? locations.filter((group) => group.location.toLowerCase().includes(search)) : locations; }, [locations, query]);
+  const totalBirds = locations.reduce((sum, group) => sum + group.birds, 0);
+  const ready = locations.filter((group) => group.status === 'Ready for Selection').length;
+  const alerts = batches.filter((batch) => batch.status === 'Needs Attention' || batch.nextAction?.toLowerCase().includes('overdue')).length;
+  const summaries = [{ icon: 'map-marker-multiple-outline', value: locations.length, label: 'Active Locations', detail: 'currently ranging' }, { icon: 'bird', value: totalBirds, label: 'Total Birds', detail: 'across all locations' }, { icon: 'alert-circle-outline', value: alerts, label: 'Tasks Due / Alerts', detail: 'requires review' }, { icon: 'account-search-outline', value: ready, label: 'Ready for Selection', detail: `from day ${readyDay}` }];
+  return <View style={styles.screen}><StatusBar style="light" translucent backgroundColor="transparent" /><ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.pageWrap}><View style={styles.page}><View style={[styles.hero, compact && styles.heroCompact]}><Image source={HERO_IMAGE} style={StyleSheet.absoluteFill} contentFit="cover" contentPosition="center" /><LinearGradient colors={['rgba(2,7,9,.12)', 'rgba(2,7,9,.25)', '#03090c']} locations={[0,.52,1]} style={StyleSheet.absoluteFill} /><SafeAreaView edges={['top']} style={styles.heroSafe}><View style={styles.header}><View style={styles.headerGroup}><Pressable accessibilityLabel="Back to farm" onPress={onBack} style={styles.back}><Ionicons name="arrow-back" size={21} color="#fff" /></Pressable><Text style={styles.headerTitle}>Ranging</Text></View><Pressable accessibilityLabel="Ranging settings" onPress={onOpenSettings} style={styles.back}><Ionicons name="settings-outline" size={21} color="#fff" /></Pressable></View><View style={styles.heroCopy}><Text style={styles.farmName}>FarmBuzz Farm</Text><Text style={styles.tagline}>Manage ranging birds by their current farm location.</Text></View></SafeAreaView></View><View style={[styles.content, compact && styles.contentCompact]}><View style={styles.search}><Ionicons name="search" size={19} color="#879499" /><TextInput value={query} onChangeText={setQuery} placeholder="Search range locations" placeholderTextColor="#748187" style={styles.searchInput} /></View><Text style={styles.overline}>RANGING DASHBOARD</Text><View style={styles.summaryGrid}>{summaries.map((item) => <Summary key={item.label} {...item} compact={compact} />)}</View><View style={styles.listHeading}><View><Text style={styles.overline}>RANGE LOCATIONS</Text><Text style={styles.listTitle}>Active locations</Text></View><Text style={styles.count}>{shown.length} active</Text></View><View style={styles.list}>{shown.map((group) => <LocationCard key={group.location} group={group} readyDay={readyDay} onPress={() => onOpenBatch(group.location)} />)}{!shown.length && <Text style={styles.empty}>No ranging locations found</Text>}</View></View></View></ScrollView></View>;
 }
 
 const styles = StyleSheet.create({

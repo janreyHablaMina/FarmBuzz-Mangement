@@ -34,7 +34,8 @@ import GrowingBatchDetailScreen from './GrowingBatchDetailScreen';
 import GrowingScheduleSettingsScreen, { DEFAULT_GROWING_SETTINGS, DEFAULT_RANGING_SETTINGS } from './GrowingScheduleSettingsScreen';
 import GrowingSettingsScreen, { GrowingSeparationSettingsScreen } from './GrowingSettingsScreen';
 import MaturingScreen from './MaturingScreen';
-import RangingScreen, { RANGING_BATCHES } from './RangingScreen';
+import PulletScreen, { PULLET_BATCHES, PulletBatchDetailScreen } from './PulletScreen';
+import RangingScreen, { buildRangingLocations, RANGING_BATCHES } from './RangingScreen';
 import RangingBatchDetailScreen from './RangingBatchDetailScreen';
 import RangingSettingsScreen, { RangingSelectionSettingsScreen } from './RangingSettingsScreen';
 import { INCUBATION_BATCHES } from './farmData';
@@ -84,6 +85,7 @@ const TRANSFERS_BADGE_IMAGE = require('./assets/badge-transfers.png');
 const FLOCK_HERO_IMAGE = require('./assets/flock-hero.png');
 const BREEDING_HERO_IMAGE = require('./assets/breeding-hero.png');
 const BROODING_HERO_IMAGE = require('./assets/brooding-card.png');
+const HARDENING_CARD_IMAGE = require('./assets/hardening-card.png');
 const GROWING_HERO_IMAGE = require('./assets/growing-card.png');
 const RANGING_HERO_IMAGE = require('./assets/ranging-card.png');
 const HEALTH_CARE_HERO_IMAGE = require('./assets/health-care-hero.png');
@@ -781,7 +783,7 @@ function FarmWorkspaceCard({ farm, onPress }) {
   );
 }
 
-function FarmDetailScreen({ farm, onBack, onOpenBreeding, onOpenIncubation, onOpenBrooding, onOpenGrowing, onOpenMaturing, onOpenSettings }) {
+function FarmDetailScreen({ farm, onBack, onOpenBreeding, onOpenIncubation, onOpenBrooding, onOpenGrowing, onOpenMaturing, onOpenHardening, onOpenSettings }) {
   const { width } = useWindowDimensions();
   const compact = width < 480;
   const narrow = width < 390;
@@ -821,6 +823,14 @@ function FarmDetailScreen({ farm, onBack, onOpenBreeding, onOpenIncubation, onOp
     color: THEME_ORANGE,
     tint: THEME_ORANGE_TINT,
     image: RANGING_HERO_IMAGE,
+  };
+  const hardeningModule = {
+    title: 'Hardening',
+    subtitle: 'Final maturity and conditioning',
+    icon: 'shield-check-outline',
+    color: THEME_ORANGE,
+    tint: THEME_ORANGE_TINT,
+    image: HARDENING_CARD_IMAGE,
   };
   const breedingStats = [
     { label: 'Active Pairings', value: '3', icon: 'link-variant', color: THEME_ORANGE },
@@ -883,7 +893,7 @@ function FarmDetailScreen({ farm, onBack, onOpenBreeding, onOpenIncubation, onOp
 
             <View style={styles.sectionHeading}>
               <Text style={[styles.sectionTitle, narrow && styles.sectionTitleNarrow]}>Management Tool</Text>
-              <Text style={styles.sectionMeta}>5 modules</Text>
+              <Text style={styles.sectionMeta}>6 modules</Text>
             </View>
             <View style={[styles.moduleGrid, compact && styles.moduleGridCompact]}>
               <ModuleCard item={breedingModule} compact={compact} onPress={onOpenBreeding} />
@@ -891,6 +901,7 @@ function FarmDetailScreen({ farm, onBack, onOpenBreeding, onOpenIncubation, onOp
               <ModuleCard item={broodingModule} compact={compact} onPress={onOpenBrooding} />
               <ModuleCard item={growingModule} compact={compact} onPress={onOpenGrowing} />
               <ModuleCard item={maturingModule} compact={compact} onPress={onOpenMaturing} />
+              <ModuleCard item={hardeningModule} compact={compact} onPress={onOpenHardening} />
             </View>
           </View>
         </View>
@@ -1341,12 +1352,27 @@ export default function App() {
   const [growingSeparationsByBatch, setGrowingSeparationsByBatch] = useState({});
   const [growingSettings, setGrowingSettings] = useState(DEFAULT_GROWING_SETTINGS);
   const [addedRangingBatches, setAddedRangingBatches] = useState([]);
-  const [selectedRangingBatchId, setSelectedRangingBatchId] = useState('RG-024');
+  const [addedPulletBatches, setAddedPulletBatches] = useState([]);
+  const [selectedRangingBatchId, setSelectedRangingBatchId] = useState('Range Area 2');
   const [rangingLossesByBatch, setRangingLossesByBatch] = useState({});
   const [rangingLocationsByBatch, setRangingLocationsByBatch] = useState({});
   const [rangingTasksByBatch, setRangingTasksByBatch] = useState({});
+  const [rangingSelectionsByLocation, setRangingSelectionsByLocation] = useState({});
   const [rangingSettings, setRangingSettings] = useState(DEFAULT_RANGING_SETTINGS);
+  useEffect(() => {
+    const previousDefaults = ['Keep / Continue', 'Future Breeder', 'Sell / Transfer', 'Remove from Program'];
+    setRangingSettings((current) => {
+      const options = current.selectionOptions || [];
+      const usesPreviousDefaults = options.length === previousDefaults.length && options.every((option, index) => option === previousDefaults[index]);
+      return usesPreviousDefaults ? { ...current, selectionOptions: ['Proceed', 'Recheck', 'Remove'] } : current;
+    });
+  }, []);
   const [completedRangingBatchIds, setCompletedRangingBatchIds] = useState([]);
+  const [selectedPulletBatchId, setSelectedPulletBatchId] = useState('PL-024');
+  const [pulletLossesByBatch, setPulletLossesByBatch] = useState({});
+  const [pulletLocationsByBatch, setPulletLocationsByBatch] = useState({});
+  const [pulletChecksByBatch, setPulletChecksByBatch] = useState({});
+  const [pulletEvaluationsByBatch, setPulletEvaluationsByBatch] = useState({});
   const [addedBirds, setAddedBirds] = useState([]);
   const [selectedBird, setSelectedBird] = useState(null);
   const [birdOverrides, setBirdOverrides] = useState({});
@@ -1420,6 +1446,9 @@ export default function App() {
   const flockBirds = [...addedBirds, ...BIRDS].map((bird) => birdOverrides[bird._recordKey || bird.farmBuzzId || bird.name] || bird);
   const totalWins = flockBirds.reduce((sum, bird) => sum + getBirdWins(bird), 0);
   const rangingBatches = [...addedRangingBatches, ...RANGING_BATCHES].filter((batch, index, items) => items.findIndex((item) => item.id === batch.id) === index);
+  const rangingLocations = buildRangingLocations(rangingBatches, rangingLossesByBatch, rangingLocationsByBatch, rangingSelectionsByLocation, rangingSettings.readyDay);
+  const selectedRangingLocation = rangingLocations.find((group) => group.location === selectedRangingBatchId) || rangingLocations[0];
+  const pulletBatches = [...addedPulletBatches, ...PULLET_BATCHES].filter((batch, index, items) => items.findIndex((item) => item.id === batch.id) === index);
 
   return (
     <SafeAreaProvider>
@@ -1454,6 +1483,7 @@ export default function App() {
           onOpenBrooding={() => setScreen('brooding')}
           onOpenGrowing={() => setScreen('growing')}
           onOpenMaturing={() => setScreen('maturing')}
+          onOpenHardening={() => Alert.alert('Hardening', 'The hardening workflow will open here.')}
           onOpenSettings={() => {
             setSettingsReturn('farm-detail');
             setScreen('management-settings');
@@ -1463,7 +1493,37 @@ export default function App() {
         <MaturingScreen
           onBack={() => setScreen('farm-detail')}
           onOpenRanging={() => setScreen('ranging')}
-          onOpenFemale={() => Alert.alert('Female / Pullet', 'The female and pullet workflow will open here.')}
+          onOpenFemale={() => setScreen('pullets')}
+        />
+      ) : screen === 'pullets' ? (
+        <PulletScreen
+          batches={pulletBatches}
+          lossesByBatch={pulletLossesByBatch}
+          locationsByBatch={pulletLocationsByBatch}
+          evaluationsByBatch={pulletEvaluationsByBatch}
+          onBack={() => setScreen('maturing')}
+          onOpenBatch={(batchId) => {
+            setSelectedPulletBatchId(batchId);
+            setScreen('pullet-batch-detail');
+          }}
+        />
+      ) : screen === 'pullet-batch-detail' ? (
+        <PulletBatchDetailScreen
+          batchId={selectedPulletBatchId}
+          batches={pulletBatches}
+          losses={pulletLossesByBatch[selectedPulletBatchId] || []}
+          locationOverride={pulletLocationsByBatch[selectedPulletBatchId]}
+          checkRecord={pulletChecksByBatch[selectedPulletBatchId]}
+          evaluationRecord={pulletEvaluationsByBatch[selectedPulletBatchId]}
+          onBack={() => setScreen('pullets')}
+          onSaveLoss={(record) => setPulletLossesByBatch((current) => ({ ...current, [selectedPulletBatchId]: [record, ...(current[selectedPulletBatchId] || [])] }))}
+          onChangeLocation={(location) => setPulletLocationsByBatch((current) => ({ ...current, [selectedPulletBatchId]: location }))}
+          onCompleteCheck={(record) => setPulletChecksByBatch((current) => ({ ...current, [selectedPulletBatchId]: record }))}
+          onCompleteEvaluation={(record) => {
+            setPulletEvaluationsByBatch((current) => ({ ...current, [selectedPulletBatchId]: record }));
+            Alert.alert('Evaluation Completed', `${selectedPulletBatchId} has been assigned by outcome.`);
+            setScreen('pullets');
+          }}
         />
       ) : screen === 'growing' ? (
         <GrowingScreen
@@ -1517,10 +1577,16 @@ export default function App() {
           onChangeLocation={(location) => setGrowingLocationsByBatch((current) => ({ ...current, [selectedGrowingBatchId]: location }))}
           onCompleteTask={(task) => setGrowingTasksByBatch((current) => ({ ...current, [selectedGrowingBatchId]: { ...(current[selectedGrowingBatchId] || {}), [task]: true } }))}
           onSaveSeparation={(record) => setGrowingSeparationsByBatch((current) => ({ ...current, [selectedGrowingBatchId]: record }))}
-          onMoveToRanging={(batch) => {
-            setAddedRangingBatches((current) => [batch, ...current.filter((item) => item.id !== batch.id)]);
-            setSelectedRangingBatchId(batch.id);
-            setScreen('ranging-batch-detail');
+          onMoveToRanging={(rangingBatch, pulletBatch) => {
+            if (rangingBatch.birds > 0) setAddedRangingBatches((current) => [rangingBatch, ...current.filter((item) => item.id !== rangingBatch.id)]);
+            if (pulletBatch.pullets > 0) setAddedPulletBatches((current) => [pulletBatch, ...current.filter((item) => item.id !== pulletBatch.id)]);
+            if (rangingBatch.birds > 0) {
+              setSelectedRangingBatchId(rangingBatch.location);
+              setScreen('ranging-batch-detail');
+            } else {
+              setSelectedPulletBatchId(pulletBatch.id);
+              setScreen('pullet-batch-detail');
+            }
           }}
         />
       ) : screen === 'ranging' ? (
@@ -1528,11 +1594,12 @@ export default function App() {
           batches={rangingBatches.map((batch) => completedRangingBatchIds.includes(batch.id) ? { ...batch, status: 'Completed' } : batch)}
           lossesByBatch={rangingLossesByBatch}
           locationsByBatch={rangingLocationsByBatch}
+          selectionsByLocation={rangingSelectionsByLocation}
           readyDay={rangingSettings.readyDay}
           onBack={() => setScreen('maturing')}
           onOpenSettings={() => setScreen('ranging-settings')}
-          onOpenBatch={(batchId) => {
-            setSelectedRangingBatchId(batchId);
+          onOpenBatch={(location) => {
+            setSelectedRangingBatchId(location);
             setScreen('ranging-batch-detail');
           }}
         />
@@ -1565,21 +1632,31 @@ export default function App() {
       ) : screen === 'ranging-batch-detail' ? (
         <RangingBatchDetailScreen
           batchId={selectedRangingBatchId}
-          batches={rangingBatches}
-          losses={rangingLossesByBatch[selectedRangingBatchId] || []}
-          locationOverride={rangingLocationsByBatch[selectedRangingBatchId]}
+          batches={selectedRangingLocation ? [selectedRangingLocation] : []}
+          losses={[]}
+          locationOverride={selectedRangingLocation?.location}
           readyDay={rangingSettings.readyDay}
           scheduledTasks={rangingSettings.tasks}
           selectionOptions={rangingSettings.selectionOptions}
           completedTasks={rangingTasksByBatch[selectedRangingBatchId] || {}}
           onBack={() => setScreen('ranging')}
           onSaveLoss={(record) => setRangingLossesByBatch((current) => ({ ...current, [selectedRangingBatchId]: [record, ...(current[selectedRangingBatchId] || [])] }))}
-          onChangeLocation={(location) => setRangingLocationsByBatch((current) => ({ ...current, [selectedRangingBatchId]: location }))}
+          onChangeLocation={(location) => setRangingLocationsByBatch((current) => ({ ...current, ...Object.fromEntries((selectedRangingLocation?.batches || []).map((batch) => [batch.id, location])) }))}
           onCompleteTask={(taskId) => setRangingTasksByBatch((current) => ({ ...current, [selectedRangingBatchId]: { ...(current[selectedRangingBatchId] || {}), [taskId]: true } }))}
-          onBeginSelection={(batch, allocations) => {
-            setCompletedRangingBatchIds((current) => current.includes(batch.id) ? current : [...current, batch.id]);
-            const summary = Object.entries(allocations).filter(([, count]) => count > 0).map(([option, count]) => `${option}: ${count}`).join('\n');
-            Alert.alert('Selection Completed', `${batch.id} is complete.\n\n${summary}`);
+          onBeginSelection={(batch, selection) => {
+            const countMatching = (matcher) => Object.entries(selection.allocations).reduce((sum, [option, count]) => matcher.test(option) ? sum + count : sum, 0);
+            setRangingSelectionsByLocation((current) => {
+              const previous = current[batch.location] || {};
+              const record = {
+                ...selection,
+                moved: (previous.moved || 0) + countMatching(/proceed|ready/i),
+                removed: (previous.removed || 0) + countMatching(/remove/i),
+                date: new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date()),
+              };
+              return { ...current, [batch.location]: record };
+            });
+            const summary = Object.entries(selection.allocations).filter(([, count]) => count > 0).map(([option, count]) => `${option}: ${count}`).join('\n');
+            Alert.alert('Selection Recorded', `${batch.location}\n\n${summary}${selection.hardeningArea ? `\n\nProceed destination: ${selection.hardeningArea}` : ''}`);
             setScreen('ranging');
           }}
         />

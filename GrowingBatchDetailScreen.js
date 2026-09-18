@@ -157,7 +157,22 @@ function FieldModal({ visible, type, batch, currentBirds, onClose, onSave }) {
   );
 }
 
-function ConfirmModal({ visible, batch, currentBirds, onClose, onConfirm }) {
+function ConfirmModal({ visible, batch, separationRecord, onClose, onConfirm }) {
+  const maleCount = separationRecord?.Male || 0;
+  const femaleCount = separationRecord?.Female || 0;
+  const [rangingArea, setRangingArea] = useState("");
+  const [pulletArea, setPulletArea] = useState("");
+  useEffect(() => {
+    if (visible) {
+      setRangingArea("");
+      setPulletArea("");
+    }
+  }, [visible]);
+  const confirm = () => {
+    if (maleCount > 0 && !rangingArea.trim()) return Alert.alert("Ranging area required", "Enter where the male group will be moved.");
+    if (femaleCount > 0 && !pulletArea.trim()) return Alert.alert("Pullet area required", "Enter where the pullet group will be moved.");
+    onConfirm({ rangingArea: rangingArea.trim(), pulletArea: pulletArea.trim() });
+  };
   return (
     <Modal
       visible={visible}
@@ -171,7 +186,7 @@ function ConfirmModal({ visible, batch, currentBirds, onClose, onConfirm }) {
           <View style={styles.modalHeader}>
             <View>
               <Text style={styles.eyebrow}>GROWING COMPLETE</Text>
-              <Text style={styles.modalTitle}>Move to Ranging</Text>
+              <Text style={styles.modalTitle}>Move Separated Groups</Text>
             </View>
             <Pressable onPress={onClose} style={styles.closeButton}>
               <Ionicons name="close" size={20} color="#dfe5e7" />
@@ -191,17 +206,18 @@ function ConfirmModal({ visible, batch, currentBirds, onClose, onConfirm }) {
             </View>
           </View>
           <Text style={styles.confirmTitle}>
-            {currentBirds} birds are ready
+            Choose each group destination
           </Text>
           <Text style={styles.confirmCopy}>
-            This completes {batch.id} and creates a ranging batch with its
-            source groups, bloodlines, and markings preserved.
+            Each group keeps its source, bloodline, marking, and hatch history.
           </Text>
+          {maleCount > 0 && <View style={styles.destinationField}><View style={styles.destinationHeading}><MaterialCommunityIcons name="gender-male" size={17} color={ORANGE} /><Text style={styles.destinationTitle}>Stag / Ranging · {maleCount}</Text></View><Text style={styles.fieldLabel}>Ranging Area / Location</Text><TextInput value={rangingArea} onChangeText={setRangingArea} placeholder="e.g. Range Area 2" placeholderTextColor="#68777c" selectionColor={ORANGE} style={styles.destinationInput} /></View>}
+          {femaleCount > 0 && <View style={styles.destinationField}><View style={styles.destinationHeading}><MaterialCommunityIcons name="gender-female" size={17} color={ORANGE} /><Text style={styles.destinationTitle}>Female / Pullet · {femaleCount}</Text></View><Text style={styles.fieldLabel}>Pullet Area / Location</Text><TextInput value={pulletArea} onChangeText={setPulletArea} placeholder="e.g. Pullet Area 1" placeholderTextColor="#68777c" selectionColor={ORANGE} style={styles.destinationInput} /></View>}
           <View style={styles.modalActions}>
             <Pressable onPress={onClose} style={styles.cancelButton}>
               <Text style={styles.cancelText}>Cancel</Text>
             </Pressable>
-            <Pressable onPress={onConfirm} style={styles.saveButton}>
+            <Pressable onPress={confirm} style={styles.saveButton}>
               <Text style={styles.saveText}>Confirm Move</Text>
             </Pressable>
           </View>
@@ -301,6 +317,12 @@ export default function GrowingBatchDetailScreen({
             0,
           )
         : Math.round((source.birds / 38) * currentBirds),
+  }));
+  const sourcesForCount = (count) => sourceBirds.map((source, index) => ({
+    ...source,
+    birds: index === sourceBirds.length - 1
+      ? count - sourceBirds.slice(0, -1).reduce((sum, item) => sum + Math.round((item.birds / Math.max(1, currentBirds)) * count), 0)
+      : Math.round((source.birds / Math.max(1, currentBirds)) * count),
   }));
   const ready = previewDay >= readyDays;
   const previewAgeDay = batch.ageDays + (previewDay - currentGrowingDay);
@@ -700,21 +722,36 @@ export default function GrowingBatchDetailScreen({
       <ConfirmModal
         visible={modal === "ranging"}
         batch={batch}
-        currentBirds={currentBirds}
+        separationRecord={separationRecord}
         onClose={() => setModal(null)}
-        onConfirm={() => {
+        onConfirm={({ rangingArea, pulletArea }) => {
           setModal(null);
           onMoveToRanging({
             ...batch,
             id: batch.id.replace(/^GR-/, "RG-"),
-            birds: currentBirds,
-            location,
-            sources: sourceBirds,
+            birds: separationRecord?.Male || 0,
+            startingBirds: separationRecord?.Male || 0,
+            location: rangingArea,
+            sources: sourcesForCount(separationRecord?.Male || 0),
             growingBatch: batch.id,
             rangingStartDate: new Date().toISOString(),
             lossHistory: losses,
             healthSchedule: scheduledTasks,
             healthCompletions: completed,
+            sexSeparation: separationRecord,
+          }, {
+            ...batch,
+            id: batch.id.replace(/^GR-/, "PL-"),
+            pullets: separationRecord?.Female || 0,
+            startingPullets: separationRecord?.Female || 0,
+            ageMonths: Math.max(1, Math.round((batch.ageDays / 30) * 10) / 10),
+            location: pulletArea,
+            status: "Developing",
+            growingBatch: batch.id,
+            hatchBatch: batch.broodingBatch,
+            enteredDate: new Date().toISOString(),
+            alerts: 0,
+            sources: sourcesForCount(separationRecord?.Female || 0),
             sexSeparation: separationRecord,
           });
         }}
@@ -1206,6 +1243,11 @@ const styles = StyleSheet.create({
   separationRow: { minHeight: 56, paddingHorizontal: 11, flexDirection: "row", alignItems: "center", gap: 10 },
   separationDivider: { borderBottomWidth: 1, borderBottomColor: "#1d2d33" },
   separationName: { flex: 1, minWidth: 0, color: "#dce2e4", fontSize: 10, fontWeight: "700" },
+  destinationField: { marginTop: 12, padding: 11, borderRadius: 7, borderWidth: 1, borderColor: "#26373e", backgroundColor: "#061014" },
+  destinationHeading: { flexDirection: "row", alignItems: "center", gap: 7 },
+  destinationTitle: { color: "#e7ebec", fontSize: 11, fontWeight: "800" },
+  fieldLabel: { marginTop: 10, marginBottom: 6, color: "#839095", fontSize: 8, fontWeight: "700" },
+  destinationInput: { height: 40, borderRadius: 6, borderWidth: 1, borderColor: "#314249", backgroundColor: "#0a1519", paddingHorizontal: 10, color: "#fff", fontSize: 10, outlineStyle: "none" },
   quantityControl: { width: 116, height: 36, borderRadius: 6, borderWidth: 1, borderColor: "#314249", flexDirection: "row", alignItems: "center", overflow: "hidden" },
   quantityButton: { width: 34, height: 36, backgroundColor: "#101c20", alignItems: "center", justifyContent: "center" },
   quantityInput: { flex: 1, height: 34, padding: 0, color: "#fff", fontSize: 11, fontWeight: "800", textAlign: "center", outlineStyle: "none" },

@@ -24,7 +24,7 @@ export default function RangingSettingsScreen({ settings, onBack, onOpenSelectio
 
 export function RangingSelectionSettingsScreen({ settings, onBack, onSave }) {
   const [day, setDay] = useState(String(settings.readyDay));
-  const [options, setOptions] = useState(settings.selectionOptions || ['Keep / Continue', 'Future Breeder', 'Sell / Transfer', 'Remove from Program']);
+  const [options, setOptions] = useState(settings.selectionOptions || ['Proceed', 'Recheck', 'Remove']);
   const [newOption, setNewOption] = useState('');
   const addOption = () => {
     const name = newOption.trim();
