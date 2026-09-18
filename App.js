@@ -1542,14 +1542,15 @@ export default function App() {
           locationOverride={rangingLocationsByBatch[selectedRangingBatchId]}
           readyDay={rangingSettings.readyDay}
           scheduledTasks={rangingSettings.tasks}
+          selectionOptions={rangingSettings.selectionOptions}
           completedTasks={rangingTasksByBatch[selectedRangingBatchId] || {}}
           onBack={() => setScreen('ranging')}
           onSaveLoss={(record) => setRangingLossesByBatch((current) => ({ ...current, [selectedRangingBatchId]: [record, ...(current[selectedRangingBatchId] || [])] }))}
           onChangeLocation={(location) => setRangingLocationsByBatch((current) => ({ ...current, [selectedRangingBatchId]: location }))}
           onCompleteTask={(taskId) => setRangingTasksByBatch((current) => ({ ...current, [selectedRangingBatchId]: { ...(current[selectedRangingBatchId] || {}), [taskId]: true } }))}
-          onBeginSelection={(batch) => {
+          onBeginSelection={(batch, selection) => {
             setCompletedRangingBatchIds((current) => current.includes(batch.id) ? current : [...current, batch.id]);
-            Alert.alert('Selection Started', `${batch.id} is complete and the selection workflow has begun.`);
+            Alert.alert('Selection Started', `${batch.id} is complete. Selected path: ${selection}.`);
             setScreen('ranging');
           }}
         />

@@ -28,6 +28,7 @@ export const DEFAULT_GROWING_SETTINGS = {
 export const DEFAULT_RANGING_SETTINGS = {
   readyDay: 180,
   weeklyChecks: true,
+  selectionOptions: ['Keep / Continue', 'Future Breeder', 'Sell / Transfer', 'Remove from Program'],
   tasks: [
     { id: 'range-vaccine-review', name: 'Configured Vaccine Review', day: 165, note: 'Use the farm health program when applicable', enabled: true },
     { id: 'range-selection-6', name: 'Ready for Selection Check', day: 180, note: 'Confirm the batch is ready before selection', enabled: true },
