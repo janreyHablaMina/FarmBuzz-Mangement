@@ -187,7 +187,7 @@ function SelectionModal({
   const result = () => Object.fromEntries(options.map((option) => [option, quantityFor(option)]));
   const proceedCount = options.reduce((sum, option) => /proceed|ready/i.test(option) ? sum + quantityFor(option) : sum, 0);
   const confirm = () => {
-    if (proceedCount > 0 && !hardeningArea.trim()) return Alert.alert("Stag Maintenance area required", "Enter the destination for birds that will proceed.");
+    if (proceedCount > 0 && !hardeningArea.trim()) return Alert.alert("Hardening area required", "Enter the destination for birds that will proceed.");
     onConfirm({ allocations: result(), hardeningArea: hardeningArea.trim() });
   };
   return (
@@ -246,7 +246,7 @@ function SelectionModal({
               );
             })}
           </View>
-          {proceedCount > 0 && <View style={styles.hardeningDestination}><Text style={styles.fieldLabel}>Destination for Proceed birds</Text><View style={styles.field}><MaterialCommunityIcons name="shield-check-outline" size={18} color={ORANGE} /><TextInput value={hardeningArea} onChangeText={setHardeningArea} placeholder="e.g. Stag Maintenance Area 1" placeholderTextColor="#68777c" style={styles.input} /></View></View>}
+          {proceedCount > 0 && <View style={styles.hardeningDestination}><Text style={styles.fieldLabel}>Destination for Proceed birds</Text><View style={styles.field}><MaterialCommunityIcons name="shield-check-outline" size={18} color={ORANGE} /><TextInput value={hardeningArea} onChangeText={setHardeningArea} placeholder="e.g. Hardening Area 1" placeholderTextColor="#68777c" style={styles.input} /></View></View>}
           <View style={styles.modalActions}>
             <Pressable onPress={onClose} style={styles.cancel}>
               <Text style={styles.cancelText}>Cancel</Text>

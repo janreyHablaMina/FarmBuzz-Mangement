@@ -67,7 +67,7 @@ export default function GrowingScheduleSettingsScreen({ initialSettings, variant
   const stag = variant === 'stag';
   const defaults = stag ? DEFAULT_STAG_SETTINGS : ranging ? DEFAULT_RANGING_SETTINGS : DEFAULT_GROWING_SETTINGS;
   const startingSettings = initialSettings || defaults;
-  const stageName = stag ? 'Stag Maintenance' : ranging ? 'Ranging' : 'Growing';
+  const stageName = stag ? 'Hardening' : ranging ? 'Ranging' : 'Growing';
   const destination = stag ? 'Next Stage' : ranging ? 'Selection' : 'Ranging';
   const minDay = stag ? 180 : ranging ? 120 : 43;
   const terminalTaskId = stag ? 'stag-next-stage' : ranging ? 'range-selection-6' : 'grow-ranging-16';

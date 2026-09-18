@@ -69,7 +69,7 @@ function SelectionModal({ visible, area, onClose, onConfirm }) {
     if (readyCount > 0 && !destination.trim())
       return Alert.alert(
         "Destination required",
-        "Select the Stag Maintenance area for ready birds.",
+        "Select the Hardening area for ready birds.",
       );
     onConfirm({
       ready: readyCount,
@@ -132,7 +132,7 @@ function SelectionModal({ visible, area, onClose, onConfirm }) {
               <TextInput
                 value={destination}
                 onChangeText={setDestination}
-                placeholder="Select Stag Maintenance Area"
+                placeholder="Select Hardening Area"
                 placeholderTextColor="#68777c"
                 style={styles.input}
               />

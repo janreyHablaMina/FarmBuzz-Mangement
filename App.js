@@ -826,7 +826,7 @@ function FarmDetailScreen({ farm, onBack, onOpenBreeding, onOpenIncubation, onOp
     image: RANGING_HERO_IMAGE,
   };
   const hardeningModule = {
-    title: 'Stag Maintenance',
+    title: 'Hardening',
     subtitle: 'Conditioning and ongoing stag care',
     icon: 'shield-check-outline',
     color: THEME_ORANGE,
@@ -1355,7 +1355,7 @@ export default function App() {
   const [addedRangingBatches, setAddedRangingBatches] = useState([]);
   const [addedPulletBatches, setAddedPulletBatches] = useState([]);
   const [stagAreas, setStagAreas] = useState(DEFAULT_STAG_AREAS);
-  const [selectedStagArea, setSelectedStagArea] = useState('Stag Area 1');
+  const [selectedStagArea, setSelectedStagArea] = useState('Hardening Area 1');
   const [stagSettings, setStagSettings] = useState(DEFAULT_STAG_SETTINGS);
   const [selectedRangingBatchId, setSelectedRangingBatchId] = useState('Range Area 2');
   const [rangingLossesByBatch, setRangingLossesByBatch] = useState({});

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import {
   Alert,
   Modal,
@@ -27,7 +27,7 @@ const today = () =>
 
 export const DEFAULT_STAG_AREAS = [
   {
-    location: "Stag Area 1",
+    location: "Hardening Area 1",
     birds: 42,
     startingBirds: 50,
     movedForward: 5,
@@ -42,12 +42,12 @@ export const DEFAULT_STAG_AREAS = [
     ],
     history: [
       { date: "Sep 18", text: "20 stags entered from Main Range" },
-      { date: "Sep 25", text: "5 moved to another Stag Area" },
+      { date: "Sep 25", text: "5 moved to another Hardening Area" },
       { date: "Oct 2", text: "3 loss / adjustment" },
     ],
   },
   {
-    location: "Stag Area 2",
+    location: "Hardening Area 2",
     birds: 31,
     startingBirds: 31,
     movedForward: 0,
@@ -81,10 +81,10 @@ function Hero({ title, subtitle, onBack, onSettings }) {
           <Pressable onPress={onBack} style={styles.back}>
             <Ionicons name="arrow-back" size={21} color="#fff" />
           </Pressable>
-          <Text style={styles.headerTitle}>Stag Maintenance</Text>
+          <Text style={styles.headerTitle}>Hardening</Text>
           {onSettings && (
             <Pressable
-              accessibilityLabel="Stag Maintenance settings"
+              accessibilityLabel="Hardening settings"
               onPress={onSettings}
               style={styles.back}
             >
@@ -132,7 +132,7 @@ export default function StagMaintenanceScreen({
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.page}>
           <Hero
-            title="Stag Maintenance"
+            title="Hardening"
             subtitle="Maintain selected stags by physical area and current count."
             onBack={onBack}
             onSettings={onOpenSettings}
@@ -292,7 +292,7 @@ function ActionModal({ visible, type, area, onClose, onSave }) {
     if (type === "move" && destination.trim() === area.location)
       return Alert.alert(
         "Choose another area",
-        "The destination must be different from the current Stag Maintenance area.",
+        "The destination must be different from the current Hardening area.",
       );
     onSave({
       count,
@@ -388,7 +388,7 @@ function ActionModal({ visible, type, area, onClose, onSave }) {
                   <>
                     <Text style={styles.fieldLabel}>
                       {type === "move"
-                        ? "Destination Stag Area"
+                        ? "Destination Hardening Area"
                         : "Next-stage Destination"}
                     </Text>
                     <TextInput
@@ -483,19 +483,6 @@ export function StagMaintenanceAreaDetail({
             press: () => setModal("check"),
             icon: "clipboard-check-outline",
           };
-  const sourceComposition = useMemo(() => {
-    const total =
-      area.sources.reduce((sum, source) => sum + source.birds, 0) || 1;
-    let assigned = 0;
-    return area.sources.map((source, index) => {
-      const birds =
-        index === area.sources.length - 1
-          ? area.birds - assigned
-          : Math.round((source.birds / total) * area.birds);
-      assigned += birds;
-      return { ...source, birds };
-    });
-  }, [area]);
   const complete = (handler) => (record) => {
     handler(record);
     setModal(null);
@@ -559,70 +546,6 @@ export function StagMaintenanceAreaDetail({
                   <Text style={styles.nextButtonText}>{action.button}</Text>
                 </Pressable>
               </View>
-            </View>
-            <Text style={styles.sectionTitle}>Source / Traceability</Text>
-            <View style={styles.panel}>
-              {sourceComposition.map((source, index) => (
-                <View
-                  key={`${source.marking}-${index}`}
-                  style={[
-                    styles.sourceRow,
-                    index < sourceComposition.length - 1 && styles.divider,
-                  ]}
-                >
-                  <View>
-                    <Text style={styles.rowTitle}>
-                      {source.marking} · {source.name}
-                    </Text>
-                    <Text style={styles.rowMeta}>
-                      Hatch, growing, and ranging history preserved
-                    </Text>
-                  </View>
-                  <Text style={styles.sourceCount}>{source.birds}</Text>
-                </View>
-              ))}
-            </View>
-            <Text style={styles.sectionTitle}>Health / Vaccination</Text>
-            <View style={styles.health}>
-              <MaterialCommunityIcons name="needle" size={22} color={ORANGE} />
-              <View style={styles.flex}>
-                <Text style={styles.rowTitle}>
-                  {task?.name || "Farm health schedule"}
-                </Text>
-                <Text style={styles.rowMeta}>
-                  {task ? `Due ${task.due}` : "No health task currently due"}
-                </Text>
-              </View>
-              <View style={styles.healthStatus}>
-                <Text style={styles.healthStatusText}>
-                  {task?.completed ? "Completed" : task?.status || "On Track"}
-                </Text>
-              </View>
-            </View>
-            {task && !task.completed && (
-              <Pressable onPress={onHealth} style={styles.outline}>
-                <MaterialCommunityIcons
-                  name="check-circle-outline"
-                  size={18}
-                  color={ORANGE}
-                />
-                <Text style={styles.outlineText}>Mark Completed</Text>
-              </Pressable>
-            )}
-            <Text style={styles.sectionTitle}>Movement History</Text>
-            <View style={styles.panel}>
-              {area.history.slice(0, 6).map((item, index) => (
-                <View
-                  key={`${item.date}-${index}`}
-                  style={[
-                    styles.history,
-                    index < area.history.length - 1 && styles.divider,
-                  ]}
-                >
-                  <Text style={styles.historyDate}>{item.date}</Text>
-                  <Text style={styles.historyText}>{item.text}</Text>
-                </View>
-              ))}
             </View>
             <Text style={styles.sectionTitle}>Main Actions</Text>
             <View style={styles.actions}>
