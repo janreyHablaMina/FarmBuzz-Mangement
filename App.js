@@ -36,7 +36,7 @@ import GrowingSettingsScreen, { GrowingSeparationSettingsScreen } from './Growin
 import MaturingScreen from './MaturingScreen';
 import PulletScreen, { PULLET_BATCHES, PulletBatchDetailScreen } from './PulletScreen';
 import RangingScreen, { buildRangingLocations, RANGING_BATCHES } from './RangingScreen';
-import RangingBatchDetailScreen from './RangingBatchDetailScreen';
+import RangingAreaDetailScreen from './RangingAreaDetailScreen';
 import RangingSettingsScreen, { RangingSelectionSettingsScreen } from './RangingSettingsScreen';
 import { INCUBATION_BATCHES } from './farmData';
 import TasksScreen from './TasksScreen';
@@ -825,8 +825,8 @@ function FarmDetailScreen({ farm, onBack, onOpenBreeding, onOpenIncubation, onOp
     image: RANGING_HERO_IMAGE,
   };
   const hardeningModule = {
-    title: 'Hardening',
-    subtitle: 'Final maturity and conditioning',
+    title: 'Stag Maintenance',
+    subtitle: 'Conditioning and ongoing stag care',
     icon: 'shield-check-outline',
     color: THEME_ORANGE,
     tint: THEME_ORANGE_TINT,
@@ -1483,7 +1483,7 @@ export default function App() {
           onOpenBrooding={() => setScreen('brooding')}
           onOpenGrowing={() => setScreen('growing')}
           onOpenMaturing={() => setScreen('maturing')}
-          onOpenHardening={() => Alert.alert('Hardening', 'The hardening workflow will open here.')}
+          onOpenHardening={() => Alert.alert('Stag Maintenance', 'The stag maintenance workflow will open here.')}
           onOpenSettings={() => {
             setSettingsReturn('farm-detail');
             setScreen('management-settings');
@@ -1630,33 +1630,46 @@ export default function App() {
           }}
         />
       ) : screen === 'ranging-batch-detail' ? (
-        <RangingBatchDetailScreen
-          batchId={selectedRangingBatchId}
-          batches={selectedRangingLocation ? [selectedRangingLocation] : []}
-          losses={[]}
-          locationOverride={selectedRangingLocation?.location}
+        <RangingAreaDetailScreen
+          area={selectedRangingLocation}
+          vaccine={rangingSettings.tasks.find((task) => task.enabled && /vaccine|health/i.test(task.name))}
           readyDay={rangingSettings.readyDay}
-          scheduledTasks={rangingSettings.tasks}
-          selectionOptions={rangingSettings.selectionOptions}
-          completedTasks={rangingTasksByBatch[selectedRangingBatchId] || {}}
+          vaccinationDone={Boolean(rangingTasksByBatch[selectedRangingBatchId]?.vaccination)}
           onBack={() => setScreen('ranging')}
-          onSaveLoss={(record) => setRangingLossesByBatch((current) => ({ ...current, [selectedRangingBatchId]: [record, ...(current[selectedRangingBatchId] || [])] }))}
-          onChangeLocation={(location) => setRangingLocationsByBatch((current) => ({ ...current, ...Object.fromEntries((selectedRangingLocation?.batches || []).map((batch) => [batch.id, location])) }))}
-          onCompleteTask={(taskId) => setRangingTasksByBatch((current) => ({ ...current, [selectedRangingBatchId]: { ...(current[selectedRangingBatchId] || {}), [taskId]: true } }))}
-          onBeginSelection={(batch, selection) => {
-            const countMatching = (matcher) => Object.entries(selection.allocations).reduce((sum, [option, count]) => matcher.test(option) ? sum + count : sum, 0);
+          onRecordSelection={(selection) => {
             setRangingSelectionsByLocation((current) => {
-              const previous = current[batch.location] || {};
+              const previous = current[selectedRangingBatchId] || {};
+              const events = [selection.ready > 0 && { date: selection.date, text: `${selection.ready} moved to ${selection.destination}` }, selection.removed > 0 && { date: selection.date, text: `${selection.removed} removed` }].filter(Boolean);
               const record = {
-                ...selection,
-                moved: (previous.moved || 0) + countMatching(/proceed|ready/i),
-                removed: (previous.removed || 0) + countMatching(/remove/i),
-                date: new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date()),
+                allocations: { Proceed: selection.ready, Recheck: selection.remain, Remove: selection.removed },
+                hardeningArea: selection.destination,
+                moved: (previous.moved || 0) + selection.ready,
+                removed: (previous.removed || 0) + selection.removed,
+                date: selection.date,
+                history: [...events, ...(previous.history || [])],
               };
-              return { ...current, [batch.location]: record };
+              return { ...current, [selectedRangingBatchId]: record };
             });
-            const summary = Object.entries(selection.allocations).filter(([, count]) => count > 0).map(([option, count]) => `${option}: ${count}`).join('\n');
-            Alert.alert('Selection Recorded', `${batch.location}\n\n${summary}${selection.hardeningArea ? `\n\nProceed destination: ${selection.hardeningArea}` : ''}`);
+            setScreen('ranging');
+          }}
+          onMoveBirds={(record) => {
+            const movedBatch = { ...selectedRangingLocation.batches[0], id: `RG-MOVE-${Date.now()}`, birds: record.count, startingBirds: record.count, location: record.destination, rangingStartDate: new Date().toISOString(), sources: selectedRangingLocation.sources };
+            setAddedRangingBatches((current) => [movedBatch, ...current]);
+            setRangingLossesByBatch((current) => ({ ...current, [selectedRangingBatchId]: [{ id: `MOVE-${Date.now()}`, count: record.count, date: record.date, note: `Moved to ${record.destination}` }, ...(current[selectedRangingBatchId] || [])] }));
+            setRangingSelectionsByLocation((current) => ({ ...current, [selectedRangingBatchId]: { ...(current[selectedRangingBatchId] || {}), history: [{ date: record.date, text: `${record.count} moved to ${record.destination}` }, ...(current[selectedRangingBatchId]?.history || [])] } }));
+            setScreen('ranging');
+          }}
+          onRecordLoss={(record) => {
+            setRangingLossesByBatch((current) => ({ ...current, [selectedRangingBatchId]: [{ id: `LOSS-${Date.now()}`, ...record }, ...(current[selectedRangingBatchId] || [])] }));
+            setRangingSelectionsByLocation((current) => ({ ...current, [selectedRangingBatchId]: { ...(current[selectedRangingBatchId] || {}), history: [{ date: record.date, text: `${record.count} lost / adjusted${record.note ? ` - ${record.note}` : ''}` }, ...(current[selectedRangingBatchId]?.history || [])] } }));
+            setScreen('ranging');
+          }}
+          onRecordVaccination={() => setRangingTasksByBatch((current) => ({ ...current, [selectedRangingBatchId]: { ...(current[selectedRangingBatchId] || {}), vaccination: true } }))}
+          onChangeArea={(record) => {
+            setRangingLocationsByBatch((current) => ({ ...current, ...Object.fromEntries((selectedRangingLocation?.batches || []).map((batch) => [batch.id, record.destination])) }));
+            setRangingSelectionsByLocation((current) => { const existing = current[selectedRangingBatchId]; if (!existing) return current; const next = { ...current, [record.destination]: existing }; delete next[selectedRangingBatchId]; return next; });
+            setRangingLossesByBatch((current) => { const existing = current[selectedRangingBatchId]; if (!existing) return current; const next = { ...current, [record.destination]: existing }; delete next[selectedRangingBatchId]; return next; });
+            setSelectedRangingBatchId(record.destination);
             setScreen('ranging');
           }}
         />
