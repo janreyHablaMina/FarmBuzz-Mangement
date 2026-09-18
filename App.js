@@ -28,10 +28,12 @@ import CandlingScreen from './CandlingScreen';
 import RecordHatchScreen from './RecordHatchScreen';
 import BroodingScreen from './BroodingScreen';
 import BroodingBatchDetailScreen from './BroodingBatchDetailScreen';
-import VaccinationScheduleScreen, { DEFAULT_VACCINE_SCHEDULE } from './VaccinationScheduleScreen';
+import VaccinationScheduleScreen, { DEFAULT_BROODING_SETTINGS } from './VaccinationScheduleScreen';
 import GrowingScreen from './GrowingScreen';
 import GrowingBatchDetailScreen from './GrowingBatchDetailScreen';
 import GrowingScheduleSettingsScreen, { DEFAULT_GROWING_SETTINGS } from './GrowingScheduleSettingsScreen';
+import RangingScreen, { RANGING_BATCHES } from './RangingScreen';
+import RangingBatchDetailScreen from './RangingBatchDetailScreen';
 import { INCUBATION_BATCHES } from './farmData';
 import TasksScreen from './TasksScreen';
 import TeamScreen, { MEMBERS } from './TeamScreen';
@@ -80,6 +82,7 @@ const FLOCK_HERO_IMAGE = require('./assets/flock-hero.png');
 const BREEDING_HERO_IMAGE = require('./assets/breeding-hero.png');
 const BROODING_HERO_IMAGE = require('./assets/brooding-card.png');
 const GROWING_HERO_IMAGE = require('./assets/growing-card.png');
+const RANGING_HERO_IMAGE = require('./assets/ranging-card.png');
 const HEALTH_CARE_HERO_IMAGE = require('./assets/health-care-hero.png');
 const SALES_DASHBOARD_HERO_IMAGE = require('./assets/sales-dashboard-hero.png');
 const COLLECTIONS_DASHBOARD_HERO_IMAGE = require('./assets/sales-hero.png');
@@ -775,7 +778,7 @@ function FarmWorkspaceCard({ farm, onPress }) {
   );
 }
 
-function FarmDetailScreen({ farm, onBack, onOpenBreeding, onOpenIncubation, onOpenBrooding, onOpenGrowing, onOpenSettings }) {
+function FarmDetailScreen({ farm, onBack, onOpenBreeding, onOpenIncubation, onOpenBrooding, onOpenGrowing, onOpenRanging, onOpenSettings }) {
   const { width } = useWindowDimensions();
   const compact = width < 480;
   const narrow = width < 390;
@@ -807,6 +810,14 @@ function FarmDetailScreen({ farm, onBack, onOpenBreeding, onOpenIncubation, onOp
     color: THEME_ORANGE,
     tint: THEME_ORANGE_TINT,
     image: GROWING_HERO_IMAGE,
+  };
+  const rangingModule = {
+    title: 'Ranging',
+    subtitle: 'Open-range batches and maturity',
+    icon: 'weather-sunny',
+    color: THEME_ORANGE,
+    tint: THEME_ORANGE_TINT,
+    image: RANGING_HERO_IMAGE,
   };
   const breedingStats = [
     { label: 'Active Pairings', value: '3', icon: 'link-variant', color: THEME_ORANGE },
@@ -869,13 +880,14 @@ function FarmDetailScreen({ farm, onBack, onOpenBreeding, onOpenIncubation, onOp
 
             <View style={styles.sectionHeading}>
               <Text style={[styles.sectionTitle, narrow && styles.sectionTitleNarrow]}>Management Tool</Text>
-              <Text style={styles.sectionMeta}>4 modules</Text>
+              <Text style={styles.sectionMeta}>5 modules</Text>
             </View>
             <View style={[styles.moduleGrid, compact && styles.moduleGridCompact]}>
               <ModuleCard item={breedingModule} compact={compact} onPress={onOpenBreeding} />
               <ModuleCard item={incubationModule} compact={compact} onPress={onOpenIncubation} />
               <ModuleCard item={broodingModule} compact={compact} onPress={onOpenBrooding} />
               <ModuleCard item={growingModule} compact={compact} onPress={onOpenGrowing} />
+              <ModuleCard item={rangingModule} compact={compact} onPress={onOpenRanging} />
             </View>
           </View>
         </View>
@@ -1317,13 +1329,19 @@ export default function App() {
   const [hatchResultsByBatch, setHatchResultsByBatch] = useState({});
   const [selectedBroodingBatchId, setSelectedBroodingBatchId] = useState('BR-024');
   const [broodingLossesByBatch, setBroodingLossesByBatch] = useState({});
-  const [vaccinationSchedule, setVaccinationSchedule] = useState(DEFAULT_VACCINE_SCHEDULE);
+  const [broodingSettings, setBroodingSettings] = useState(DEFAULT_BROODING_SETTINGS);
   const [vaccineCompletionsByBatch, setVaccineCompletionsByBatch] = useState({});
   const [selectedGrowingBatchId, setSelectedGrowingBatchId] = useState('GR-024');
   const [growingLossesByBatch, setGrowingLossesByBatch] = useState({});
   const [growingLocationsByBatch, setGrowingLocationsByBatch] = useState({});
   const [growingTasksByBatch, setGrowingTasksByBatch] = useState({});
   const [growingSettings, setGrowingSettings] = useState(DEFAULT_GROWING_SETTINGS);
+  const [addedRangingBatches, setAddedRangingBatches] = useState([]);
+  const [selectedRangingBatchId, setSelectedRangingBatchId] = useState('RG-024');
+  const [rangingLossesByBatch, setRangingLossesByBatch] = useState({});
+  const [rangingLocationsByBatch, setRangingLocationsByBatch] = useState({});
+  const [rangingChecksByBatch, setRangingChecksByBatch] = useState({});
+  const [completedRangingBatchIds, setCompletedRangingBatchIds] = useState([]);
   const [addedBirds, setAddedBirds] = useState([]);
   const [selectedBird, setSelectedBird] = useState(null);
   const [birdOverrides, setBirdOverrides] = useState({});
@@ -1396,6 +1414,7 @@ export default function App() {
   const teamMembers = [...addedMembers, ...MEMBERS].map((member) => memberOverrides[member.id] || member);
   const flockBirds = [...addedBirds, ...BIRDS].map((bird) => birdOverrides[bird._recordKey || bird.farmBuzzId || bird.name] || bird);
   const totalWins = flockBirds.reduce((sum, bird) => sum + getBirdWins(bird), 0);
+  const rangingBatches = [...addedRangingBatches, ...RANGING_BATCHES].filter((batch, index, items) => items.findIndex((item) => item.id === batch.id) === index);
 
   return (
     <SafeAreaProvider>
@@ -1429,6 +1448,7 @@ export default function App() {
           onOpenIncubation={() => setScreen('eggs-incubation')}
           onOpenBrooding={() => setScreen('brooding')}
           onOpenGrowing={() => setScreen('growing')}
+          onOpenRanging={() => setScreen('ranging')}
           onOpenSettings={() => {
             setSettingsReturn('farm-detail');
             setScreen('management-settings');
@@ -1467,10 +1487,44 @@ export default function App() {
           onSaveLoss={(record) => setGrowingLossesByBatch((current) => ({ ...current, [selectedGrowingBatchId]: [record, ...(current[selectedGrowingBatchId] || [])] }))}
           onChangeLocation={(location) => setGrowingLocationsByBatch((current) => ({ ...current, [selectedGrowingBatchId]: location }))}
           onCompleteTask={(task) => setGrowingTasksByBatch((current) => ({ ...current, [selectedGrowingBatchId]: { ...(current[selectedGrowingBatchId] || {}), [task]: true } }))}
+          onMoveToRanging={(batch) => {
+            setAddedRangingBatches((current) => [batch, ...current.filter((item) => item.id !== batch.id)]);
+            setSelectedRangingBatchId(batch.id);
+            setScreen('ranging-batch-detail');
+          }}
+        />
+      ) : screen === 'ranging' ? (
+        <RangingScreen
+          batches={rangingBatches.map((batch) => completedRangingBatchIds.includes(batch.id) ? { ...batch, status: 'Completed' } : batch)}
+          lossesByBatch={rangingLossesByBatch}
+          locationsByBatch={rangingLocationsByBatch}
+          onBack={() => setScreen('farm-detail')}
+          onOpenBatch={(batchId) => {
+            setSelectedRangingBatchId(batchId);
+            setScreen('ranging-batch-detail');
+          }}
+        />
+      ) : screen === 'ranging-batch-detail' ? (
+        <RangingBatchDetailScreen
+          batchId={selectedRangingBatchId}
+          batches={rangingBatches}
+          losses={rangingLossesByBatch[selectedRangingBatchId] || []}
+          locationOverride={rangingLocationsByBatch[selectedRangingBatchId]}
+          areaCheck={rangingChecksByBatch[selectedRangingBatchId]}
+          onBack={() => setScreen('ranging')}
+          onSaveLoss={(record) => setRangingLossesByBatch((current) => ({ ...current, [selectedRangingBatchId]: [record, ...(current[selectedRangingBatchId] || [])] }))}
+          onChangeLocation={(location) => setRangingLocationsByBatch((current) => ({ ...current, [selectedRangingBatchId]: location }))}
+          onCompleteCheck={(check) => setRangingChecksByBatch((current) => ({ ...current, [selectedRangingBatchId]: check }))}
+          onBeginSelection={(batch) => {
+            setCompletedRangingBatchIds((current) => current.includes(batch.id) ? current : [...current, batch.id]);
+            Alert.alert('Selection Started', `${batch.id} is complete and the selection workflow has begun.`);
+            setScreen('ranging');
+          }}
         />
       ) : screen === 'brooding' ? (
         <BroodingScreen
           lossRecordsByBatch={broodingLossesByBatch}
+          readyDay={broodingSettings.readyDay}
           onBack={() => setScreen('farm-detail')}
           onOpenSettings={() => setScreen('vaccination-schedule')}
           onOpenBatch={(batchId) => {
@@ -1482,8 +1536,9 @@ export default function App() {
         <BroodingBatchDetailScreen
           batchId={selectedBroodingBatchId}
           lossRecords={broodingLossesByBatch[selectedBroodingBatchId] || []}
-          vaccinationSchedule={vaccinationSchedule}
+          vaccinationSchedule={broodingSettings.vaccinationSchedule}
           vaccineCompletions={vaccineCompletionsByBatch[selectedBroodingBatchId] || {}}
+          readyDay={broodingSettings.readyDay}
           onBack={() => setScreen('brooding')}
           onSaveLoss={(record) => setBroodingLossesByBatch((current) => ({
             ...current,
@@ -1499,9 +1554,9 @@ export default function App() {
         />
       ) : screen === 'vaccination-schedule' ? (
         <VaccinationScheduleScreen
-          initialSchedule={vaccinationSchedule}
+          initialSettings={broodingSettings}
           onBack={() => setScreen('brooding')}
-          onSave={setVaccinationSchedule}
+          onSave={setBroodingSettings}
         />
       ) : screen === 'showcase' ? (
         <ShowcaseScreen

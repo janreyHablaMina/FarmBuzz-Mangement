@@ -31,9 +31,9 @@ function SummaryCard({ item, compact }) {
   );
 }
 
-function BatchCard({ batch, onPress }) {
+function BatchCard({ batch, onPress, readyDay }) {
   const tone = statusTone(batch.status);
-  const progress = Math.min(100, Math.round((batch.ageDays / 42) * 100));
+  const progress = Math.min(100, Math.round((batch.ageDays / readyDay) * 100));
   return (
     <Pressable accessibilityLabel={`Open brooding batch ${batch.id}`} onPress={onPress} style={({ pressed }) => [styles.batchCard, pressed && styles.pressed]}>
       <View style={styles.batchTop}>
@@ -53,14 +53,15 @@ function BatchCard({ batch, onPress }) {
   );
 }
 
-export default function BroodingScreen({ onBack, onOpenBatch, onOpenSettings, lossRecordsByBatch = {} }) {
+export default function BroodingScreen({ onBack, onOpenBatch, onOpenSettings, lossRecordsByBatch = {}, readyDay = 42 }) {
   const { width } = useWindowDimensions();
   const compact = width < 480;
   const [query, setQuery] = useState('');
   const adjustedBatches = useMemo(() => BROODING_BATCHES.map((batch) => {
     const addedLosses = (lossRecordsByBatch[batch.id] || []).reduce((total, record) => total + record.count, 0);
-    return { ...batch, chicks: Math.max(0, batch.chicks - addedLosses) };
-  }), [lossRecordsByBatch]);
+    const ready = batch.ageDays >= readyDay;
+    return { ...batch, chicks: Math.max(0, batch.chicks - addedLosses), status: ready && batch.status !== 'Needs Attention' ? 'Ready for Growing' : batch.status };
+  }), [lossRecordsByBatch, readyDay]);
   const batches = useMemo(() => {
     const search = query.trim().toLowerCase();
     if (!search) return adjustedBatches;
@@ -70,7 +71,7 @@ export default function BroodingScreen({ onBack, onOpenBatch, onOpenSettings, lo
     { icon: 'layers-triple-outline', value: String(adjustedBatches.length), label: 'Active Batches', detail: 'currently brooding' },
     { icon: 'bird', value: String(adjustedBatches.reduce((total, batch) => total + batch.chicks, 0)), label: 'Total Chicks', detail: 'across active batches' },
     { icon: 'alert-circle-outline', value: String(adjustedBatches.filter((batch) => batch.status === 'Needs Attention').length), label: 'Needs Attention', detail: 'requires review' },
-    { icon: 'arrow-right-circle-outline', value: String(adjustedBatches.filter((batch) => batch.status === 'Ready for Growing').length), label: 'Ready for Growing', detail: 'around week 6' },
+    { icon: 'arrow-right-circle-outline', value: String(adjustedBatches.filter((batch) => batch.status === 'Ready for Growing').length), label: 'Ready for Growing', detail: `from day ${readyDay}` },
   ];
 
   return (
@@ -92,7 +93,7 @@ export default function BroodingScreen({ onBack, onOpenBatch, onOpenSettings, lo
             <Text style={styles.overline}>BROODING DASHBOARD</Text>
             <View style={styles.summaryGrid}>{summary.map((item) => <SummaryCard key={item.label} item={item} compact={compact} />)}</View>
             <View style={styles.listHeading}><View><Text style={styles.overline}>BROODING BATCHES</Text><Text style={styles.listTitle}>Active batches</Text></View><View style={styles.countPill}><Text style={styles.countText}>{batches.length} active</Text></View></View>
-            <View style={styles.batchList}>{batches.map((batch) => <BatchCard key={batch.id} batch={batch} onPress={() => onOpenBatch(batch.id)} />)}{!batches.length && <Text style={styles.empty}>No brooding batches found</Text>}</View>
+            <View style={styles.batchList}>{batches.map((batch) => <BatchCard key={batch.id} batch={batch} readyDay={readyDay} onPress={() => onOpenBatch(batch.id)} />)}{!batches.length && <Text style={styles.empty}>No brooding batches found</Text>}</View>
           </View>
         </View>
       </ScrollView>

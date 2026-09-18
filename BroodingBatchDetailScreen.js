@@ -14,32 +14,38 @@ function formatToday() {
   return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date());
 }
 
+function dateAfterDays(startDate, days) {
+  const due = new Date(startDate);
+  due.setDate(due.getDate() + days);
+  return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(due);
+}
+
 function SummaryMetric({ value, label, danger, last }) {
   return <View style={[styles.summaryMetric, !last && styles.summaryDivider]}><Text style={[styles.summaryValue, danger && styles.dangerValue]}>{value}</Text><Text style={styles.summaryLabel}>{label}</Text></View>;
 }
 
-const BROODING_STAGES = [
-  { day: 0, label: 'Hatched', icon: 'egg-easter' },
-  { day: 1, label: 'Day 1', icon: 'bird' },
-  { day: 14, label: 'Mid Brooding', icon: 'sprout-outline' },
-  { day: 42, label: 'Ready for Growing', icon: 'arrow-right-circle-outline' },
-];
+function getBroodingStages(readyDay) {
+  const midDay = Math.max(2, Math.round(readyDay / 3));
+  return [
+    { day: 0, label: 'Hatched', icon: 'egg-easter' },
+    { day: 1, label: 'Day 1', icon: 'bird' },
+    { day: midDay, label: `Day ${midDay}`, icon: 'sprout-outline' },
+    { day: readyDay, label: `Ready Day ${readyDay}`, icon: 'arrow-right-circle-outline' },
+  ];
+}
 
-function ProgressPreview({ batch, previewDay, onPreviewDayChange }) {
-  const currentIndex = BROODING_STAGES.reduce((result, stage, index) => previewDay >= stage.day ? index : result, 0);
-  const progress = Math.min(100, Math.round((previewDay / 42) * 100));
-  const nextStage = BROODING_STAGES.find((stage) => stage.day > previewDay);
+function ProgressPreview({ batch, previewDay, readyDay, readyDate, onPreviewDayChange }) {
+  const stages = getBroodingStages(readyDay);
+  const currentIndex = stages.reduce((result, stage, index) => previewDay >= stage.day ? index : result, 0);
+  const progress = Math.min(100, Math.round((previewDay / readyDay) * 100));
   const displayAge = previewDay === batch.ageDays ? batch.age : previewDay === 0 ? 'Hatched' : previewDay % 7 === 0 ? `Week ${previewDay / 7}` : `Day ${previewDay}`;
-  const displayStatus = previewDay >= 42 ? 'Ready for Growing' : previewDay >= 14 ? 'Mid Brooding' : previewDay === 0 ? 'Hatched' : 'Brooding';
-  const message = previewDay === 0 ? 'Hatch day and brooding entry' : previewDay < 7 ? 'Early brooding period' : previewDay < 14 ? 'First week development' : previewDay < 42 ? 'Growing steadily in brooding' : 'Ready for growing transition';
+  const message = previewDay === 0 ? 'Hatch day and brooding entry' : previewDay < 7 ? 'Early brooding period' : previewDay < readyDay ? 'Growing steadily in brooding' : 'Ready for growing transition';
 
   return (
     <View style={styles.progressCard}>
-      <View style={styles.progressMain}>
-        <View style={styles.progressVisual}><Image source={HERO_IMAGE} style={StyleSheet.absoluteFill} contentFit="cover" contentPosition="70% center" /><LinearGradient colors={['rgba(3,9,12,0.08)', 'rgba(3,9,12,0.8)']} style={StyleSheet.absoluteFill} /></View>
-        <View style={styles.progressCopy}><View style={styles.progressAgeRow}><Text style={styles.progressAge}>{displayAge}</Text><View style={styles.stageChip}><Text style={styles.stageChipText}>{displayStatus}</Text></View></View><Text style={styles.progressMessage}>{message}</Text><View style={styles.milestoneRow}><View><Text style={styles.milestoneLabel}>Next milestone</Text><Text style={styles.milestoneValue}>{nextStage?.label || 'Growing transition'}</Text></View><Text style={styles.progressPercent}>{progress}%</Text></View><View style={styles.mainProgressTrack}><View style={[styles.mainProgressFill, { width: `${progress}%` }]} /></View></View>
-      </View>
-      <View style={styles.timeline}><View style={styles.timelineTrack} />{BROODING_STAGES.map((stage, index) => { const active = index === currentIndex; const complete = index < currentIndex; return <Pressable accessibilityRole="button" accessibilityState={{ selected: active }} accessibilityLabel={`Preview ${stage.label}`} onPress={() => onPreviewDayChange(stage.day)} key={stage.label} style={({ pressed }) => [styles.timelineItem, pressed && styles.timelineItemPressed]}><View style={[styles.timelineDot, complete && styles.timelineDotComplete, active && styles.timelineDotActive]}><MaterialCommunityIcons name={stage.icon} size={active ? 17 : 14} color={active || complete ? ORANGE : '#657278'} /></View><Text numberOfLines={2} style={[styles.timelineLabel, active && styles.timelineLabelActive]}>{stage.label}</Text></Pressable>; })}</View>
+      <View style={styles.progressTop}><View><Text style={styles.progressAge}>{displayAge}</Text><Text style={styles.progressMessage}>{message}</Text></View><View style={styles.nextStageCopy}><Text style={styles.milestoneLabel}>READY FOR GROWING</Text><Text style={styles.milestoneValue}>{readyDate}</Text></View></View>
+      <View style={styles.mainProgressTrack}><View style={[styles.mainProgressFill, { width: `${progress}%` }]} /></View>
+      <View style={styles.timeline}><View style={styles.timelineTrack} />{stages.map((stage, index) => { const active = index === currentIndex; const complete = index < currentIndex; return <Pressable accessibilityRole="button" accessibilityState={{ selected: active }} accessibilityLabel={`Preview ${stage.label}`} onPress={() => onPreviewDayChange(stage.day)} key={stage.label} style={({ pressed }) => [styles.timelineItem, pressed && styles.timelineItemPressed]}><View style={[styles.timelineDot, complete && styles.timelineDotComplete, active && styles.timelineDotActive]}><MaterialCommunityIcons name={stage.icon} size={active ? 17 : 14} color={active || complete ? ORANGE : '#657278'} /></View><Text numberOfLines={2} style={[styles.timelineLabel, active && styles.timelineLabelActive]}>{stage.label}</Text></Pressable>; })}</View>
     </View>
   );
 }
@@ -110,7 +116,7 @@ function MoveToGrowingModal({ visible, batch, currentChicks, onClose, onConfirm 
   );
 }
 
-export default function BroodingBatchDetailScreen({ batchId, lossRecords = [], vaccinationSchedule = [], vaccineCompletions = {}, onBack, onSaveLoss, onMarkVaccineCompleted }) {
+export default function BroodingBatchDetailScreen({ batchId, lossRecords = [], vaccinationSchedule = [], vaccineCompletions = {}, readyDay = 42, onBack, onSaveLoss, onMarkVaccineCompleted }) {
   const { width } = useWindowDimensions();
   const compact = width < 480;
   const [showLoss, setShowLoss] = useState(false);
@@ -120,13 +126,14 @@ export default function BroodingBatchDetailScreen({ batchId, lossRecords = [], v
   const addedLosses = lossRecords.reduce((total, record) => total + record.count, 0);
   const currentChicks = Math.max(0, batch.chicks - addedLosses);
   const totalLosses = batch.startingChicks - currentChicks;
+  const readyDate = dateAfterDays(batch.hatchDate, readyDay);
   const enabledVaccines = vaccinationSchedule.filter((item) => item.enabled).sort((a, b) => a.day - b.day);
   const nextVaccine = enabledVaccines.find((item) => !vaccineCompletions[item.id]);
   const nextVaccineStatus = nextVaccine
     ? previewDay > nextVaccine.day ? 'Overdue' : previewDay === nextVaccine.day ? 'Due Today' : 'Upcoming'
     : 'Completed';
   const vaccineNeedsAction = nextVaccine && (nextVaccineStatus === 'Overdue' || nextVaccineStatus === 'Due Today');
-  const readyForGrowing = previewDay >= 42;
+  const readyForGrowing = previewDay >= readyDay;
   const previewStatus = readyForGrowing ? 'Ready for Growing' : previewDay >= 14 ? 'Mid Brooding' : previewDay === 0 ? 'Hatched' : 'Brooding';
   const nextAction = readyForGrowing
     ? { icon: 'arrow-right-circle-outline', title: 'Ready for Growing', detail: 'Brooding cycle complete - farmer confirmation required', button: 'Move to Growing', onPress: () => setShowGrowing(true) }
@@ -136,7 +143,7 @@ export default function BroodingBatchDetailScreen({ batchId, lossRecords = [], v
         ? { icon: 'home-check-outline', title: 'Confirm Brooder Setup', detail: 'Confirm the batch is settled in its assigned brooder.', button: 'Complete', onPress: () => Alert.alert('Brooder setup confirmed') }
         : previewDay < 7
           ? { icon: 'clipboard-check-outline', title: 'First Week Check', detail: `Due on Day 7 - ${7 - previewDay} day${7 - previewDay === 1 ? '' : 's'} remaining`, button: 'Start Check', onPress: () => Alert.alert('First Week Check', batch.id) }
-          : { icon: 'chart-timeline-variant', title: 'Growing Transition Approaching', detail: `${Math.max(0, 42 - previewDay)} days until the Week 6 transition`, button: 'View Program', onPress: () => Alert.alert('Brooding program', `Day ${previewDay} of the six-week brooding cycle.`) };
+          : { icon: 'chart-timeline-variant', title: 'Growing Transition Approaching', detail: `${Math.max(0, readyDay - previewDay)} days until the Day ${readyDay} transition`, button: 'View Program', onPress: () => Alert.alert('Brooding program', `Day ${previewDay} of the ${readyDay}-day brooding cycle.`) };
 
   return (
     <View style={styles.screen}>
@@ -150,9 +157,9 @@ export default function BroodingBatchDetailScreen({ batchId, lossRecords = [], v
           </View>
 
           <View style={[styles.content, compact && styles.contentCompact]}>
-            <ProgressPreview batch={batch} previewDay={previewDay} onPreviewDayChange={setPreviewDay} />
+            <ProgressPreview batch={batch} previewDay={previewDay} readyDay={readyDay} readyDate={readyDate} onPreviewDayChange={setPreviewDay} />
 
-            <View style={styles.originStrip}><View style={styles.originItem}><Text style={styles.infoLabel}>Incubation Batch</Text><Text style={styles.infoValue}>{batch.incubationBatch}</Text></View><View style={styles.originDivider} /><View style={styles.originItem}><Text style={styles.infoLabel}>Hatch Date</Text><Text style={styles.infoValue}>{batch.hatchDate}</Text></View><View style={styles.originDivider} /><View style={styles.originItem}><Text style={styles.infoLabel}>Starting Chicks</Text><Text style={styles.infoValue}>{batch.startingChicks}</Text></View></View>
+            <View style={styles.originStrip}><View style={styles.originItem}><Text style={styles.infoLabel}>Hatch Date</Text><Text style={styles.infoValue}>{batch.hatchDate}</Text></View><View style={styles.originDivider} /><View style={styles.originItem}><Text style={styles.infoLabel}>Ready Date</Text><Text style={styles.infoValue}>{readyDate}</Text></View><View style={styles.originDivider} /><View style={styles.originItem}><Text style={styles.infoLabel}>Incubation Batch</Text><Text style={styles.infoValue}>{batch.incubationBatch}</Text></View></View>
 
             <Text style={styles.sectionTitle}>Batch Snapshot</Text>
             <View style={styles.snapshotGrid}><SnapshotItem icon="bird" value={currentChicks} label="Current Chicks" compact={compact} /><SnapshotItem icon="source-branch" value={batch.sources.length} label="Source Groups" compact={compact} /><SnapshotItem icon="home-map-marker" value={batch.location} label="Brooder" compact={compact} /><SnapshotItem icon="progress-check" value={previewStatus} label="Status" compact={compact} /></View>
@@ -181,7 +188,7 @@ export default function BroodingBatchDetailScreen({ batchId, lossRecords = [], v
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#020709' }, pageWrap: { flexGrow: 1, alignItems: 'center', backgroundColor: '#020709' }, page: { width: '100%', maxWidth: 720 }, hero: { height: 248, overflow: 'hidden', backgroundColor: '#101719' }, heroCompact: { height: 228 }, heroSafe: { flex: 1 }, header: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingTop: Platform.OS === 'web' ? 10 : 3 }, backButton: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(190,204,208,0.35)', backgroundColor: 'rgba(2,8,11,0.65)', alignItems: 'center', justifyContent: 'center' }, headerTitle: { color: '#f3f5f6', fontSize: 15, fontWeight: '800' }, heroCopy: { marginTop: 'auto', paddingHorizontal: 20, paddingBottom: 22 }, batchTitle: { color: '#fff', fontSize: 34, lineHeight: 40, fontWeight: '800', fontFamily: Platform.select({ ios: 'Georgia', android: 'serif', web: 'Georgia' }) }, heroDetail: { marginTop: 4, color: '#c4cccf', fontSize: 12 },
   content: { padding: 16, paddingBottom: 30 }, contentCompact: { paddingHorizontal: 10 }, identityCard: { minHeight: 86, borderRadius: 7, borderWidth: 1, borderColor: '#23343b', backgroundColor: '#091317', padding: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 }, overline: { color: '#718086', fontSize: 7, fontWeight: '800' }, currentCount: { marginTop: 5, color: '#fff', fontSize: 20, fontWeight: '800' }, ageText: { marginTop: 3, color: '#7c898e', fontSize: 9 }, statusPill: { minHeight: 24, maxWidth: 130, paddingHorizontal: 9, borderRadius: 12, flexDirection: 'row', alignItems: 'center', gap: 5 }, statusDot: { width: 5, height: 5, borderRadius: 3 }, statusText: { flexShrink: 1, fontSize: 8, fontWeight: '800' }, sectionTitle: { marginTop: 20, marginBottom: 8, color: '#e8edef', fontSize: 15, fontWeight: '800' },
-  progressCard: { borderRadius: 7, borderWidth: 1, borderColor: '#26373e', backgroundColor: '#091317', overflow: 'hidden' }, progressMain: { minHeight: 176, flexDirection: 'row' }, progressVisual: { width: '35%', minWidth: 105, overflow: 'hidden', backgroundColor: '#101719' }, progressCopy: { flex: 1, minWidth: 0, padding: 14, justifyContent: 'center' }, progressAgeRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }, progressAge: { color: '#fff', fontSize: 23, fontWeight: '800' }, stageChip: { minHeight: 23, maxWidth: 115, paddingHorizontal: 8, borderRadius: 12, backgroundColor: 'rgba(255,121,0,0.1)', justifyContent: 'center' }, stageChipText: { color: ORANGE, fontSize: 7, fontWeight: '800', textAlign: 'center' }, progressMessage: { marginTop: 5, color: '#8d9a9e', fontSize: 9 }, milestoneRow: { marginTop: 20, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' }, milestoneLabel: { color: '#68767b', fontSize: 7 }, milestoneValue: { marginTop: 3, color: '#dfe5e7', fontSize: 10, fontWeight: '700' }, progressPercent: { color: ORANGE, fontSize: 10, fontWeight: '800' }, mainProgressTrack: { height: 5, marginTop: 9, borderRadius: 3, backgroundColor: '#1c2a30', overflow: 'hidden' }, mainProgressFill: { height: 5, borderRadius: 3, backgroundColor: ORANGE }, timeline: { minHeight: 92, borderTopWidth: 1, borderTopColor: '#1d2d33', flexDirection: 'row', alignItems: 'flex-start', paddingTop: 13, paddingHorizontal: 7, position: 'relative' }, timelineTrack: { position: 'absolute', top: 31, left: '12%', right: '12%', height: 2, backgroundColor: '#26363c' }, timelineItem: { flex: 1, minWidth: 0, alignItems: 'center' }, timelineItemPressed: { opacity: 0.68 }, timelineDot: { width: 36, height: 36, borderRadius: 18, borderWidth: 1, borderColor: '#34444a', backgroundColor: '#0d181c', alignItems: 'center', justifyContent: 'center' }, timelineDotComplete: { borderColor: '#8a4b0f', backgroundColor: '#17140f' }, timelineDotActive: { borderWidth: 2, borderColor: ORANGE, backgroundColor: '#21170e' }, timelineLabel: { minHeight: 20, marginTop: 6, color: '#748187', fontSize: 7, lineHeight: 9, textAlign: 'center' }, timelineLabelActive: { color: ORANGE, fontWeight: '800' },
+  progressCard: { borderRadius: 7, borderWidth: 1, borderColor: '#26373e', backgroundColor: '#091317', overflow: 'hidden' }, progressTop: { minHeight: 112, padding: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }, progressAge: { color: '#fff', fontSize: 24, fontWeight: '800' }, progressMessage: { marginTop: 5, color: '#849196', fontSize: 9 }, nextStageCopy: { maxWidth: '42%', alignItems: 'flex-end' }, milestoneLabel: { color: '#6f7d82', fontSize: 7, textAlign: 'right' }, milestoneValue: { marginTop: 4, color: ORANGE, fontSize: 13, fontWeight: '800', textAlign: 'right' }, mainProgressTrack: { height: 5, marginHorizontal: 16, borderRadius: 3, backgroundColor: '#1d2c31', overflow: 'hidden' }, mainProgressFill: { height: 5, borderRadius: 3, backgroundColor: ORANGE }, timeline: { minHeight: 94, marginTop: 15, borderTopWidth: 1, borderTopColor: '#1d2d33', flexDirection: 'row', alignItems: 'flex-start', paddingTop: 13, paddingHorizontal: 6, position: 'relative' }, timelineTrack: { position: 'absolute', top: 31, left: '12%', right: '12%', height: 2, backgroundColor: '#26363c' }, timelineItem: { flex: 1, minWidth: 0, alignItems: 'center' }, timelineItemPressed: { opacity: 0.68 }, timelineDot: { width: 36, height: 36, borderRadius: 18, borderWidth: 1, borderColor: '#34444a', backgroundColor: '#0d181c', alignItems: 'center', justifyContent: 'center' }, timelineDotComplete: { borderColor: '#8a4b0f', backgroundColor: '#17140f' }, timelineDotActive: { borderWidth: 2, borderColor: ORANGE, backgroundColor: '#21170e' }, timelineLabel: { minHeight: 20, marginTop: 6, color: '#748187', fontSize: 7, lineHeight: 9, textAlign: 'center' }, timelineLabelActive: { color: ORANGE, fontWeight: '800' },
   originStrip: { minHeight: 58, marginTop: 8, borderRadius: 7, borderWidth: 1, borderColor: '#1d2d33', backgroundColor: '#081216', flexDirection: 'row', alignItems: 'center' }, originItem: { flex: 1, minWidth: 0, alignItems: 'center', paddingHorizontal: 5 }, originDivider: { width: 1, height: 30, backgroundColor: '#213139' }, snapshotGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 }, snapshotItem: { flex: 1, minWidth: 0, height: 94, borderRadius: 7, borderWidth: 1, borderColor: '#23343b', backgroundColor: '#091317', paddingHorizontal: 7, alignItems: 'center', justifyContent: 'center' }, snapshotItemCompact: { flexBasis: '48%', height: 86 }, snapshotValue: { width: '100%', marginTop: 7, color: '#eef2f3', fontSize: 13, fontWeight: '800', textAlign: 'center' }, snapshotLabel: { marginTop: 4, color: '#718086', fontSize: 7, textAlign: 'center' }, actionFocus: { minHeight: 86, borderRadius: 7, borderWidth: 1, borderColor: '#74410e', backgroundColor: 'rgba(255,121,0,0.06)', padding: 11, flexDirection: 'row', alignItems: 'center', gap: 10 }, actionFocusIcon: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,121,0,0.1)', alignItems: 'center', justifyContent: 'center' }, actionFocusCopy: { flex: 1, minWidth: 0 }, actionFocusTitle: { color: '#f0f3f4', fontSize: 11, fontWeight: '800' }, actionFocusDetail: { marginTop: 4, color: '#8d9a9e', fontSize: 8, lineHeight: 12 }, actionFocusButton: { minWidth: 92, height: 38, borderRadius: 6, backgroundColor: ORANGE, paddingHorizontal: 10, alignItems: 'center', justifyContent: 'center' }, actionFocusButtonText: { color: '#fff', fontSize: 8, fontWeight: '800', textAlign: 'center' },
   infoCard: { borderRadius: 7, borderWidth: 1, borderColor: '#1d2d33', backgroundColor: '#091317', flexDirection: 'row', paddingVertical: 13 }, infoItem: { flex: 1, minWidth: 0, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 7 }, infoLabel: { color: '#68767b', fontSize: 7 }, infoValue: { marginTop: 3, color: '#e0e6e8', fontSize: 9, fontWeight: '700' }, sourceCard: { borderRadius: 7, borderWidth: 1, borderColor: '#1d2d33', backgroundColor: '#091317', paddingHorizontal: 11 }, sourceRow: { minHeight: 68, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 9 }, sourceDivider: { borderBottomWidth: 1, borderBottomColor: '#1b2a30' }, sourceIcon: { width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(255,121,0,0.08)', alignItems: 'center', justifyContent: 'center' }, sourceCopy: { flex: 1, minWidth: 0 }, sourceName: { color: '#edf1f2', fontSize: 11, fontWeight: '800' }, sourceCross: { marginTop: 3, color: '#7b898e', fontSize: 8 }, marking: { marginTop: 3, color: '#d9a057', fontSize: 8 }, sourceChicks: { color: ORANGE, fontSize: 9, fontWeight: '800' },
   summaryCard: { minHeight: 88, borderRadius: 7, borderWidth: 1, borderColor: '#1d2d33', backgroundColor: '#091317', flexDirection: 'row', alignItems: 'center' }, summaryMetric: { flex: 1, minWidth: 0, alignItems: 'center', justifyContent: 'center' }, summaryDivider: { borderRightWidth: 1, borderRightColor: '#213139' }, summaryValue: { color: '#fff', fontSize: 20, fontWeight: '800' }, dangerValue: { color: '#ef7467' }, summaryLabel: { marginTop: 5, color: '#77858a', fontSize: 8, textAlign: 'center' }, growingButton: { height: 50, borderRadius: 7, backgroundColor: ORANGE, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }, growingText: { color: '#fff', fontSize: 11, fontWeight: '800' }, lossButton: { height: 48, marginTop: 8, borderRadius: 7, borderWidth: 1, borderColor: ORANGE, backgroundColor: 'rgba(255,121,0,0.08)', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7 }, lossText: { color: ORANGE, fontSize: 10, fontWeight: '800' }, secondaryActions: { marginTop: 8, flexDirection: 'row', gap: 8 }, secondaryButton: { flex: 1, minHeight: 46, borderRadius: 7, borderWidth: 1, borderColor: '#27383f', backgroundColor: '#091317', paddingHorizontal: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }, secondaryText: { flexShrink: 1, color: '#d9e0e2', fontSize: 9, fontWeight: '700', textAlign: 'center' }, closeText: { color: '#ef6b55' }, pressed: { opacity: 0.74 },

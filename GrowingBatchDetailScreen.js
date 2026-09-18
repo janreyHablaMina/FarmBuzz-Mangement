@@ -5,7 +5,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { GROWING_BATCHES } from './GrowingScreen';
+import { daysSince, GROWING_BATCHES } from './GrowingScreen';
 
 const HERO_IMAGE = require('./assets/growing-card.png');
 const ORANGE = '#ff7900';
@@ -19,8 +19,8 @@ function today() {
   return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date());
 }
 
-function taskDueDate(hatchDate, day) {
-  const due = new Date(hatchDate);
+function dateAfterDays(startDate, day) {
+  const due = new Date(startDate);
   due.setDate(due.getDate() + day);
   return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(due);
 }
@@ -51,25 +51,28 @@ function Snapshot({ icon, value, label, compact }) {
   return <View style={[styles.snapshot, compact && styles.snapshotCompact]}><MaterialCommunityIcons name={icon} size={21} color={ORANGE} /><Text numberOfLines={1} adjustsFontSizeToFit style={styles.snapshotValue}>{value}</Text><Text style={styles.snapshotLabel}>{label}</Text></View>;
 }
 
-export default function GrowingBatchDetailScreen({ batchId, losses = [], completed = {}, locationOverride, readyDay = 120, scheduledTasks = [], onBack, onSaveLoss, onChangeLocation, onCompleteTask }) {
+export default function GrowingBatchDetailScreen({ batchId, losses = [], completed = {}, locationOverride, readyDay = 120, scheduledTasks = [], onBack, onSaveLoss, onChangeLocation, onCompleteTask, onMoveToRanging }) {
   const { width } = useWindowDimensions();
   const compact = width < 480;
   const batch = useMemo(() => GROWING_BATCHES.find((item) => item.id === batchId) || GROWING_BATCHES[0], [batchId]);
-  const [previewDay, setPreviewDay] = useState(batch.ageDays);
+  const currentGrowingDay = daysSince(batch.growingStartDate);
+  const [previewDay, setPreviewDay] = useState(currentGrowingDay);
   const [modal, setModal] = useState(null);
   const lossesAdded = losses.reduce((sum, item) => sum + item.count, 0);
   const currentBirds = Math.max(0, batch.birds - lossesAdded);
   const totalLosses = batch.startingBirds - currentBirds;
   const location = locationOverride || batch.location;
   const readyDays = readyDay;
+  const readyDate = dateAfterDays(batch.growingStartDate, readyDays);
   const stages = useMemo(() => {
-    const timeline = [
-      { day: 42, label: 'Week 6', icon: 'bird' },
-      { day: 60, label: 'Month 2', icon: 'calendar-blank-outline' },
+    const first = Math.max(1, Math.round(readyDays / 3));
+    const second = Math.max(first + 1, Math.round((readyDays * 2) / 3));
+    return [
+      { day: 0, label: 'Started', icon: 'bird' },
+      { day: first, label: `Day ${first}`, icon: 'calendar-blank-outline' },
+      { day: second, label: `Day ${second}`, icon: 'calendar-clock-outline' },
+      { day: readyDays, label: `Ready Day ${readyDay}`, icon: 'arrow-right-circle-outline' },
     ];
-    if (readyDay > 90) timeline.push({ day: 90, label: 'Day 90', icon: 'calendar-clock-outline' });
-    timeline.push({ day: readyDays, label: `Ready Day ${readyDay}`, icon: 'arrow-right-circle-outline' });
-    return timeline;
   }, [readyDay, readyDays]);
   const sourceBirds = SOURCES.map((source, index) => ({
     ...source,
@@ -78,13 +81,14 @@ export default function GrowingBatchDetailScreen({ batchId, losses = [], complet
       : Math.round((source.birds / 38) * currentBirds),
   }));
   const ready = previewDay >= readyDays;
+  const previewAgeDay = batch.ageDays + (previewDay - currentGrowingDay);
   const enabledTasks = scheduledTasks.filter((task) => task.enabled).sort((a, b) => a.day - b.day);
   const nextTask = enabledTasks.find((task) => !completed[task.id]);
-  const taskTiming = nextTask ? previewDay > nextTask.day ? `${previewDay - nextTask.day} days overdue` : previewDay === nextTask.day ? 'Due today' : `Due in ${nextTask.day - previewDay} days` : '';
-  const nextTaskDate = nextTask ? taskDueDate(batch.hatchDate, nextTask.day) : '';
+  const taskTiming = nextTask ? previewAgeDay > nextTask.day ? `${previewAgeDay - nextTask.day} days overdue` : previewAgeDay === nextTask.day ? 'Due today' : `Due in ${nextTask.day - previewAgeDay} days` : '';
+  const nextTaskDate = nextTask ? dateAfterDays(batch.hatchDate, nextTask.day) : '';
   const stageIndex = stages.reduce((found, stage, index) => previewDay >= stage.day ? index : found, 0);
-  const progress = Math.max(0, Math.min(100, Math.round(((previewDay - 42) / Math.max(1, readyDays - 42)) * 100)));
-  const displayAge = previewDay === 42 ? 'Week 6' : previewDay >= readyDays ? `Day ${readyDay}` : previewDay % 30 === 0 ? `Day ${previewDay}` : batch.age;
+  const progress = Math.max(0, Math.min(100, Math.round((previewDay / Math.max(1, readyDays)) * 100)));
+  const displayAge = previewDay >= readyDays ? `Day ${readyDay} in Growing` : `Day ${previewDay} in Growing`;
   const action = ready
     ? { icon: 'arrow-right-circle-outline', title: 'Ready for Ranging', detail: 'Growing stage complete - farmer confirmation required', button: 'Move to Ranging', press: () => setModal('ranging') }
     : nextTask
@@ -92,15 +96,15 @@ export default function GrowingBatchDetailScreen({ batchId, losses = [], complet
       : { icon: 'check-decagram-outline', title: 'Schedule Complete', detail: 'All configured growing tasks are completed.', button: 'Completed', press: () => {} };
 
   return <View style={styles.screen}><StatusBar style="light" translucent backgroundColor="transparent" /><ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.pageWrap}><View style={styles.page}><View style={styles.hero}><Image source={HERO_IMAGE} style={StyleSheet.absoluteFill} contentFit="cover" contentPosition="center" /><LinearGradient colors={['rgba(2,7,9,.1)', 'rgba(2,7,9,.2)', '#03090c']} style={StyleSheet.absoluteFill} /><SafeAreaView edges={['top']} style={styles.heroSafe}><View style={styles.header}><Pressable onPress={onBack} style={styles.backButton}><Ionicons name="arrow-back" size={21} color="#fff" /></Pressable><Text style={styles.headerTitle}>Growing Batch</Text></View><View style={styles.heroCopy}><Text style={styles.heroTitle}>{batch.id}</Text><Text style={styles.heroDetail}>{batch.title} - {currentBirds} birds in {location}</Text></View></SafeAreaView></View><View style={[styles.content, compact && styles.contentCompact]}>
-    <View style={styles.identity}><View><Text style={styles.eyebrow}>CURRENT BATCH</Text><Text style={styles.identityTitle}>{currentBirds} birds</Text><Text style={styles.identityMeta}>{displayAge} - {location}</Text></View><View style={styles.status}><View style={styles.statusDot} /><Text style={styles.statusText}>{ready ? 'Ready for Ranging' : 'Growing'}</Text></View></View>
-    <Text style={styles.sectionTitle}>Growing Progress</Text><View style={styles.progressCard}><View style={styles.progressTop}><View><Text style={styles.progressAge}>{displayAge}</Text><Text style={styles.progressMessage}>{ready ? 'Ready for the next farm stage' : 'Developing through the growing stage'}</Text></View><View><Text style={styles.nextLabel}>NEXT STAGE</Text><Text style={styles.nextValue}>Ranging</Text></View></View><View style={styles.progressTrack}><View style={[styles.progressFill, { width: `${progress}%` }]} /></View><View style={styles.timeline}><View style={styles.timelineLine} />{stages.map((stage, index) => { const active = index === stageIndex; return <Pressable key={`${stage.day}-${stage.label}`} onPress={() => setPreviewDay(stage.day)} style={styles.timelineItem}><View style={[styles.timelineDot, index < stageIndex && styles.timelineComplete, active && styles.timelineActive]}><MaterialCommunityIcons name={stage.icon} size={active ? 17 : 14} color={index <= stageIndex ? ORANGE : '#68767b'} /></View><Text numberOfLines={2} style={[styles.timelineLabel, active && styles.timelineLabelActive]}>{stage.label}</Text></Pressable>; })}</View></View>
-    <View style={styles.origin}><View><Text style={styles.infoLabel}>Brooding Batch</Text><Text style={styles.infoValue}>{batch.broodingBatch}</Text></View><View style={styles.originDivider} /><View><Text style={styles.infoLabel}>Starting Birds</Text><Text style={styles.infoValue}>{batch.startingBirds}</Text></View><View style={styles.originDivider} /><View><Text style={styles.infoLabel}>Original Sources</Text><Text style={styles.infoValue}>{SOURCES.length} groups</Text></View></View>
+    <View style={styles.identity}><View><Text style={styles.eyebrow}>CURRENT BATCH</Text><Text style={styles.identityTitle}>{currentBirds} birds</Text><Text style={styles.identityMeta}>{batch.age} old - {location}</Text></View><View style={styles.status}><View style={styles.statusDot} /><Text style={styles.statusText}>{ready ? 'Ready for Ranging' : 'Growing'}</Text></View></View>
+    <Text style={styles.sectionTitle}>Growing Progress</Text><View style={styles.progressCard}><View style={styles.progressTop}><View><Text style={styles.progressAge}>{displayAge}</Text><Text style={styles.progressMessage}>{ready ? 'Ready for the next farm stage' : `${progress}% of the Growing period complete`}</Text></View><View><Text style={styles.nextLabel}>READY FOR RANGING</Text><Text style={styles.nextValue}>{readyDate}</Text></View></View><View style={styles.progressTrack}><View style={[styles.progressFill, { width: `${progress}%` }]} /></View><View style={styles.timeline}><View style={styles.timelineLine} />{stages.map((stage, index) => { const active = index === stageIndex; return <Pressable key={`${stage.day}-${stage.label}`} onPress={() => setPreviewDay(stage.day)} style={styles.timelineItem}><View style={[styles.timelineDot, index < stageIndex && styles.timelineComplete, active && styles.timelineActive]}><MaterialCommunityIcons name={stage.icon} size={active ? 17 : 14} color={index <= stageIndex ? ORANGE : '#68767b'} /></View><Text numberOfLines={2} style={[styles.timelineLabel, active && styles.timelineLabelActive]}>{stage.label}</Text></Pressable>; })}</View></View>
+    <View style={styles.origin}><View><Text style={styles.infoLabel}>Growing Started</Text><Text style={styles.infoValue}>{dateAfterDays(batch.growingStartDate, 0)}</Text></View><View style={styles.originDivider} /><View><Text style={styles.infoLabel}>Ready Date</Text><Text style={styles.infoValue}>{readyDate}</Text></View><View style={styles.originDivider} /><View><Text style={styles.infoLabel}>Brooding Batch</Text><Text style={styles.infoValue}>{batch.broodingBatch}</Text></View></View>
     <Text style={styles.sectionTitle}>Batch Snapshot</Text><View style={styles.snapshotGrid}><Snapshot icon="bird" value={currentBirds} label="Current Birds" compact={compact} /><Snapshot icon="source-branch" value={SOURCES.length} label="Source Groups" compact={compact} /><Snapshot icon="map-marker-outline" value={location} label="Growing Area" compact={compact} /><Snapshot icon="progress-check" value={ready ? 'Ready' : 'Growing'} label="Status" compact={compact} /></View>
     <Text style={styles.sectionTitle}>Next Action</Text><View style={styles.action}><View style={styles.actionIcon}><MaterialCommunityIcons name={action.icon} size={24} color={ORANGE} /></View><View style={styles.actionCopy}><Text style={styles.actionTitle}>{action.title}</Text><Text style={styles.actionDetail}>{action.detail}</Text></View><Pressable onPress={action.press} disabled={!ready && !nextTask} style={[styles.actionButton, !ready && !nextTask && styles.buttonDone]}><Text style={styles.actionButtonText}>{action.button}</Text></Pressable></View>
     <Text style={styles.sectionTitle}>Source Breakdown</Text><View style={styles.sourceCard}>{sourceBirds.map((source, index) => <View key={source.name} style={[styles.sourceRow, index < sourceBirds.length - 1 && styles.sourceDivider]}><View style={styles.sourceIcon}><MaterialCommunityIcons name="source-branch" size={18} color={ORANGE} /></View><View style={styles.sourceCopy}><Text style={styles.sourceName}>{source.name}</Text><Text style={styles.sourceMeta}>{source.cross}{source.marking ? ` - ${source.marking} marking` : ''}</Text></View><Text style={styles.sourceBirds}>{source.birds} birds</Text></View>)}</View>
     <Text style={styles.sectionTitle}>Batch Summary</Text><View style={styles.summary}><View style={styles.summaryItem}><Text style={styles.summaryValue}>{batch.startingBirds}</Text><Text style={styles.summaryLabel}>Starting Birds</Text></View><View style={styles.summaryDivider} /><View style={styles.summaryItem}><Text style={styles.summaryValue}>{currentBirds}</Text><Text style={styles.summaryLabel}>Current Birds</Text></View><View style={styles.summaryDivider} /><View style={styles.summaryItem}><Text style={[styles.summaryValue, styles.lossValue]}>{totalLosses}</Text><Text style={styles.summaryLabel}>Total Losses</Text></View></View>
     <Text style={styles.sectionTitle}>Batch Management</Text><Pressable onPress={() => setModal('loss')} style={styles.lossButton}><MaterialCommunityIcons name="minus-circle-outline" size={20} color={ORANGE} /><Text style={styles.lossButtonText}>Record Loss</Text></Pressable><View style={styles.secondaryRow}><Pressable onPress={() => setModal('location')} style={styles.secondaryButton}><MaterialCommunityIcons name="map-marker-outline" size={18} color={ORANGE} /><Text style={styles.secondaryText}>Change Growing Area</Text></Pressable><Pressable onPress={() => Alert.alert('Close Batch', `Close ${batch.id}?`)} style={styles.secondaryButton}><MaterialCommunityIcons name="close-circle-outline" size={18} color="#ef7568" /><Text style={[styles.secondaryText, styles.closeText]}>Close Batch</Text></Pressable></View>
-  </View></View></ScrollView><FieldModal key={`${modal}-${location}`} visible={modal === 'loss' || modal === 'location'} type={modal} batch={{ ...batch, location }} currentBirds={currentBirds} onClose={() => setModal(null)} onSave={(value) => { modal === 'loss' ? onSaveLoss(value) : onChangeLocation(value); setModal(null); }} /><ConfirmModal visible={modal === 'ranging'} batch={batch} currentBirds={currentBirds} onClose={() => setModal(null)} onConfirm={() => { setModal(null); Alert.alert('Ranging Batch Created', `${batch.id} is complete. A new ranging batch now carries ${currentBirds} birds.`); }} /></View>;
+  </View></View></ScrollView><FieldModal key={`${modal}-${location}`} visible={modal === 'loss' || modal === 'location'} type={modal} batch={{ ...batch, location }} currentBirds={currentBirds} onClose={() => setModal(null)} onSave={(value) => { modal === 'loss' ? onSaveLoss(value) : onChangeLocation(value); setModal(null); }} /><ConfirmModal visible={modal === 'ranging'} batch={batch} currentBirds={currentBirds} onClose={() => setModal(null)} onConfirm={() => { setModal(null); onMoveToRanging({ ...batch, id: batch.id.replace(/^GR-/, 'RG-'), birds: currentBirds, location, sources: sourceBirds, growingBatch: batch.id, rangingStartDate: new Date().toISOString(), lossHistory: losses, healthSchedule: scheduledTasks, healthCompletions: completed }); }} /></View>;
 }
 
 const styles = StyleSheet.create({

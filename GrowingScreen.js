@@ -10,11 +10,19 @@ const HERO_IMAGE = require('./assets/growing-card.png');
 const ORANGE = '#ff7900';
 
 export const GROWING_BATCHES = [
-  { id: 'GR-024', title: 'September Growers', birds: 38, startingBirds: 40, age: '8 Weeks', ageDays: 56, hatchDate: '2026-07-23T12:00:00', location: 'Grower House 1', status: 'Growing', nextAction: '', broodingBatch: 'BR-024' },
-  { id: 'GR-018', title: 'North House Growers', birds: 42, startingBirds: 43, age: 'Month 3', ageDays: 90, hatchDate: '2026-06-19T12:00:00', location: 'Grower Area 2', status: 'Growing', nextAction: 'Health task due in 2 days', broodingBatch: 'BR-018' },
-  { id: 'GR-015', title: 'August Growers', birds: 27, startingBirds: 29, age: 'Month 2', ageDays: 68, hatchDate: '2026-07-11T12:00:00', location: 'Grower House 2', status: 'Needs Attention', nextAction: 'Health review overdue', broodingBatch: 'BR-015' },
-  { id: 'GR-011', title: 'Early Season Growers', birds: 31, startingBirds: 32, age: 'Month 4', ageDays: 120, hatchDate: '2026-05-20T12:00:00', location: 'Grower Area 1', status: 'Ready for Ranging', nextAction: 'Move to Ranging', broodingBatch: 'BR-011' },
+  { id: 'GR-024', title: 'September Growers', birds: 38, startingBirds: 40, age: '8 Weeks', ageDays: 56, hatchDate: '2026-07-23T12:00:00', growingStartDate: '2026-09-01T12:00:00', location: 'Grower House 1', status: 'Growing', nextAction: '', broodingBatch: 'BR-024' },
+  { id: 'GR-018', title: 'North House Growers', birds: 42, startingBirds: 43, age: 'Month 3', ageDays: 90, hatchDate: '2026-06-19T12:00:00', growingStartDate: '2026-08-01T12:00:00', location: 'Grower Area 2', status: 'Growing', nextAction: 'Health task due in 2 days', broodingBatch: 'BR-018' },
+  { id: 'GR-015', title: 'August Growers', birds: 27, startingBirds: 29, age: 'Month 2', ageDays: 68, hatchDate: '2026-07-11T12:00:00', growingStartDate: '2026-08-22T12:00:00', location: 'Grower House 2', status: 'Needs Attention', nextAction: 'Health review overdue', broodingBatch: 'BR-015' },
+  { id: 'GR-011', title: 'Early Season Growers', birds: 31, startingBirds: 32, age: 'Month 4', ageDays: 120, hatchDate: '2026-05-20T12:00:00', growingStartDate: '2026-06-01T12:00:00', location: 'Grower Area 1', status: 'Ready for Ranging', nextAction: 'Move to Ranging', broodingBatch: 'BR-011' },
 ];
+
+export function daysSince(dateString) {
+  const start = new Date(dateString);
+  const now = new Date();
+  const startUtc = Date.UTC(start.getFullYear(), start.getMonth(), start.getDate());
+  const nowUtc = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  return Math.max(0, Math.floor((nowUtc - startUtc) / 86400000));
+}
 
 function statusTone(status) {
   if (status === 'Needs Attention') return { color: '#ff756b', background: 'rgba(143,42,42,0.28)' };
@@ -28,11 +36,12 @@ function SummaryCard({ item, compact }) {
 
 function BatchCard({ batch, onPress, readyDays }) {
   const tone = statusTone(batch.status);
-  const progress = Math.min(100, Math.round((batch.ageDays / readyDays) * 100));
+  const growingDays = daysSince(batch.growingStartDate);
+  const progress = Math.min(100, Math.round((growingDays / readyDays) * 100));
   return (
     <Pressable accessibilityLabel={`Open growing batch ${batch.id}`} onPress={onPress} style={({ pressed }) => [styles.batchCard, pressed && styles.pressed]}>
       <View style={styles.batchTop}><View style={styles.batchIdentity}><View style={styles.batchIcon}><MaterialCommunityIcons name="bird" size={23} color={ORANGE} /></View><View><Text style={styles.batchId}>{batch.id}</Text><Text style={styles.location}>{batch.location}</Text></View></View><View style={[styles.statusPill, { backgroundColor: tone.background }]}><View style={[styles.statusDot, { backgroundColor: tone.color }]} /><Text style={[styles.statusText, { color: tone.color }]}>{batch.status}</Text></View></View>
-      <View style={styles.batchMetrics}><View><Text style={styles.birdValue}>{batch.birds}</Text><Text style={styles.metricLabel}>current birds</Text></View><View style={styles.ageCopy}><Text style={styles.ageValue}>{batch.age}</Text><Text style={styles.metricLabel}>{progress}% to ranging stage</Text></View></View>
+      <View style={styles.batchMetrics}><View><Text style={styles.birdValue}>{batch.birds}</Text><Text style={styles.metricLabel}>current birds</Text></View><View style={styles.ageCopy}><Text style={styles.ageValue}>{batch.age}</Text><Text style={styles.metricLabel}>Day {growingDays} in Growing - {progress}% ready</Text></View></View>
       <View style={styles.progressTrack}><View style={[styles.progressFill, { width: `${progress}%` }]} /></View>
       <View style={styles.batchFooter}>{batch.nextAction ? <View style={styles.nextAction}><MaterialCommunityIcons name={batch.status === 'Ready for Ranging' ? 'arrow-right-circle-outline' : 'calendar-alert'} size={15} color={batch.status === 'Needs Attention' ? '#ef7568' : ORANGE} /><Text style={[styles.nextActionText, batch.status === 'Needs Attention' && styles.attentionText]}>{batch.nextAction}</Text></View> : <Text style={styles.onTrack}>On track</Text>}<Ionicons name="chevron-forward" size={17} color="#67767b" /></View>
     </Pressable>
@@ -45,7 +54,7 @@ export default function GrowingScreen({ onBack, onOpenBatch, onOpenSettings, rea
   const [query, setQuery] = useState('');
   const readyDays = readyDay;
   const adjustedBatches = useMemo(() => GROWING_BATCHES.map((batch) => {
-    if (batch.ageDays >= readyDays) return { ...batch, status: 'Ready for Ranging', nextAction: 'Move to Ranging' };
+    if (daysSince(batch.growingStartDate) >= readyDays) return { ...batch, status: 'Ready for Ranging', nextAction: 'Move to Ranging' };
     if (batch.status === 'Needs Attention') return batch;
     return { ...batch, status: 'Growing', nextAction: batch.nextAction === 'Move to Ranging' ? '' : batch.nextAction };
   }), [readyDays]);
