@@ -31,7 +31,7 @@ import BroodingBatchDetailScreen from './BroodingBatchDetailScreen';
 import VaccinationScheduleScreen, { DEFAULT_BROODING_SETTINGS } from './VaccinationScheduleScreen';
 import GrowingScreen from './GrowingScreen';
 import GrowingBatchDetailScreen from './GrowingBatchDetailScreen';
-import GrowingScheduleSettingsScreen, { DEFAULT_GROWING_SETTINGS } from './GrowingScheduleSettingsScreen';
+import GrowingScheduleSettingsScreen, { DEFAULT_GROWING_SETTINGS, DEFAULT_RANGING_SETTINGS } from './GrowingScheduleSettingsScreen';
 import RangingScreen, { RANGING_BATCHES } from './RangingScreen';
 import RangingBatchDetailScreen from './RangingBatchDetailScreen';
 import { INCUBATION_BATCHES } from './farmData';
@@ -1340,7 +1340,8 @@ export default function App() {
   const [selectedRangingBatchId, setSelectedRangingBatchId] = useState('RG-024');
   const [rangingLossesByBatch, setRangingLossesByBatch] = useState({});
   const [rangingLocationsByBatch, setRangingLocationsByBatch] = useState({});
-  const [rangingChecksByBatch, setRangingChecksByBatch] = useState({});
+  const [rangingTasksByBatch, setRangingTasksByBatch] = useState({});
+  const [rangingSettings, setRangingSettings] = useState(DEFAULT_RANGING_SETTINGS);
   const [completedRangingBatchIds, setCompletedRangingBatchIds] = useState([]);
   const [addedBirds, setAddedBirds] = useState([]);
   const [selectedBird, setSelectedBird] = useState(null);
@@ -1498,10 +1499,22 @@ export default function App() {
           batches={rangingBatches.map((batch) => completedRangingBatchIds.includes(batch.id) ? { ...batch, status: 'Completed' } : batch)}
           lossesByBatch={rangingLossesByBatch}
           locationsByBatch={rangingLocationsByBatch}
+          readyDay={rangingSettings.readyDay}
           onBack={() => setScreen('farm-detail')}
+          onOpenSettings={() => setScreen('ranging-settings')}
           onOpenBatch={(batchId) => {
             setSelectedRangingBatchId(batchId);
             setScreen('ranging-batch-detail');
+          }}
+        />
+      ) : screen === 'ranging-settings' ? (
+        <GrowingScheduleSettingsScreen
+          variant="ranging"
+          initialSettings={rangingSettings}
+          onBack={() => setScreen('ranging')}
+          onSave={(settings) => {
+            setRangingSettings(settings);
+            setScreen('ranging');
           }}
         />
       ) : screen === 'ranging-batch-detail' ? (
@@ -1510,11 +1523,13 @@ export default function App() {
           batches={rangingBatches}
           losses={rangingLossesByBatch[selectedRangingBatchId] || []}
           locationOverride={rangingLocationsByBatch[selectedRangingBatchId]}
-          areaCheck={rangingChecksByBatch[selectedRangingBatchId]}
+          readyDay={rangingSettings.readyDay}
+          scheduledTasks={rangingSettings.tasks}
+          completedTasks={rangingTasksByBatch[selectedRangingBatchId] || {}}
           onBack={() => setScreen('ranging')}
           onSaveLoss={(record) => setRangingLossesByBatch((current) => ({ ...current, [selectedRangingBatchId]: [record, ...(current[selectedRangingBatchId] || [])] }))}
           onChangeLocation={(location) => setRangingLocationsByBatch((current) => ({ ...current, [selectedRangingBatchId]: location }))}
-          onCompleteCheck={(check) => setRangingChecksByBatch((current) => ({ ...current, [selectedRangingBatchId]: check }))}
+          onCompleteTask={(taskId) => setRangingTasksByBatch((current) => ({ ...current, [selectedRangingBatchId]: { ...(current[selectedRangingBatchId] || {}), [taskId]: true } }))}
           onBeginSelection={(batch) => {
             setCompletedRangingBatchIds((current) => current.includes(batch.id) ? current : [...current, batch.id]);
             Alert.alert('Selection Started', `${batch.id} is complete and the selection workflow has begun.`);
