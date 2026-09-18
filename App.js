@@ -34,6 +34,7 @@ import GrowingBatchDetailScreen from './GrowingBatchDetailScreen';
 import GrowingScheduleSettingsScreen, { DEFAULT_GROWING_SETTINGS, DEFAULT_RANGING_SETTINGS } from './GrowingScheduleSettingsScreen';
 import RangingScreen, { RANGING_BATCHES } from './RangingScreen';
 import RangingBatchDetailScreen from './RangingBatchDetailScreen';
+import RangingSettingsScreen, { RangingSelectionSettingsScreen } from './RangingSettingsScreen';
 import { INCUBATION_BATCHES } from './farmData';
 import TasksScreen from './TasksScreen';
 import TeamScreen, { MEMBERS } from './TeamScreen';
@@ -1508,13 +1509,29 @@ export default function App() {
           }}
         />
       ) : screen === 'ranging-settings' ? (
+        <RangingSettingsScreen
+          settings={rangingSettings}
+          onBack={() => setScreen('ranging')}
+          onOpenSelection={() => setScreen('ranging-selection-settings')}
+          onOpenTasks={() => setScreen('ranging-task-settings')}
+        />
+      ) : screen === 'ranging-selection-settings' ? (
+        <RangingSelectionSettingsScreen
+          settings={rangingSettings}
+          onBack={() => setScreen('ranging-settings')}
+          onSave={(settings) => {
+            setRangingSettings(settings);
+            setScreen('ranging-settings');
+          }}
+        />
+      ) : screen === 'ranging-task-settings' ? (
         <GrowingScheduleSettingsScreen
           variant="ranging"
           initialSettings={rangingSettings}
-          onBack={() => setScreen('ranging')}
+          onBack={() => setScreen('ranging-settings')}
           onSave={(settings) => {
             setRangingSettings(settings);
-            setScreen('ranging');
+            setScreen('ranging-settings');
           }}
         />
       ) : screen === 'ranging-batch-detail' ? (
