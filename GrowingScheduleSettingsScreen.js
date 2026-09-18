@@ -42,7 +42,6 @@ export const DEFAULT_STAG_SETTINGS = {
   readyDay: 270,
   weeklyChecks: true,
   tasks: [
-    { id: 'stag-maintenance-check', name: 'Maintenance Check', day: 195, note: 'General condition, feed, water, housing, and health review', enabled: true },
     { id: 'stag-health-review', name: 'Configured Health / Vaccine Task', day: 210, note: 'Use the farm health program when applicable', enabled: true },
     { id: 'stag-parasite-control', name: 'Parasite Control Review', day: 240, note: 'Check the configured parasite control program', enabled: true },
     { id: 'stag-next-stage', name: 'Ready for Next Stage Check', day: 270, note: 'Confirm stags are ready to proceed', enabled: true },

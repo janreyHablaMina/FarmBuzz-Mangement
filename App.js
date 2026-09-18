@@ -39,6 +39,7 @@ import RangingScreen, { buildRangingLocations, RANGING_BATCHES } from './Ranging
 import RangingAreaDetailScreen from './RangingAreaDetailScreen';
 import RangingSettingsScreen, { RangingSelectionSettingsScreen } from './RangingSettingsScreen';
 import StagMaintenanceScreen, { DEFAULT_STAG_AREAS, StagMaintenanceAreaDetail } from './StagMaintenanceScreen';
+import CordingScreen from './CordingScreen';
 import { INCUBATION_BATCHES } from './farmData';
 import TasksScreen from './TasksScreen';
 import TeamScreen, { MEMBERS } from './TeamScreen';
@@ -87,6 +88,7 @@ const FLOCK_HERO_IMAGE = require('./assets/flock-hero.png');
 const BREEDING_HERO_IMAGE = require('./assets/breeding-hero.png');
 const BROODING_HERO_IMAGE = require('./assets/brooding-card.png');
 const HARDENING_CARD_IMAGE = require('./assets/hardening-card.png');
+const CORDING_CARD_IMAGE = require('./assets/cording-card.png');
 const GROWING_HERO_IMAGE = require('./assets/growing-card.png');
 const RANGING_HERO_IMAGE = require('./assets/ranging-card.png');
 const HEALTH_CARE_HERO_IMAGE = require('./assets/health-care-hero.png');
@@ -784,7 +786,7 @@ function FarmWorkspaceCard({ farm, onPress }) {
   );
 }
 
-function FarmDetailScreen({ farm, onBack, onOpenBreeding, onOpenIncubation, onOpenBrooding, onOpenGrowing, onOpenMaturing, onOpenHardening, onOpenSettings }) {
+function FarmDetailScreen({ farm, onBack, onOpenBreeding, onOpenIncubation, onOpenBrooding, onOpenGrowing, onOpenMaturing, onOpenHardening, onOpenCording, onOpenSettings }) {
   const { width } = useWindowDimensions();
   const compact = width < 480;
   const narrow = width < 390;
@@ -832,6 +834,14 @@ function FarmDetailScreen({ farm, onBack, onOpenBreeding, onOpenIncubation, onOp
     color: THEME_ORANGE,
     tint: THEME_ORANGE_TINT,
     image: HARDENING_CARD_IMAGE,
+  };
+  const cordingModule = {
+    title: 'Cording',
+    subtitle: 'Individual housing and permanent IDs',
+    icon: 'home-account',
+    color: THEME_ORANGE,
+    tint: THEME_ORANGE_TINT,
+    image: CORDING_CARD_IMAGE,
   };
   const breedingStats = [
     { label: 'Active Pairings', value: '3', icon: 'link-variant', color: THEME_ORANGE },
@@ -894,7 +904,7 @@ function FarmDetailScreen({ farm, onBack, onOpenBreeding, onOpenIncubation, onOp
 
             <View style={styles.sectionHeading}>
               <Text style={[styles.sectionTitle, narrow && styles.sectionTitleNarrow]}>Management Tool</Text>
-              <Text style={styles.sectionMeta}>6 modules</Text>
+              <Text style={styles.sectionMeta}>7 modules</Text>
             </View>
             <View style={[styles.moduleGrid, compact && styles.moduleGridCompact]}>
               <ModuleCard item={breedingModule} compact={compact} onPress={onOpenBreeding} />
@@ -903,6 +913,7 @@ function FarmDetailScreen({ farm, onBack, onOpenBreeding, onOpenIncubation, onOp
               <ModuleCard item={growingModule} compact={compact} onPress={onOpenGrowing} />
               <ModuleCard item={maturingModule} compact={compact} onPress={onOpenMaturing} />
               <ModuleCard item={hardeningModule} compact={compact} onPress={onOpenHardening} />
+              <ModuleCard item={cordingModule} compact={compact} onPress={onOpenCording} />
             </View>
           </View>
         </View>
@@ -1357,6 +1368,9 @@ export default function App() {
   const [stagAreas, setStagAreas] = useState(DEFAULT_STAG_AREAS);
   const [selectedStagArea, setSelectedStagArea] = useState('Hardening Area 1');
   const [stagSettings, setStagSettings] = useState(DEFAULT_STAG_SETTINGS);
+  const [cordingAreas, setCordingAreas] = useState([{ name: 'Cording Area 1', count: 0 }, { name: 'Cording Area 2', count: 0 }]);
+  const [cordingBirds, setCordingBirds] = useState([]);
+  const nextCordingBirdNumber = useRef(101);
   const [selectedRangingBatchId, setSelectedRangingBatchId] = useState('Range Area 2');
   const [rangingLossesByBatch, setRangingLossesByBatch] = useState({});
   const [rangingLocationsByBatch, setRangingLocationsByBatch] = useState({});
@@ -1488,6 +1502,7 @@ export default function App() {
           onOpenGrowing={() => setScreen('growing')}
           onOpenMaturing={() => setScreen('maturing')}
           onOpenHardening={() => setScreen('stag-maintenance')}
+          onOpenCording={() => setScreen('cording')}
           onOpenSettings={() => {
             setSettingsReturn('farm-detail');
             setScreen('management-settings');
@@ -1509,6 +1524,12 @@ export default function App() {
             setScreen('stag-maintenance-detail');
           }}
         />
+      ) : screen === 'cording' ? (
+        <CordingScreen
+          areas={cordingAreas}
+          birds={cordingBirds}
+          onBack={() => setScreen('farm-detail')}
+        />
       ) : screen === 'stag-maintenance-settings' ? (
         <GrowingScheduleSettingsScreen
           variant="stag"
@@ -1522,8 +1543,10 @@ export default function App() {
       ) : screen === 'stag-maintenance-detail' ? (
         <StagMaintenanceAreaDetail
           area={stagAreas.find((area) => area.location === selectedStagArea) || stagAreas[0]}
+          cordingAreas={cordingAreas.map((area) => area.name)}
+          nextBirdNumber={nextCordingBirdNumber.current}
+          existingPhysicalIds={cordingBirds.map((bird) => bird.physicalId)}
           onBack={() => setScreen('stag-maintenance')}
-          onCheck={(record) => setStagAreas((current) => current.map((area) => area.location === selectedStagArea ? { ...area, lastCheck: record, history: [{ date: record.date, text: 'Maintenance check completed' }, ...area.history] } : area))}
           onMove={(record) => {
             setStagAreas((current) => {
               const source = current.find((area) => area.location === selectedStagArea);
@@ -1539,8 +1562,25 @@ export default function App() {
             setScreen('stag-maintenance');
           }}
           onHealth={() => setStagAreas((current) => current.map((area) => area.location === selectedStagArea ? { ...area, nextTask: area.nextTask ? { ...area.nextTask, completed: true, status: 'Completed' } : null, history: [{ date: new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(new Date()), text: 'Health / vaccination task completed' }, ...area.history] } : area))}
-          onProceed={(record) => {
-            setStagAreas((current) => current.map((area) => area.location === selectedStagArea ? { ...area, birds: area.birds - record.count, movedForward: (area.movedForward || 0) + record.count, history: [{ date: record.date, text: `${record.count} proceeded to ${record.destination}` }, ...area.history] } : area));
+          onMoveToCording={(record) => {
+            const individualBirds = record.birds.map((bird) => ({
+              ...bird,
+              _recordKey: bird.farmBuzzId,
+              name: bird.physicalId,
+              type: 'Stag',
+              filter: 'stag',
+              bloodline: 'Not individually assigned',
+              status: 'Cording',
+              location: record.destination,
+              image: CORDING_CARD_IMAGE,
+              details: [{ icon: 'tag-outline', text: `${bird.identificationType}: ${bird.physicalId}` }, { icon: 'map-marker-outline', text: record.destination }],
+              cordingEntry: { fromArea: selectedStagArea, destination: record.destination, movedAt: record.moveDate },
+            }));
+            setStagAreas((current) => current.map((area) => area.location === selectedStagArea ? { ...area, birds: area.birds - record.quantity, movedForward: (area.movedForward || 0) + record.quantity, status: area.birds === record.quantity ? 'Completed' : area.status, history: [{ date: record.moveDate, text: `${record.quantity} moved to ${record.destination}` }, ...area.history] } : area));
+            setCordingBirds((current) => [...individualBirds, ...current]);
+            setAddedBirds((current) => [...individualBirds, ...current]);
+            setCordingAreas((current) => current.map((area) => area.name === record.destination ? { ...area, count: area.count + record.quantity } : area));
+            nextCordingBirdNumber.current += record.quantity;
             setScreen('stag-maintenance');
           }}
         />

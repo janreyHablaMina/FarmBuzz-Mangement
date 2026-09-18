@@ -229,59 +229,19 @@ export default function StagMaintenanceScreen({
   );
 }
 
-function Choice({ label, value, onChange }) {
-  return (
-    <View>
-      <Text style={styles.fieldLabel}>{label}</Text>
-      <View style={styles.choiceRow}>
-        {["Okay", "Issue"].map((option) => (
-          <Pressable
-            key={option}
-            onPress={() => onChange(option)}
-            style={[styles.choice, value === option && styles.choiceActive]}
-          >
-            <Text
-              style={[
-                styles.choiceText,
-                value === option && styles.choiceTextActive,
-              ]}
-            >
-              {option}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
-    </View>
-  );
-}
 function ActionModal({ visible, type, area, onClose, onSave }) {
   const [quantity, setQuantity] = useState("");
   const [destination, setDestination] = useState("");
   const [note, setNote] = useState("");
-  const [condition, setCondition] = useState("Okay");
-  const [feed, setFeed] = useState("Okay");
-  const [housing, setHousing] = useState("Okay");
-  const [health, setHealth] = useState("Okay");
   const count = Number.parseInt(quantity, 10) || 0;
   const remain = area.birds - count;
   const title =
-    type === "check"
-      ? "Maintenance Check"
-      : type === "move"
-        ? "Move Stags"
-        : type === "loss"
-          ? "Record Loss / Adjustment"
-          : "Proceed to Next Stage";
+    type === "move"
+      ? "Move Stags"
+      : type === "loss"
+        ? "Record Loss / Adjustment"
+        : "Proceed to Next Stage";
   const save = () => {
-    if (type === "check")
-      return onSave({
-        condition,
-        feed,
-        housing,
-        health,
-        note: note.trim(),
-        date: today(),
-      });
     if (count < 1 || count > area.birds)
       return Alert.alert(
         "Check quantity",
@@ -327,42 +287,214 @@ function ActionModal({ visible, type, area, onClose, onSave }) {
                 <Ionicons name="close" size={20} color="#fff" />
               </Pressable>
             </View>
-            {type === "check" ? (
+            <>
+              <View style={styles.currentBand}>
+                <Text style={styles.currentLabel}>CURRENT STAGS</Text>
+                <Text style={styles.currentValue}>{area.birds}</Text>
+              </View>
+              <Text style={styles.fieldLabel}>
+                {type === "proceed" ? "Ready / Proceed" : "Quantity"}
+              </Text>
+              <TextInput
+                value={quantity}
+                onChangeText={(value) =>
+                  setQuantity(value.replace(/[^0-9]/g, ""))
+                }
+                keyboardType="number-pad"
+                placeholder="0"
+                placeholderTextColor="#68777c"
+                style={styles.input}
+              />
+              {type === "proceed" && (
+                <View style={styles.remain}>
+                  <Text style={styles.remainLabel}>Remain in Maintenance</Text>
+                  <Text style={styles.remainValue}>{Math.max(0, remain)}</Text>
+                </View>
+              )}
+              {(type === "move" || type === "proceed") && (
+                <>
+                  <Text style={styles.fieldLabel}>
+                    {type === "move"
+                      ? "Destination Hardening Area"
+                      : "Next-stage Destination"}
+                  </Text>
+                  <TextInput
+                    value={destination}
+                    onChangeText={setDestination}
+                    placeholder="Select destination area"
+                    placeholderTextColor="#68777c"
+                    style={styles.input}
+                  />
+                </>
+              )}
+              {type === "loss" && (
+                <>
+                  <Text style={styles.fieldLabel}>Note (optional)</Text>
+                  <TextInput
+                    value={note}
+                    onChangeText={setNote}
+                    placeholder="Reason or adjustment"
+                    placeholderTextColor="#68777c"
+                    style={styles.input}
+                  />
+                </>
+              )}
+              <View style={styles.date}>
+                <MaterialCommunityIcons
+                  name="calendar-outline"
+                  size={16}
+                  color={ORANGE}
+                />
+                <Text style={styles.dateText}>{today()}</Text>
+              </View>
+            </>
+            <View style={styles.modalActions}>
+              <Pressable onPress={onClose} style={styles.cancel}>
+                <Text style={styles.cancelText}>Cancel</Text>
+              </Pressable>
+              <Pressable onPress={save} style={styles.save}>
+                <Text style={styles.saveText}>
+                  {type === "move"
+                    ? "Confirm Move"
+                    : type === "proceed"
+                      ? "Confirm"
+                      : "Save"}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </ScrollView>
+      </View>
+    </Modal>
+  );
+}
+
+function CordingTransitionModal({
+  visible,
+  area,
+  destinations,
+  nextBirdNumber,
+  existingPhysicalIds,
+  onClose,
+  onConfirm,
+}) {
+  const [step, setStep] = useState("setup");
+  const [quantity, setQuantity] = useState("");
+  const [destination, setDestination] = useState(destinations[0] || "");
+  const [moveDate, setMoveDate] = useState(today());
+  const [birds, setBirds] = useState([]);
+  const [index, setIndex] = useState(0);
+  const [applyTypeToAll, setApplyTypeToAll] = useState(true);
+  const count = Number.parseInt(quantity, 10) || 0;
+  const current = birds[index];
+  const startIdentification = () => {
+    if (count < 1 || count > area.birds)
+      return Alert.alert(
+        "Check quantity",
+        `Enter a number from 1 to ${area.birds}.`,
+      );
+    if (!destination)
+      return Alert.alert(
+        "Cording area required",
+        "Select an existing Cording area.",
+      );
+    setBirds(
+      Array.from({ length: count }, (_, birdIndex) => ({
+        farmBuzzId: `FB-${String(nextBirdNumber + birdIndex).padStart(6, "0")}`,
+        identificationType: "Leg Band",
+        physicalId: "",
+        note: "",
+      })),
+    );
+    setIndex(0);
+    setStep("identify");
+  };
+  const updateCurrent = (changes) =>
+    setBirds((items) =>
+      items.map((bird, birdIndex) =>
+        birdIndex === index ? { ...bird, ...changes } : bird,
+      ),
+    );
+  const setType = (identificationType) => {
+    if (applyTypeToAll)
+      setBirds((items) =>
+        items.map((bird) => ({ ...bird, identificationType })),
+      );
+    else updateCurrent({ identificationType });
+  };
+  const saveNext = () => {
+    if (!current.identificationType || !current.physicalId.trim())
+      return Alert.alert(
+        "Identification required",
+        "Select one identification type and enter the physical ID / band number.",
+      );
+    const duplicate = birds.some(
+      (bird, birdIndex) =>
+        birdIndex !== index &&
+        bird.physicalId.trim().toLowerCase() ===
+          current.physicalId.trim().toLowerCase(),
+    );
+    if (duplicate)
+      return Alert.alert(
+        "Duplicate physical ID",
+        "Each stag needs a unique physical ID / band number.",
+      );
+    if (
+      existingPhysicalIds.some(
+        (physicalId) =>
+          physicalId.toLowerCase() === current.physicalId.trim().toLowerCase(),
+      )
+    )
+      return Alert.alert(
+        "Physical ID already used",
+        "Enter a physical ID / band number that is not assigned to another bird.",
+      );
+    if (index < birds.length - 1) setIndex((value) => value + 1);
+    else setStep("review");
+  };
+  const identificationTypes = ["Leg Band", "Existing Wing Band", "Other ID"];
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <View style={styles.backdrop}>
+        <ScrollView
+          style={styles.modalScroll}
+          contentContainerStyle={styles.modalWrap}
+        >
+          <View style={styles.cordingModal}>
+            <View style={styles.modalHead}>
+              <View>
+                <Text style={styles.overline}>HARDENING TO CORDING</Text>
+                <Text style={styles.modalTitle}>
+                  {step === "setup"
+                    ? "Move to Cording"
+                    : step === "identify"
+                      ? "Individual Identification"
+                      : "Ready to Move to Cording"}
+                </Text>
+              </View>
+              <Pressable onPress={onClose} style={styles.close}>
+                <Ionicons name="close" size={20} color="#fff" />
+              </Pressable>
+            </View>
+            {step === "setup" && (
               <>
-                <Choice
-                  label="General Condition"
-                  value={condition}
-                  onChange={setCondition}
-                />
-                <Choice label="Feed & Water" value={feed} onChange={setFeed} />
-                <Choice
-                  label="Housing / Area"
-                  value={housing}
-                  onChange={setHousing}
-                />
-                <Choice
-                  label="Injuries / Health Concern"
-                  value={health}
-                  onChange={setHealth}
-                />
-                <Text style={styles.fieldLabel}>Optional Note</Text>
-                <TextInput
-                  value={note}
-                  onChangeText={setNote}
-                  multiline
-                  placeholder="Observation"
-                  placeholderTextColor="#68777c"
-                  style={[styles.input, styles.note]}
-                />
-              </>
-            ) : (
-              <>
-                <View style={styles.currentBand}>
-                  <Text style={styles.currentLabel}>CURRENT STAGS</Text>
-                  <Text style={styles.currentValue}>{area.birds}</Text>
+                <View style={styles.readOnlyGrid}>
+                  <View style={styles.readOnlyItem}>
+                    <Text style={styles.readOnlyLabel}>HARDENING AREA</Text>
+                    <Text style={styles.readOnlyValue}>{area.location}</Text>
+                  </View>
+                  <View style={styles.readOnlyItem}>
+                    <Text style={styles.readOnlyLabel}>CURRENT STAGS</Text>
+                    <Text style={styles.readOnlyValue}>{area.birds}</Text>
+                  </View>
                 </View>
                 <Text style={styles.fieldLabel}>
-                  {type === "proceed" ? "Ready / Proceed" : "Quantity"}
+                  Quantity Ready for Cording
                 </Text>
                 <TextInput
                   value={quantity}
@@ -374,70 +506,241 @@ function ActionModal({ visible, type, area, onClose, onSave }) {
                   placeholderTextColor="#68777c"
                   style={styles.input}
                 />
-                {type === "proceed" && (
-                  <View style={styles.remain}>
-                    <Text style={styles.remainLabel}>
-                      Remain in Maintenance
-                    </Text>
-                    <Text style={styles.remainValue}>
-                      {Math.max(0, remain)}
-                    </Text>
-                  </View>
-                )}
-                {(type === "move" || type === "proceed") && (
-                  <>
-                    <Text style={styles.fieldLabel}>
-                      {type === "move"
-                        ? "Destination Hardening Area"
-                        : "Next-stage Destination"}
-                    </Text>
-                    <TextInput
-                      value={destination}
-                      onChangeText={setDestination}
-                      placeholder="Select destination area"
-                      placeholderTextColor="#68777c"
-                      style={styles.input}
-                    />
-                  </>
-                )}
-                {type === "loss" && (
-                  <>
-                    <Text style={styles.fieldLabel}>Note (optional)</Text>
-                    <TextInput
-                      value={note}
-                      onChangeText={setNote}
-                      placeholder="Reason or adjustment"
-                      placeholderTextColor="#68777c"
-                      style={styles.input}
-                    />
-                  </>
-                )}
-                <View style={styles.date}>
-                  <MaterialCommunityIcons
-                    name="calendar-outline"
-                    size={16}
-                    color={ORANGE}
-                  />
-                  <Text style={styles.dateText}>{today()}</Text>
+                <Text style={styles.fieldLabel}>
+                  Cording Area / Destination
+                </Text>
+                <View style={styles.destinationList}>
+                  {destinations.map((item) => (
+                    <Pressable
+                      key={item}
+                      onPress={() => setDestination(item)}
+                      style={[
+                        styles.destinationOption,
+                        destination === item && styles.destinationActive,
+                      ]}
+                    >
+                      <MaterialCommunityIcons
+                        name="home-account"
+                        size={18}
+                        color={destination === item ? ORANGE : "#78868b"}
+                      />
+                      <Text
+                        style={[
+                          styles.destinationText,
+                          destination === item && styles.destinationTextActive,
+                        ]}
+                      >
+                        {item}
+                      </Text>
+                      {destination === item && (
+                        <Ionicons name="checkmark" size={18} color={ORANGE} />
+                      )}
+                    </Pressable>
+                  ))}
+                </View>
+                <Text style={styles.fieldLabel}>Move Date</Text>
+                <TextInput
+                  value={moveDate}
+                  onChangeText={setMoveDate}
+                  style={styles.input}
+                />
+                <View style={styles.modalActions}>
+                  <Pressable onPress={onClose} style={styles.cancel}>
+                    <Text style={styles.cancelText}>Cancel</Text>
+                  </Pressable>
+                  <Pressable onPress={startIdentification} style={styles.save}>
+                    <Text style={styles.saveText}>Continue</Text>
+                  </Pressable>
                 </View>
               </>
             )}
-            <View style={styles.modalActions}>
-              <Pressable onPress={onClose} style={styles.cancel}>
-                <Text style={styles.cancelText}>Cancel</Text>
-              </Pressable>
-              <Pressable onPress={save} style={styles.save}>
-                <Text style={styles.saveText}>
-                  {type === "check"
-                    ? "Complete Check"
-                    : type === "move"
-                      ? "Confirm Move"
-                      : type === "proceed"
-                        ? "Confirm"
-                        : "Save"}
-                </Text>
-              </Pressable>
-            </View>
+            {step === "identify" && current && (
+              <>
+                <View style={styles.identifyProgress}>
+                  <View>
+                    <Text style={styles.currentLabel}>
+                      BIRD {index + 1} OF {birds.length}
+                    </Text>
+                    <Text style={styles.identifyId}>{current.farmBuzzId}</Text>
+                  </View>
+                  <Text style={styles.identifiedCount}>{index} saved</Text>
+                </View>
+                <View style={styles.readOnlyId}>
+                  <MaterialCommunityIcons
+                    name="identifier"
+                    size={20}
+                    color={ORANGE}
+                  />
+                  <View>
+                    <Text style={styles.readOnlyLabel}>FARMBUZZ BIRD ID</Text>
+                    <Text style={styles.readOnlyValue}>
+                      {current.farmBuzzId}
+                    </Text>
+                  </View>
+                  <MaterialCommunityIcons
+                    name="lock-outline"
+                    size={16}
+                    color="#738187"
+                  />
+                </View>
+                <View style={styles.applyRow}>
+                  <View>
+                    <Text style={styles.rowTitle}>
+                      Apply Identification Type to All
+                    </Text>
+                    <Text style={styles.rowMeta}>
+                      Use one type for this entire move
+                    </Text>
+                  </View>
+                  <Pressable
+                    accessibilityRole="switch"
+                    accessibilityState={{ checked: applyTypeToAll }}
+                    onPress={() => setApplyTypeToAll((value) => !value)}
+                    style={[styles.switch, applyTypeToAll && styles.switchOn]}
+                  >
+                    <View
+                      style={[
+                        styles.switchThumb,
+                        applyTypeToAll && styles.switchThumbOn,
+                      ]}
+                    />
+                  </Pressable>
+                </View>
+                <Text style={styles.fieldLabel}>Identification Type</Text>
+                <View style={styles.typeList}>
+                  {identificationTypes.map((type) => (
+                    <Pressable
+                      key={type}
+                      onPress={() => setType(type)}
+                      style={[
+                        styles.typeOption,
+                        current.identificationType === type &&
+                          styles.typeActive,
+                      ]}
+                    >
+                      <View
+                        style={[
+                          styles.radio,
+                          current.identificationType === type &&
+                            styles.radioActive,
+                        ]}
+                      />
+                      <Text
+                        style={[
+                          styles.typeText,
+                          current.identificationType === type &&
+                            styles.typeTextActive,
+                        ]}
+                      >
+                        {type}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+                <Text style={styles.fieldLabel}>Physical ID / Band Number</Text>
+                <TextInput
+                  autoFocus
+                  value={current.physicalId}
+                  onChangeText={(physicalId) => updateCurrent({ physicalId })}
+                  placeholder="Enter band or physical ID"
+                  placeholderTextColor="#68777c"
+                  returnKeyType="next"
+                  onSubmitEditing={saveNext}
+                  style={styles.input}
+                />
+                <Text style={styles.fieldLabel}>Optional Note</Text>
+                <TextInput
+                  value={current.note}
+                  onChangeText={(note) => updateCurrent({ note })}
+                  placeholder="Add a short note"
+                  placeholderTextColor="#68777c"
+                  style={styles.input}
+                />
+                <View style={styles.modalActions}>
+                  <Pressable
+                    onPress={() =>
+                      index > 0
+                        ? setIndex((value) => value - 1)
+                        : setStep("setup")
+                    }
+                    style={styles.cancel}
+                  >
+                    <Text style={styles.cancelText}>
+                      {index > 0 ? "Previous" : "Back"}
+                    </Text>
+                  </Pressable>
+                  <Pressable onPress={saveNext} style={styles.save}>
+                    <Text style={styles.saveText}>
+                      {index === birds.length - 1 ? "Review" : "Save & Next"}
+                    </Text>
+                  </Pressable>
+                </View>
+              </>
+            )}
+            {step === "review" && (
+              <>
+                <View style={styles.reviewCard}>
+                  <View style={styles.reviewRow}>
+                    <Text style={styles.readOnlyLabel}>
+                      FROM HARDENING AREA
+                    </Text>
+                    <Text style={styles.reviewValue}>{area.location}</Text>
+                  </View>
+                  <View style={styles.reviewRow}>
+                    <Text style={styles.readOnlyLabel}>DESTINATION</Text>
+                    <Text style={styles.reviewValue}>{destination}</Text>
+                  </View>
+                  <View style={styles.reviewRow}>
+                    <Text style={styles.readOnlyLabel}>TOTAL STAGS</Text>
+                    <Text style={styles.reviewValue}>{birds.length}</Text>
+                  </View>
+                  <View style={styles.reviewRow}>
+                    <Text style={styles.readOnlyLabel}>IDENTIFIED</Text>
+                    <Text style={styles.reviewReady}>
+                      {birds.length} / {birds.length}
+                    </Text>
+                  </View>
+                  <View style={styles.reviewRow}>
+                    <Text style={styles.readOnlyLabel}>MOVE DATE</Text>
+                    <Text style={styles.reviewValue}>{moveDate}</Text>
+                  </View>
+                </View>
+                <View style={styles.reviewIds}>
+                  {birds.map((bird) => (
+                    <View key={bird.farmBuzzId} style={styles.reviewBird}>
+                      <Text style={styles.reviewBirdId}>{bird.farmBuzzId}</Text>
+                      <Text style={styles.reviewBirdPhysical}>
+                        {bird.identificationType} · {bird.physicalId}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+                <View style={styles.modalActions}>
+                  <Pressable
+                    onPress={() => {
+                      setStep("identify");
+                      setIndex(birds.length - 1);
+                    }}
+                    style={styles.cancel}
+                  >
+                    <Text style={styles.cancelText}>Back</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() =>
+                      onConfirm({
+                        quantity: birds.length,
+                        destination,
+                        moveDate,
+                        birds,
+                      })
+                    }
+                    style={styles.save}
+                  >
+                    <Text style={styles.saveText}>Confirm Move</Text>
+                  </Pressable>
+                </View>
+              </>
+            )}
           </View>
         </ScrollView>
       </View>
@@ -448,11 +751,13 @@ function ActionModal({ visible, type, area, onClose, onSave }) {
 export function StagMaintenanceAreaDetail({
   area,
   onBack,
-  onCheck,
   onMove,
   onLoss,
   onHealth,
-  onProceed,
+  cordingAreas,
+  nextBirdNumber,
+  existingPhysicalIds,
+  onMoveToCording,
 }) {
   const [modal, setModal] = useState(null);
   const task = area.nextTask;
@@ -468,20 +773,21 @@ export function StagMaintenanceAreaDetail({
         }
       : area.ready
         ? {
-            title: "Ready for Next Stage",
-            detail: "Move ready stags forward when the breeder confirms",
+            title: "Ready for Cording",
+            detail: "Identify ready stags before individual housing",
             status: "Ready",
-            button: "Proceed",
-            press: () => setModal("proceed"),
+            button: "Move to Cording",
+            press: () => setModal("cording"),
             icon: "arrow-right-circle-outline",
           }
         : {
-            title: "Maintenance Check",
-            detail: "Review condition, feed, water, housing, and health",
-            status: "Upcoming",
-            button: "Complete Check",
-            press: () => setModal("check"),
-            icon: "clipboard-check-outline",
+            title: "Hardening in Progress",
+            detail:
+              "Stags remain in this area until the next scheduled task or Cording move",
+            status: "Active",
+            button: null,
+            press: null,
+            icon: "shield-check-outline",
           };
   const complete = (handler) => (record) => {
     handler(record);
@@ -542,24 +848,15 @@ export function StagMaintenanceAreaDetail({
                 <View style={styles.nextStatus}>
                   <Text style={styles.nextStatusText}>{action.status}</Text>
                 </View>
-                <Pressable onPress={action.press} style={styles.nextButton}>
-                  <Text style={styles.nextButtonText}>{action.button}</Text>
-                </Pressable>
+                {action.button && (
+                  <Pressable onPress={action.press} style={styles.nextButton}>
+                    <Text style={styles.nextButtonText}>{action.button}</Text>
+                  </Pressable>
+                )}
               </View>
             </View>
             <Text style={styles.sectionTitle}>Main Actions</Text>
             <View style={styles.actions}>
-              <Pressable
-                onPress={() => setModal("check")}
-                style={styles.mainAction}
-              >
-                <MaterialCommunityIcons
-                  name="clipboard-check-outline"
-                  size={19}
-                  color={ORANGE}
-                />
-                <Text style={styles.actionText}>Maintenance Check</Text>
-              </Pressable>
               <Pressable
                 onPress={() => setModal("move")}
                 style={styles.mainAction}
@@ -591,7 +888,7 @@ export function StagMaintenanceAreaDetail({
                 <Text style={styles.actionText}>Health / Vaccination</Text>
               </Pressable>
               <Pressable
-                onPress={() => setModal("proceed")}
+                onPress={() => setModal("cording")}
                 style={styles.proceed}
               >
                 <MaterialCommunityIcons
@@ -599,7 +896,7 @@ export function StagMaintenanceAreaDetail({
                   size={20}
                   color="#fff"
                 />
-                <Text style={styles.proceedText}>Proceed to Next Stage</Text>
+                <Text style={styles.proceedText}>Move to Cording</Text>
               </Pressable>
             </View>
           </View>
@@ -607,19 +904,21 @@ export function StagMaintenanceAreaDetail({
       </ScrollView>
       <ActionModal
         key={modal}
-        visible={Boolean(modal)}
+        visible={["move", "loss"].includes(modal)}
         type={modal}
         area={area}
         onClose={() => setModal(null)}
-        onSave={complete(
-          modal === "check"
-            ? onCheck
-            : modal === "move"
-              ? onMove
-              : modal === "loss"
-                ? onLoss
-                : onProceed,
-        )}
+        onSave={complete(modal === "move" ? onMove : onLoss)}
+      />
+      <CordingTransitionModal
+        key={`cording-${modal}`}
+        visible={modal === "cording"}
+        area={area}
+        destinations={cordingAreas}
+        nextBirdNumber={nextBirdNumber}
+        existingPhysicalIds={existingPhysicalIds}
+        onClose={() => setModal(null)}
+        onConfirm={complete(onMoveToCording)}
       />
     </View>
   );
@@ -957,6 +1256,182 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#314249",
     backgroundColor: "#071115",
+  },
+  cordingModal: {
+    width: "100%",
+    maxWidth: 480,
+    padding: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#314249",
+    backgroundColor: "#071115",
+  },
+  readOnlyGrid: { marginTop: 14, flexDirection: "row", gap: 8 },
+  readOnlyItem: {
+    flex: 1,
+    minWidth: 0,
+    minHeight: 62,
+    padding: 10,
+    borderRadius: 6,
+    backgroundColor: "rgba(255,121,0,.07)",
+    justifyContent: "center",
+  },
+  readOnlyLabel: { color: "#7f8c91", fontSize: 7, fontWeight: "800" },
+  readOnlyValue: {
+    marginTop: 5,
+    color: "#eef2f3",
+    fontSize: 11,
+    fontWeight: "800",
+  },
+  destinationList: {
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#2a3b42",
+    overflow: "hidden",
+  },
+  destinationOption: {
+    minHeight: 44,
+    paddingHorizontal: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: "#203038",
+  },
+  destinationActive: { backgroundColor: "rgba(255,121,0,.07)" },
+  destinationText: {
+    flex: 1,
+    color: "#9ca8ab",
+    fontSize: 10,
+    fontWeight: "700",
+  },
+  destinationTextActive: { color: "#eef2f3" },
+  identifyProgress: {
+    minHeight: 64,
+    marginTop: 14,
+    padding: 11,
+    borderRadius: 7,
+    backgroundColor: "rgba(255,121,0,.07)",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  identifyId: { marginTop: 4, color: "#fff", fontSize: 17, fontWeight: "800" },
+  identifiedCount: { color: ORANGE, fontSize: 9, fontWeight: "800" },
+  readOnlyId: {
+    minHeight: 58,
+    marginTop: 10,
+    paddingHorizontal: 11,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#2a3b42",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 9,
+  },
+  applyRow: {
+    minHeight: 58,
+    marginTop: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  switch: {
+    width: 42,
+    height: 24,
+    borderRadius: 12,
+    padding: 3,
+    backgroundColor: "#2b3a40",
+  },
+  switchOn: { backgroundColor: "#9a4d08" },
+  switchThumb: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: "#9aa5a8",
+  },
+  switchThumbOn: { marginLeft: 18, backgroundColor: ORANGE },
+  typeList: { flexDirection: "row", gap: 6 },
+  typeOption: {
+    flex: 1,
+    minHeight: 46,
+    paddingHorizontal: 7,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#2a3b42",
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 6,
+  },
+  typeActive: { borderColor: ORANGE, backgroundColor: "rgba(255,121,0,.07)" },
+  radio: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#718086",
+  },
+  radioActive: { borderWidth: 3, borderColor: ORANGE },
+  typeText: {
+    flexShrink: 1,
+    color: "#879499",
+    fontSize: 8,
+    fontWeight: "700",
+    textAlign: "center",
+  },
+  typeTextActive: { color: "#eef2f3" },
+  reviewCard: {
+    marginTop: 14,
+    borderRadius: 7,
+    borderWidth: 1,
+    borderColor: "#2a3b42",
+    backgroundColor: "#091317",
+    overflow: "hidden",
+  },
+  reviewRow: {
+    minHeight: 50,
+    paddingHorizontal: 11,
+    borderBottomWidth: 1,
+    borderBottomColor: "#203038",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  reviewValue: {
+    flex: 1,
+    color: "#e7ebec",
+    fontSize: 10,
+    fontWeight: "800",
+    textAlign: "right",
+  },
+  reviewReady: { color: "#6ee58c", fontSize: 11, fontWeight: "800" },
+  reviewIds: {
+    maxHeight: 190,
+    marginTop: 10,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#2a3b42",
+    overflow: "hidden",
+  },
+  reviewBird: {
+    minHeight: 42,
+    paddingHorizontal: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#203038",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  reviewBirdId: { color: ORANGE, fontSize: 9, fontWeight: "800" },
+  reviewBirdPhysical: {
+    flex: 1,
+    color: "#aab5b8",
+    fontSize: 8,
+    textAlign: "right",
   },
   modalHead: {
     flexDirection: "row",
