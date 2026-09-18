@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Modal,
@@ -163,7 +163,24 @@ function SelectionModal({
   onClose,
   onConfirm,
 }) {
-  const [selected, setSelected] = useState(null);
+  const emptyAllocations = () => Object.fromEntries(options.map((option) => [option, ""]));
+  const [allocations, setAllocations] = useState(emptyAllocations);
+  useEffect(() => {
+    if (visible) setAllocations(emptyAllocations());
+  }, [visible, options]);
+  const quantityFor = (option) => Number.parseInt(allocations[option], 10) || 0;
+  const allocated = options.reduce((total, option) => total + quantityFor(option), 0);
+  const remaining = currentBirds - allocated;
+  const updateQuantity = (option, value) => {
+    const digits = value.replace(/[^0-9]/g, "");
+    const quantity = digits ? Math.min(Number.parseInt(digits, 10), currentBirds) : "";
+    setAllocations((current) => ({ ...current, [option]: String(quantity) }));
+  };
+  const stepQuantity = (option, amount) => {
+    const quantity = Math.max(0, Math.min(currentBirds, quantityFor(option) + amount));
+    setAllocations((current) => ({ ...current, [option]: quantity ? String(quantity) : "" }));
+  };
+  const result = () => Object.fromEntries(options.map((option) => [option, quantityFor(option)]));
   return (
     <Modal
       visible={visible}
@@ -191,40 +208,32 @@ function SelectionModal({
             {currentBirds} birds ready for review
           </Text>
           <Text style={styles.confirmCopy}>
-            Choose the selection path for {batch.id}.
+            Allocate every bird in {batch.id} across the selection options.
           </Text>
+          <View style={styles.allocationSummary}>
+            <View><Text style={styles.allocationValue}>{allocated}</Text><Text style={styles.allocationLabel}>Allocated</Text></View>
+            <View style={styles.allocationDivider} />
+            <View><Text style={[styles.allocationValue, remaining < 0 && styles.allocationError]}>{remaining}</Text><Text style={styles.allocationLabel}>Remaining</Text></View>
+            <View style={styles.allocationDivider} />
+            <View><Text style={styles.allocationValue}>{currentBirds}</Text><Text style={styles.allocationLabel}>Total Birds</Text></View>
+          </View>
           <View style={styles.selectionOptions}>
             {options.map((option, index) => {
-              const active = selected === option;
               return (
-                <Pressable
+                <View
                   key={option}
-                  accessibilityRole="radio"
-                  accessibilityState={{ checked: active }}
-                  onPress={() => setSelected(option)}
                   style={[
                     styles.selectionOption,
-                    active && styles.selectionOptionActive,
                     index < options.length - 1 && styles.selectionOptionDivider,
                   ]}
                 >
-                  <View style={[styles.radio, active && styles.radioActive]}>
-                    {active && <View style={styles.radioDot} />}
+                  <Text style={styles.selectionOptionText}>{option}</Text>
+                  <View style={styles.quantityControl}>
+                    <Pressable accessibilityLabel={`Remove one ${option} bird`} onPress={() => stepQuantity(option, -1)} style={styles.quantityButton}><Ionicons name="remove" size={16} color="#aab4b7" /></Pressable>
+                    <TextInput accessibilityLabel={`${option} bird quantity`} value={allocations[option]} onChangeText={(value) => updateQuantity(option, value)} keyboardType="number-pad" selectTextOnFocus placeholder="0" placeholderTextColor="#68777c" selectionColor={ORANGE} style={styles.quantityInput} />
+                    <Pressable accessibilityLabel={`Add one ${option} bird`} onPress={() => stepQuantity(option, 1)} style={styles.quantityButton}><Ionicons name="add" size={16} color={ORANGE} /></Pressable>
                   </View>
-                  <Text
-                    style={[
-                      styles.selectionOptionText,
-                      active && styles.selectionOptionTextActive,
-                    ]}
-                  >
-                    {option}
-                  </Text>
-                  <Ionicons
-                    name="chevron-forward"
-                    size={16}
-                    color={active ? ORANGE : "#68767b"}
-                  />
-                </Pressable>
+                </View>
               );
             })}
           </View>
@@ -233,9 +242,9 @@ function SelectionModal({
               <Text style={styles.cancelText}>Cancel</Text>
             </Pressable>
             <Pressable
-              disabled={!selected}
-              onPress={() => onConfirm(selected)}
-              style={[styles.save, !selected && styles.saveDisabled]}
+              disabled={remaining !== 0}
+              onPress={() => onConfirm(result())}
+              style={[styles.save, remaining !== 0 && styles.saveDisabled]}
             >
               <Text style={styles.saveText}>Continue</Text>
             </Pressable>
@@ -1026,22 +1035,33 @@ const styles = StyleSheet.create({
   },
   saveDisabled: { opacity: 0.35 },
   saveText: { color: "#fff", fontSize: 10, fontWeight: "800" },
+  allocationSummary: {
+    minHeight: 66,
+    marginTop: 14,
+    borderRadius: 7,
+    backgroundColor: "rgba(255,121,0,.07)",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-around",
+  },
+  allocationValue: { color: "#fff", fontSize: 17, fontWeight: "800", textAlign: "center" },
+  allocationError: { color: "#ef7568" },
+  allocationLabel: { marginTop: 3, color: "#77858a", fontSize: 7, textAlign: "center" },
+  allocationDivider: { width: 1, height: 30, backgroundColor: "#324047" },
   selectionOptions: {
-    marginTop: 15,
+    marginTop: 10,
     borderRadius: 7,
     borderWidth: 1,
     borderColor: "#26373e",
     backgroundColor: "#061014",
     overflow: "hidden",
   },
-  selectionOption: { minHeight: 48, paddingHorizontal: 11, flexDirection: "row", alignItems: "center", gap: 10 },
-  selectionOptionActive: { backgroundColor: "rgba(255,121,0,.07)" },
+  selectionOption: { minHeight: 56, paddingHorizontal: 11, flexDirection: "row", alignItems: "center", gap: 10 },
   selectionOptionDivider: { borderBottomWidth: 1, borderBottomColor: "#1d2d33" },
-  selectionOptionText: { flex: 1, color: "#aab4b7", fontSize: 10, fontWeight: "700" },
-  selectionOptionTextActive: { color: "#fff" },
-  radio: { width: 18, height: 18, borderRadius: 9, borderWidth: 1, borderColor: "#59676c", alignItems: "center", justifyContent: "center" },
-  radioActive: { borderColor: ORANGE },
-  radioDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: ORANGE },
+  selectionOptionText: { flex: 1, minWidth: 0, color: "#dce2e4", fontSize: 9, fontWeight: "700" },
+  quantityControl: { width: 116, height: 36, borderRadius: 6, borderWidth: 1, borderColor: "#314249", flexDirection: "row", alignItems: "center", overflow: "hidden" },
+  quantityButton: { width: 34, height: 36, backgroundColor: "#101c20", alignItems: "center", justifyContent: "center" },
+  quantityInput: { flex: 1, height: 34, padding: 0, color: "#fff", fontSize: 11, fontWeight: "800", textAlign: "center", outlineStyle: "none" },
   progressOverview: {
     minHeight: 86,
     marginTop: 16,

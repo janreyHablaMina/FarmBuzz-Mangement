@@ -1548,9 +1548,10 @@ export default function App() {
           onSaveLoss={(record) => setRangingLossesByBatch((current) => ({ ...current, [selectedRangingBatchId]: [record, ...(current[selectedRangingBatchId] || [])] }))}
           onChangeLocation={(location) => setRangingLocationsByBatch((current) => ({ ...current, [selectedRangingBatchId]: location }))}
           onCompleteTask={(taskId) => setRangingTasksByBatch((current) => ({ ...current, [selectedRangingBatchId]: { ...(current[selectedRangingBatchId] || {}), [taskId]: true } }))}
-          onBeginSelection={(batch, selection) => {
+          onBeginSelection={(batch, allocations) => {
             setCompletedRangingBatchIds((current) => current.includes(batch.id) ? current : [...current, batch.id]);
-            Alert.alert('Selection Started', `${batch.id} is complete. Selected path: ${selection}.`);
+            const summary = Object.entries(allocations).filter(([, count]) => count > 0).map(([option, count]) => `${option}: ${count}`).join('\n');
+            Alert.alert('Selection Completed', `${batch.id} is complete.\n\n${summary}`);
             setScreen('ranging');
           }}
         />
