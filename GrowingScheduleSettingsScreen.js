@@ -17,10 +17,12 @@ function ThemeToggle({ value, onValueChange, label = 'Enabled' }) {
 export const DEFAULT_GROWING_SETTINGS = {
   readyDay: 120,
   weeklyChecks: true,
+  separationOptions: ['Male', 'Female'],
   tasks: [
     { id: 'grow-weekly-check', name: 'Weekly Growing Check', day: 49, note: 'Batch condition, feed, water, space, and housing', enabled: true },
     { id: 'grow-health-8', name: 'Growing Health Review', day: 56, note: 'General batch condition and housing review', enabled: true },
     { id: 'grow-vaccine-12', name: 'Configured Vaccine Review', day: 84, note: 'Use the farm health program when applicable', enabled: true },
+    { id: 'grow-sex-separation', name: 'Separate Male and Female', day: 105, note: 'Separate the batch into the configured male and female groups', enabled: true },
     { id: 'grow-ranging-16', name: 'Ready for Ranging Check', day: 120, note: 'Confirm the batch is ready before moving to ranging', enabled: true },
   ],
 };

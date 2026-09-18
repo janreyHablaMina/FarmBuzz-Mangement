@@ -1,60 +1,273 @@
-import { useMemo, useState } from 'react';
-import { Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
-import { Image } from 'expo-image';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { daysSince, GROWING_BATCHES } from './GrowingScreen';
+import { useEffect, useMemo, useState } from "react";
+import {
+  Alert,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+  useWindowDimensions,
+} from "react-native";
+import { StatusBar } from "expo-status-bar";
+import { Image } from "expo-image";
+import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { daysSince, GROWING_BATCHES } from "./GrowingScreen";
 
-const HERO_IMAGE = require('./assets/growing-card.png');
-const ORANGE = '#ff7900';
+const HERO_IMAGE = require("./assets/growing-card.png");
+const ORANGE = "#ff7900";
 const SOURCES = [
-  { name: 'Main Breeders', cross: 'Sweater x Kelso', birds: 17, marking: 'Red' },
-  { name: 'Group B', cross: 'Kelso', birds: 12, marking: 'Blue' },
-  { name: 'Group C', cross: 'Roundhead x Hatch', birds: 9, marking: '' },
+  {
+    name: "Main Breeders",
+    cross: "Sweater x Kelso",
+    birds: 17,
+    marking: "Red",
+  },
+  { name: "Group B", cross: "Kelso", birds: 12, marking: "Blue" },
+  { name: "Group C", cross: "Roundhead x Hatch", birds: 9, marking: "" },
 ];
 
 function today() {
-  return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date());
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date());
 }
 
 function dateAfterDays(startDate, day) {
   const due = new Date(startDate);
   due.setDate(due.getDate() + day);
-  return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(due);
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(due);
 }
 
 function FieldModal({ visible, type, batch, currentBirds, onClose, onSave }) {
-  const loss = type === 'loss';
-  const [value, setValue] = useState(loss ? '1' : batch.location);
+  const loss = type === "loss";
+  const [value, setValue] = useState(loss ? "1" : batch.location);
   const [date, setDate] = useState(today);
-  const [note, setNote] = useState('');
+  const [note, setNote] = useState("");
   const save = () => {
     if (loss) {
       const count = Number.parseInt(value, 10);
-      if (!Number.isFinite(count) || count < 1 || count > currentBirds) return Alert.alert('Check birds lost', `Enter a number from 1 to ${currentBirds}.`);
+      if (!Number.isFinite(count) || count < 1 || count > currentBirds)
+        return Alert.alert(
+          "Check birds lost",
+          `Enter a number from 1 to ${currentBirds}.`,
+        );
       onSave({ id: `LOSS-${Date.now()}`, count, date, note: note.trim() });
     } else {
-      if (!value.trim()) return Alert.alert('Location required', 'Enter the new growing area.');
+      if (!value.trim())
+        return Alert.alert("Location required", "Enter the new growing area.");
       onSave(value.trim());
     }
   };
-  return <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}><View style={styles.modalBackdrop}><Pressable style={StyleSheet.absoluteFill} onPress={onClose} /><View style={styles.modalCard}><View style={styles.modalHeader}><View><Text style={styles.eyebrow}>{batch.id}</Text><Text style={styles.modalTitle}>{loss ? 'Record Loss' : 'Change Growing Area'}</Text></View><Pressable onPress={onClose} style={styles.closeButton}><Ionicons name="close" size={20} color="#dfe5e7" /></Pressable></View><View style={styles.batchBand}><Text style={styles.bandValue}>{currentBirds} current birds</Text><Text style={styles.bandValue}>{batch.age}</Text></View><Text style={styles.fieldLabel}>{loss ? 'Birds Lost' : 'Growing Area / Location'}</Text><View style={styles.field}><MaterialCommunityIcons name={loss ? 'bird' : 'map-marker-outline'} size={18} color={ORANGE} /><TextInput value={value} onChangeText={setValue} keyboardType={loss ? 'number-pad' : 'default'} selectionColor={ORANGE} style={styles.fieldInput} /></View>{loss && <><Text style={styles.fieldLabel}>Date</Text><View style={styles.field}><MaterialCommunityIcons name="calendar-outline" size={18} color={ORANGE} /><TextInput value={date} onChangeText={setDate} selectionColor={ORANGE} style={styles.fieldInput} /></View><Text style={styles.fieldLabel}>Note <Text style={styles.muted}>(optional)</Text></Text><TextInput value={note} onChangeText={setNote} multiline placeholder="Reason or observation" placeholderTextColor="#68777c" selectionColor={ORANGE} style={styles.noteInput} /></>}<View style={styles.modalActions}><Pressable onPress={onClose} style={styles.cancelButton}><Text style={styles.cancelText}>Cancel</Text></Pressable><Pressable onPress={save} style={styles.saveButton}><Text style={styles.saveText}>{loss ? 'Save Loss' : 'Update Area'}</Text></Pressable></View></View></View></Modal>;
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <View style={styles.modalBackdrop}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+        <View style={styles.modalCard}>
+          <View style={styles.modalHeader}>
+            <View>
+              <Text style={styles.eyebrow}>{batch.id}</Text>
+              <Text style={styles.modalTitle}>
+                {loss ? "Record Loss" : "Change Growing Area"}
+              </Text>
+            </View>
+            <Pressable onPress={onClose} style={styles.closeButton}>
+              <Ionicons name="close" size={20} color="#dfe5e7" />
+            </Pressable>
+          </View>
+          <View style={styles.batchBand}>
+            <Text style={styles.bandValue}>{currentBirds} current birds</Text>
+            <Text style={styles.bandValue}>{batch.age}</Text>
+          </View>
+          <Text style={styles.fieldLabel}>
+            {loss ? "Birds Lost" : "Growing Area / Location"}
+          </Text>
+          <View style={styles.field}>
+            <MaterialCommunityIcons
+              name={loss ? "bird" : "map-marker-outline"}
+              size={18}
+              color={ORANGE}
+            />
+            <TextInput
+              value={value}
+              onChangeText={setValue}
+              keyboardType={loss ? "number-pad" : "default"}
+              selectionColor={ORANGE}
+              style={styles.fieldInput}
+            />
+          </View>
+          {loss && (
+            <>
+              <Text style={styles.fieldLabel}>Date</Text>
+              <View style={styles.field}>
+                <MaterialCommunityIcons
+                  name="calendar-outline"
+                  size={18}
+                  color={ORANGE}
+                />
+                <TextInput
+                  value={date}
+                  onChangeText={setDate}
+                  selectionColor={ORANGE}
+                  style={styles.fieldInput}
+                />
+              </View>
+              <Text style={styles.fieldLabel}>
+                Note <Text style={styles.muted}>(optional)</Text>
+              </Text>
+              <TextInput
+                value={note}
+                onChangeText={setNote}
+                multiline
+                placeholder="Reason or observation"
+                placeholderTextColor="#68777c"
+                selectionColor={ORANGE}
+                style={styles.noteInput}
+              />
+            </>
+          )}
+          <View style={styles.modalActions}>
+            <Pressable onPress={onClose} style={styles.cancelButton}>
+              <Text style={styles.cancelText}>Cancel</Text>
+            </Pressable>
+            <Pressable onPress={save} style={styles.saveButton}>
+              <Text style={styles.saveText}>
+                {loss ? "Save Loss" : "Update Area"}
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
 }
 
 function ConfirmModal({ visible, batch, currentBirds, onClose, onConfirm }) {
-  return <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}><View style={styles.modalBackdrop}><Pressable style={StyleSheet.absoluteFill} onPress={onClose} /><View style={styles.modalCard}><View style={styles.modalHeader}><View><Text style={styles.eyebrow}>GROWING COMPLETE</Text><Text style={styles.modalTitle}>Move to Ranging</Text></View><Pressable onPress={onClose} style={styles.closeButton}><Ionicons name="close" size={20} color="#dfe5e7" /></Pressable></View><View style={styles.transition}><View style={styles.transitionIcon}><MaterialCommunityIcons name="bird" size={25} color={ORANGE} /></View><Ionicons name="arrow-forward" size={23} color={ORANGE} /><View style={[styles.transitionIcon, styles.transitionActive]}><MaterialCommunityIcons name="weather-sunny" size={25} color="#fff" /></View></View><Text style={styles.confirmTitle}>{currentBirds} birds are ready</Text><Text style={styles.confirmCopy}>This completes {batch.id} and creates a ranging batch with its source groups, bloodlines, and markings preserved.</Text><View style={styles.modalActions}><Pressable onPress={onClose} style={styles.cancelButton}><Text style={styles.cancelText}>Cancel</Text></Pressable><Pressable onPress={onConfirm} style={styles.saveButton}><Text style={styles.saveText}>Confirm Move</Text></Pressable></View></View></View></Modal>;
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <View style={styles.modalBackdrop}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+        <View style={styles.modalCard}>
+          <View style={styles.modalHeader}>
+            <View>
+              <Text style={styles.eyebrow}>GROWING COMPLETE</Text>
+              <Text style={styles.modalTitle}>Move to Ranging</Text>
+            </View>
+            <Pressable onPress={onClose} style={styles.closeButton}>
+              <Ionicons name="close" size={20} color="#dfe5e7" />
+            </Pressable>
+          </View>
+          <View style={styles.transition}>
+            <View style={styles.transitionIcon}>
+              <MaterialCommunityIcons name="bird" size={25} color={ORANGE} />
+            </View>
+            <Ionicons name="arrow-forward" size={23} color={ORANGE} />
+            <View style={[styles.transitionIcon, styles.transitionActive]}>
+              <MaterialCommunityIcons
+                name="weather-sunny"
+                size={25}
+                color="#fff"
+              />
+            </View>
+          </View>
+          <Text style={styles.confirmTitle}>
+            {currentBirds} birds are ready
+          </Text>
+          <Text style={styles.confirmCopy}>
+            This completes {batch.id} and creates a ranging batch with its
+            source groups, bloodlines, and markings preserved.
+          </Text>
+          <View style={styles.modalActions}>
+            <Pressable onPress={onClose} style={styles.cancelButton}>
+              <Text style={styles.cancelText}>Cancel</Text>
+            </Pressable>
+            <Pressable onPress={onConfirm} style={styles.saveButton}>
+              <Text style={styles.saveText}>Confirm Move</Text>
+            </Pressable>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+function SeparationModal({ visible, batch, currentBirds, options, initialValues, onClose, onConfirm }) {
+  const emptyValues = () => Object.fromEntries(options.map((option) => [option, initialValues?.[option] ? String(initialValues[option]) : ""]));
+  const [values, setValues] = useState(emptyValues);
+  useEffect(() => {
+    if (visible) setValues(emptyValues());
+  }, [visible, options, initialValues]);
+  const quantityFor = (option) => Number.parseInt(values[option], 10) || 0;
+  const allocated = options.reduce((sum, option) => sum + quantityFor(option), 0);
+  const remaining = currentBirds - allocated;
+  const update = (option, value) => {
+    const digits = value.replace(/[^0-9]/g, "");
+    const quantity = digits ? Math.min(Number.parseInt(digits, 10), currentBirds) : "";
+    setValues((current) => ({ ...current, [option]: String(quantity) }));
+  };
+  const step = (option, amount) => {
+    const quantity = Math.max(0, Math.min(currentBirds, quantityFor(option) + amount));
+    setValues((current) => ({ ...current, [option]: quantity ? String(quantity) : "" }));
+  };
+  const result = () => Object.fromEntries(options.map((option) => [option, quantityFor(option)]));
+  return <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}><View style={styles.modalBackdrop}><Pressable style={StyleSheet.absoluteFill} onPress={onClose} /><View style={styles.modalCard}><View style={styles.modalHeader}><View><Text style={styles.eyebrow}>{batch.id}</Text><Text style={styles.modalTitle}>Separate Birds</Text></View><Pressable accessibilityLabel="Close" onPress={onClose} style={styles.closeButton}><Ionicons name="close" size={20} color="#dfe5e7" /></Pressable></View><Text style={styles.separationTitle}>{currentBirds} birds to separate</Text><Text style={styles.confirmCopy}>Record how many birds belong in each configured group.</Text><View style={styles.allocationSummary}><View><Text style={styles.allocationValue}>{allocated}</Text><Text style={styles.allocationLabel}>Allocated</Text></View><View style={styles.allocationDivider} /><View><Text style={[styles.allocationValue,remaining < 0 && styles.allocationError]}>{remaining}</Text><Text style={styles.allocationLabel}>Remaining</Text></View><View style={styles.allocationDivider} /><View><Text style={styles.allocationValue}>{currentBirds}</Text><Text style={styles.allocationLabel}>Total Birds</Text></View></View><View style={styles.separationList}>{options.map((option,index) => <View key={option} style={[styles.separationRow,index < options.length-1 && styles.separationDivider]}><Text style={styles.separationName}>{option}</Text><View style={styles.quantityControl}><Pressable accessibilityLabel={`Remove one ${option} bird`} onPress={() => step(option,-1)} style={styles.quantityButton}><Ionicons name="remove" size={16} color="#aab4b7" /></Pressable><TextInput accessibilityLabel={`${option} bird quantity`} value={values[option]} onChangeText={(value) => update(option,value)} keyboardType="number-pad" selectTextOnFocus placeholder="0" placeholderTextColor="#68777c" selectionColor={ORANGE} style={styles.quantityInput} /><Pressable accessibilityLabel={`Add one ${option} bird`} onPress={() => step(option,1)} style={styles.quantityButton}><Ionicons name="add" size={16} color={ORANGE} /></Pressable></View></View>)}</View><View style={styles.modalActions}><Pressable onPress={onClose} style={styles.cancelButton}><Text style={styles.cancelText}>Cancel</Text></Pressable><Pressable disabled={remaining !== 0} onPress={() => onConfirm(result())} style={[styles.saveButton,remaining !== 0 && styles.saveButtonDisabled]}><Text style={styles.saveText}>Save Separation</Text></Pressable></View></View></View></Modal>;
 }
 
 function Snapshot({ icon, value, label, compact }) {
-  return <View style={[styles.snapshot, compact && styles.snapshotCompact]}><MaterialCommunityIcons name={icon} size={21} color={ORANGE} /><Text numberOfLines={1} adjustsFontSizeToFit style={styles.snapshotValue}>{value}</Text><Text style={styles.snapshotLabel}>{label}</Text></View>;
+  return (
+    <View style={[styles.snapshot, compact && styles.snapshotCompact]}>
+      <MaterialCommunityIcons name={icon} size={21} color={ORANGE} />
+      <Text numberOfLines={1} adjustsFontSizeToFit style={styles.snapshotValue}>
+        {value}
+      </Text>
+      <Text style={styles.snapshotLabel}>{label}</Text>
+    </View>
+  );
 }
 
-export default function GrowingBatchDetailScreen({ batchId, losses = [], completed = {}, locationOverride, readyDay = 120, scheduledTasks = [], onBack, onSaveLoss, onChangeLocation, onCompleteTask, onMoveToRanging }) {
+export default function GrowingBatchDetailScreen({
+  batchId,
+  losses = [],
+  completed = {},
+  locationOverride,
+  readyDay = 120,
+  scheduledTasks = [],
+  separationOptions = ["Male", "Female"],
+  separationRecord,
+  onBack,
+  onSaveLoss,
+  onChangeLocation,
+  onCompleteTask,
+  onSaveSeparation,
+  onMoveToRanging,
+}) {
   const { width } = useWindowDimensions();
   const compact = width < 480;
-  const batch = useMemo(() => GROWING_BATCHES.find((item) => item.id === batchId) || GROWING_BATCHES[0], [batchId]);
+  const batch = useMemo(
+    () =>
+      GROWING_BATCHES.find((item) => item.id === batchId) || GROWING_BATCHES[0],
+    [batchId],
+  );
   const currentGrowingDay = daysSince(batch.growingStartDate);
   const [previewDay, setPreviewDay] = useState(currentGrowingDay);
   const [modal, setModal] = useState(null);
@@ -68,47 +281,964 @@ export default function GrowingBatchDetailScreen({ batchId, losses = [], complet
     const first = Math.max(1, Math.round(readyDays / 3));
     const second = Math.max(first + 1, Math.round((readyDays * 2) / 3));
     return [
-      { day: 0, label: 'Started', icon: 'bird' },
-      { day: first, label: `Day ${first}`, icon: 'calendar-blank-outline' },
-      { day: second, label: `Day ${second}`, icon: 'calendar-clock-outline' },
-      { day: readyDays, label: `Ready Day ${readyDay}`, icon: 'arrow-right-circle-outline' },
+      { day: 0, label: "Started", icon: "bird" },
+      { day: first, label: `Day ${first}`, icon: "calendar-blank-outline" },
+      { day: second, label: `Day ${second}`, icon: "calendar-clock-outline" },
+      {
+        day: readyDays,
+        label: `Ready Day ${readyDay}`,
+        icon: "arrow-right-circle-outline",
+      },
     ];
   }, [readyDay, readyDays]);
   const sourceBirds = SOURCES.map((source, index) => ({
     ...source,
-    birds: index === SOURCES.length - 1
-      ? currentBirds - SOURCES.slice(0, -1).reduce((sum, item) => sum + Math.round((item.birds / 38) * currentBirds), 0)
-      : Math.round((source.birds / 38) * currentBirds),
+    birds:
+      index === SOURCES.length - 1
+        ? currentBirds -
+          SOURCES.slice(0, -1).reduce(
+            (sum, item) => sum + Math.round((item.birds / 38) * currentBirds),
+            0,
+          )
+        : Math.round((source.birds / 38) * currentBirds),
   }));
   const ready = previewDay >= readyDays;
   const previewAgeDay = batch.ageDays + (previewDay - currentGrowingDay);
-  const enabledTasks = scheduledTasks.filter((task) => task.enabled).sort((a, b) => a.day - b.day);
+  const enabledTasks = scheduledTasks
+    .filter((task) => task.enabled)
+    .sort((a, b) => a.day - b.day);
   const nextTask = enabledTasks.find((task) => !completed[task.id]);
-  const taskTiming = nextTask ? previewAgeDay > nextTask.day ? `${previewAgeDay - nextTask.day} days overdue` : previewAgeDay === nextTask.day ? 'Due today' : `Due in ${nextTask.day - previewAgeDay} days` : '';
-  const nextTaskDate = nextTask ? dateAfterDays(batch.hatchDate, nextTask.day) : '';
-  const stageIndex = stages.reduce((found, stage, index) => previewDay >= stage.day ? index : found, 0);
-  const progress = Math.max(0, Math.min(100, Math.round((previewDay / Math.max(1, readyDays)) * 100)));
-  const displayAge = previewDay >= readyDays ? `Day ${readyDay} in Growing` : `Day ${previewDay} in Growing`;
-  const action = ready
-    ? { icon: 'arrow-right-circle-outline', title: 'Ready for Ranging', detail: `Due ${readyDate} - farmer confirmation required`, button: 'Move to Ranging', press: () => setModal('ranging') }
-    : nextTask
-      ? { icon: nextTask.name.toLowerCase().includes('vaccine') || nextTask.name.toLowerCase().includes('health') ? 'medical-bag' : 'clipboard-check-outline', title: nextTask.name, detail: `Due ${nextTaskDate} - ${taskTiming}`, button: 'Mark Completed', press: () => onCompleteTask(nextTask.id) }
-      : { icon: 'check-decagram-outline', title: 'Schedule Complete', detail: 'All configured growing tasks are completed.', button: 'Completed', press: () => {} };
-  const actionStatus = ready ? 'Ready' : !nextTask ? 'Completed' : previewAgeDay > nextTask.day ? 'Overdue' : previewAgeDay === nextTask.day ? 'Due Today' : 'Upcoming';
-  const actionTone = actionStatus === 'Overdue' ? '#ef7568' : actionStatus === 'Completed' ? '#6ee58c' : actionStatus === 'Ready' ? '#ffba56' : ORANGE;
+  const canMoveToRanging = ready && !nextTask;
+  const taskTiming = nextTask
+    ? previewAgeDay > nextTask.day
+      ? `${previewAgeDay - nextTask.day} days overdue`
+      : previewAgeDay === nextTask.day
+        ? "Due today"
+        : `Due in ${nextTask.day - previewAgeDay} days`
+    : "";
+  const nextTaskDate = nextTask
+    ? dateAfterDays(batch.hatchDate, nextTask.day)
+    : "";
+  const stageIndex = stages.reduce(
+    (found, stage, index) => (previewDay >= stage.day ? index : found),
+    0,
+  );
+  const progress = Math.max(
+    0,
+    Math.min(100, Math.round((previewDay / Math.max(1, readyDays)) * 100)),
+  );
+  const displayAge =
+    previewDay >= readyDays
+      ? `Day ${readyDay} in Growing`
+      : `Day ${previewDay} in Growing`;
+  const action = nextTask
+    ? {
+        icon:
+          nextTask.id === "grow-sex-separation"
+            ? "gender-male-female"
+            : nextTask.name.toLowerCase().includes("vaccine") ||
+                nextTask.name.toLowerCase().includes("health")
+              ? "medical-bag"
+              : "clipboard-check-outline",
+        title: nextTask.name,
+        detail: `Due ${nextTaskDate} - ${taskTiming}`,
+        button:
+          nextTask.id === "grow-sex-separation"
+            ? "Record Separation"
+            : "Mark Completed",
+        press: () =>
+          nextTask.id === "grow-sex-separation"
+            ? setModal("separation")
+            : onCompleteTask(nextTask.id),
+      }
+    : ready
+      ? {
+          icon: "arrow-right-circle-outline",
+          title: "Ready for Ranging",
+          detail: `Due ${readyDate} - all required tasks completed`,
+          button: "Move to Ranging",
+          press: () => setModal("ranging"),
+        }
+      : {
+          icon: "check-decagram-outline",
+          title: "Schedule Complete",
+          detail: `All tasks completed - ranging begins ${readyDate}`,
+          button: "Completed",
+          press: () => {},
+        };
+  const actionStatus = canMoveToRanging
+    ? "Ready"
+    : !nextTask
+      ? "Completed"
+      : previewAgeDay > nextTask.day
+        ? "Overdue"
+        : previewAgeDay === nextTask.day
+          ? "Due Today"
+          : "Upcoming";
+  const actionTone =
+    actionStatus === "Overdue"
+      ? "#ef7568"
+      : actionStatus === "Completed"
+        ? "#6ee58c"
+        : actionStatus === "Ready"
+          ? "#ffba56"
+          : ORANGE;
 
-  return <View style={styles.screen}><StatusBar style="light" translucent backgroundColor="transparent" /><ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.pageWrap}><View style={styles.page}><View style={styles.hero}><Image source={HERO_IMAGE} style={StyleSheet.absoluteFill} contentFit="cover" contentPosition="center" /><LinearGradient colors={['rgba(2,7,9,.1)', 'rgba(2,7,9,.2)', '#03090c']} style={StyleSheet.absoluteFill} /><SafeAreaView edges={['top']} style={styles.heroSafe}><View style={styles.header}><Pressable onPress={onBack} style={styles.backButton}><Ionicons name="arrow-back" size={21} color="#fff" /></Pressable><Text style={styles.headerTitle}>Growing Batch</Text></View><View style={styles.heroCopy}><Text style={styles.heroTitle}>{batch.id}</Text><Text style={styles.heroDetail}>{batch.title} - {currentBirds} birds in {location}</Text></View></SafeAreaView></View><View style={[styles.content, compact && styles.contentCompact]}>
-    <View style={styles.identity}><View><Text style={styles.eyebrow}>CURRENT BATCH</Text><Text style={styles.identityTitle}>{currentBirds} birds</Text><Text style={styles.identityMeta}>{batch.age} old - {location}</Text></View><View style={styles.status}><View style={styles.statusDot} /><Text style={styles.statusText}>{ready ? 'Ready for Ranging' : 'Growing'}</Text></View></View>
-    <Text style={styles.sectionTitle}>Growing Progress</Text><View style={styles.progressCard}><View style={styles.progressTop}><View><Text style={styles.progressAge}>{displayAge}</Text><Text style={styles.progressMessage}>{ready ? 'Ready for the next farm stage' : `${progress}% of the Growing period complete`}</Text></View><View><Text style={styles.nextLabel}>READY FOR RANGING</Text><Text style={styles.nextValue}>{readyDate}</Text></View></View><View style={styles.progressTrack}><View style={[styles.progressFill, { width: `${progress}%` }]} /></View><View style={styles.timeline}><View style={styles.timelineLine} />{stages.map((stage, index) => { const active = index === stageIndex; return <Pressable key={`${stage.day}-${stage.label}`} onPress={() => setPreviewDay(stage.day)} style={styles.timelineItem}><View style={[styles.timelineDot, index < stageIndex && styles.timelineComplete, active && styles.timelineActive]}><MaterialCommunityIcons name={stage.icon} size={active ? 17 : 14} color={index <= stageIndex ? ORANGE : '#68767b'} /></View><Text numberOfLines={2} style={[styles.timelineLabel, active && styles.timelineLabelActive]}>{stage.label}</Text></Pressable>; })}</View></View>
-    <View style={styles.origin}><View><Text style={styles.infoLabel}>Growing Started</Text><Text style={styles.infoValue}>{dateAfterDays(batch.growingStartDate, 0)}</Text></View><View style={styles.originDivider} /><View><Text style={styles.infoLabel}>Ready Date</Text><Text style={styles.infoValue}>{readyDate}</Text></View><View style={styles.originDivider} /><View><Text style={styles.infoLabel}>Brooding Batch</Text><Text style={styles.infoValue}>{batch.broodingBatch}</Text></View></View>
-    <Text style={styles.sectionTitle}>Batch Snapshot</Text><View style={styles.snapshotGrid}><Snapshot icon="bird" value={currentBirds} label="Current Birds" compact={compact} /><Snapshot icon="source-branch" value={SOURCES.length} label="Source Groups" compact={compact} /><Snapshot icon="map-marker-outline" value={location} label="Growing Area" compact={compact} /><Snapshot icon="progress-check" value={ready ? 'Ready' : 'Growing'} label="Status" compact={compact} /></View>
-    <Text style={styles.sectionTitle}>Next Action</Text><View style={styles.action}><View style={styles.actionIcon}><MaterialCommunityIcons name={action.icon} size={24} color={ORANGE} /></View><View style={styles.actionCopy}><Text style={styles.actionTitle}>{action.title}</Text><Text style={styles.actionDetail}>{action.detail}</Text></View><View style={styles.actionControls}><View style={[styles.actionStatus,{borderColor:`${actionTone}66`,backgroundColor:`${actionTone}18`}]}><View style={[styles.actionStatusDot,{backgroundColor:actionTone}]} /><Text style={[styles.actionStatusText,{color:actionTone}]}>{actionStatus}</Text></View><Pressable onPress={action.press} disabled={!ready && !nextTask} style={[styles.actionButton, !ready && !nextTask && styles.buttonDone]}><Text style={styles.actionButtonText}>{action.button}</Text></Pressable></View></View>
-    <Text style={styles.sectionTitle}>Source Breakdown</Text><View style={styles.sourceCard}>{sourceBirds.map((source, index) => <View key={source.name} style={[styles.sourceRow, index < sourceBirds.length - 1 && styles.sourceDivider]}><View style={styles.sourceIcon}><MaterialCommunityIcons name="source-branch" size={18} color={ORANGE} /></View><View style={styles.sourceCopy}><Text style={styles.sourceName}>{source.name}</Text><Text style={styles.sourceMeta}>{source.cross}{source.marking ? ` - ${source.marking} marking` : ''}</Text></View><Text style={styles.sourceBirds}>{source.birds} birds</Text></View>)}</View>
-    <Text style={styles.sectionTitle}>Batch Summary</Text><View style={styles.summary}><View style={styles.summaryItem}><Text style={styles.summaryValue}>{batch.startingBirds}</Text><Text style={styles.summaryLabel}>Starting Birds</Text></View><View style={styles.summaryDivider} /><View style={styles.summaryItem}><Text style={styles.summaryValue}>{currentBirds}</Text><Text style={styles.summaryLabel}>Current Birds</Text></View><View style={styles.summaryDivider} /><View style={styles.summaryItem}><Text style={[styles.summaryValue, styles.lossValue]}>{totalLosses}</Text><Text style={styles.summaryLabel}>Total Losses</Text></View></View>
-    <Text style={styles.sectionTitle}>Batch Management</Text><Pressable onPress={() => setModal('loss')} style={styles.lossButton}><MaterialCommunityIcons name="minus-circle-outline" size={20} color={ORANGE} /><Text style={styles.lossButtonText}>Record Loss</Text></Pressable><View style={styles.secondaryRow}><Pressable onPress={() => setModal('location')} style={styles.secondaryButton}><MaterialCommunityIcons name="map-marker-outline" size={18} color={ORANGE} /><Text style={styles.secondaryText}>Change Growing Area</Text></Pressable><Pressable onPress={() => Alert.alert('Close Batch', `Close ${batch.id}?`)} style={styles.secondaryButton}><MaterialCommunityIcons name="close-circle-outline" size={18} color="#ef7568" /><Text style={[styles.secondaryText, styles.closeText]}>Close Batch</Text></Pressable></View>
-  </View></View></ScrollView><FieldModal key={`${modal}-${location}`} visible={modal === 'loss' || modal === 'location'} type={modal} batch={{ ...batch, location }} currentBirds={currentBirds} onClose={() => setModal(null)} onSave={(value) => { modal === 'loss' ? onSaveLoss(value) : onChangeLocation(value); setModal(null); }} /><ConfirmModal visible={modal === 'ranging'} batch={batch} currentBirds={currentBirds} onClose={() => setModal(null)} onConfirm={() => { setModal(null); onMoveToRanging({ ...batch, id: batch.id.replace(/^GR-/, 'RG-'), birds: currentBirds, location, sources: sourceBirds, growingBatch: batch.id, rangingStartDate: new Date().toISOString(), lossHistory: losses, healthSchedule: scheduledTasks, healthCompletions: completed }); }} /></View>;
+  return (
+    <View style={styles.screen}>
+      <StatusBar style="light" translucent backgroundColor="transparent" />
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.pageWrap}
+      >
+        <View style={styles.page}>
+          <View style={styles.hero}>
+            <Image
+              source={HERO_IMAGE}
+              style={StyleSheet.absoluteFill}
+              contentFit="cover"
+              contentPosition="center"
+            />
+            <LinearGradient
+              colors={["rgba(2,7,9,.1)", "rgba(2,7,9,.2)", "#03090c"]}
+              style={StyleSheet.absoluteFill}
+            />
+            <SafeAreaView edges={["top"]} style={styles.heroSafe}>
+              <View style={styles.header}>
+                <Pressable onPress={onBack} style={styles.backButton}>
+                  <Ionicons name="arrow-back" size={21} color="#fff" />
+                </Pressable>
+                <Text style={styles.headerTitle}>Growing Batch</Text>
+              </View>
+              <View style={styles.heroCopy}>
+                <Text style={styles.heroTitle}>{batch.id}</Text>
+                <Text style={styles.heroDetail}>
+                  {batch.title} - {currentBirds} birds in {location}
+                </Text>
+              </View>
+            </SafeAreaView>
+          </View>
+          <View style={[styles.content, compact && styles.contentCompact]}>
+            <View style={styles.identity}>
+              <View>
+                <Text style={styles.eyebrow}>CURRENT BATCH</Text>
+                <Text style={styles.identityTitle}>{currentBirds} birds</Text>
+                <Text style={styles.identityMeta}>
+                  {batch.age} old - {location}
+                </Text>
+              </View>
+              <View style={styles.status}>
+                <View style={styles.statusDot} />
+                <Text style={styles.statusText}>
+                  {ready ? "Ready for Ranging" : "Growing"}
+                </Text>
+              </View>
+            </View>
+            <Text style={styles.sectionTitle}>Growing Progress</Text>
+            <View style={styles.progressCard}>
+              <View style={styles.progressTop}>
+                <View>
+                  <Text style={styles.progressAge}>{displayAge}</Text>
+                  <Text style={styles.progressMessage}>
+                    {ready
+                      ? "Ready for the next farm stage"
+                      : `${progress}% of the Growing period complete`}
+                  </Text>
+                </View>
+                <View>
+                  <Text style={styles.nextLabel}>READY FOR RANGING</Text>
+                  <Text style={styles.nextValue}>{readyDate}</Text>
+                </View>
+              </View>
+              <View style={styles.progressTrack}>
+                <View
+                  style={[styles.progressFill, { width: `${progress}%` }]}
+                />
+              </View>
+              <View style={styles.timeline}>
+                <View style={styles.timelineLine} />
+                {stages.map((stage, index) => {
+                  const active = index === stageIndex;
+                  return (
+                    <Pressable
+                      key={`${stage.day}-${stage.label}`}
+                      onPress={() => setPreviewDay(stage.day)}
+                      style={styles.timelineItem}
+                    >
+                      <View
+                        style={[
+                          styles.timelineDot,
+                          index < stageIndex && styles.timelineComplete,
+                          active && styles.timelineActive,
+                        ]}
+                      >
+                        <MaterialCommunityIcons
+                          name={stage.icon}
+                          size={active ? 17 : 14}
+                          color={index <= stageIndex ? ORANGE : "#68767b"}
+                        />
+                      </View>
+                      <Text
+                        numberOfLines={2}
+                        style={[
+                          styles.timelineLabel,
+                          active && styles.timelineLabelActive,
+                        ]}
+                      >
+                        {stage.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+            <View style={styles.origin}>
+              <View>
+                <Text style={styles.infoLabel}>Growing Started</Text>
+                <Text style={styles.infoValue}>
+                  {dateAfterDays(batch.growingStartDate, 0)}
+                </Text>
+              </View>
+              <View style={styles.originDivider} />
+              <View>
+                <Text style={styles.infoLabel}>Ready Date</Text>
+                <Text style={styles.infoValue}>{readyDate}</Text>
+              </View>
+              <View style={styles.originDivider} />
+              <View>
+                <Text style={styles.infoLabel}>Brooding Batch</Text>
+                <Text style={styles.infoValue}>{batch.broodingBatch}</Text>
+              </View>
+            </View>
+            <Text style={styles.sectionTitle}>Batch Snapshot</Text>
+            <View style={styles.snapshotGrid}>
+              <Snapshot
+                icon="bird"
+                value={currentBirds}
+                label="Current Birds"
+                compact={compact}
+              />
+              <Snapshot
+                icon="source-branch"
+                value={SOURCES.length}
+                label="Source Groups"
+                compact={compact}
+              />
+              <Snapshot
+                icon="map-marker-outline"
+                value={location}
+                label="Growing Area"
+                compact={compact}
+              />
+              <Snapshot
+                icon="progress-check"
+                value={ready ? "Ready" : "Growing"}
+                label="Status"
+                compact={compact}
+              />
+            </View>
+            <Text style={styles.sectionTitle}>Next Action</Text>
+            <View style={styles.action}>
+              <View style={styles.actionIcon}>
+                <MaterialCommunityIcons
+                  name={action.icon}
+                  size={24}
+                  color={ORANGE}
+                />
+              </View>
+              <View style={styles.actionCopy}>
+                <Text style={styles.actionTitle}>{action.title}</Text>
+                <Text style={styles.actionDetail}>{action.detail}</Text>
+              </View>
+              <View style={styles.actionControls}>
+                <View
+                  style={[
+                    styles.actionStatus,
+                    {
+                      borderColor: `${actionTone}66`,
+                      backgroundColor: `${actionTone}18`,
+                    },
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.actionStatusDot,
+                      { backgroundColor: actionTone },
+                    ]}
+                  />
+                  <Text
+                    style={[styles.actionStatusText, { color: actionTone }]}
+                  >
+                    {actionStatus}
+                  </Text>
+                </View>
+                <Pressable
+                  onPress={action.press}
+                  disabled={!ready && !nextTask}
+                  style={[
+                    styles.actionButton,
+                    !ready && !nextTask && styles.buttonDone,
+                  ]}
+                >
+                  <Text style={styles.actionButtonText}>{action.button}</Text>
+                </Pressable>
+              </View>
+            </View>
+            <Text style={styles.sectionTitle}>Source Breakdown</Text>
+            <View style={styles.sourceCard}>
+              {sourceBirds.map((source, index) => (
+                <View
+                  key={source.name}
+                  style={[
+                    styles.sourceRow,
+                    index < sourceBirds.length - 1 && styles.sourceDivider,
+                  ]}
+                >
+                  <View style={styles.sourceIcon}>
+                    <MaterialCommunityIcons
+                      name="source-branch"
+                      size={18}
+                      color={ORANGE}
+                    />
+                  </View>
+                  <View style={styles.sourceCopy}>
+                    <Text style={styles.sourceName}>{source.name}</Text>
+                    <Text style={styles.sourceMeta}>
+                      {source.cross}
+                      {source.marking ? ` - ${source.marking} marking` : ""}
+                    </Text>
+                  </View>
+                  <Text style={styles.sourceBirds}>{source.birds} birds</Text>
+                </View>
+              ))}
+            </View>
+            <Text style={styles.sectionTitle}>Batch Summary</Text>
+            <View style={styles.summary}>
+              <View style={styles.summaryItem}>
+                <Text style={styles.summaryValue}>{batch.startingBirds}</Text>
+                <Text style={styles.summaryLabel}>Starting Birds</Text>
+              </View>
+              <View style={styles.summaryDivider} />
+              <View style={styles.summaryItem}>
+                <Text style={styles.summaryValue}>{currentBirds}</Text>
+                <Text style={styles.summaryLabel}>Current Birds</Text>
+              </View>
+              <View style={styles.summaryDivider} />
+              <View style={styles.summaryItem}>
+                <Text style={[styles.summaryValue, styles.lossValue]}>
+                  {totalLosses}
+                </Text>
+                <Text style={styles.summaryLabel}>Total Losses</Text>
+              </View>
+            </View>
+            <Text style={styles.sectionTitle}>Batch Management</Text>
+            <Pressable
+              onPress={() => setModal("loss")}
+              style={styles.lossButton}
+            >
+              <MaterialCommunityIcons
+                name="minus-circle-outline"
+                size={20}
+                color={ORANGE}
+              />
+              <Text style={styles.lossButtonText}>Record Loss</Text>
+            </Pressable>
+            <View style={styles.secondaryRow}>
+              <Pressable
+                onPress={() => setModal("location")}
+                style={styles.secondaryButton}
+              >
+                <MaterialCommunityIcons
+                  name="map-marker-outline"
+                  size={18}
+                  color={ORANGE}
+                />
+                <Text style={styles.secondaryText}>Change Growing Area</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => Alert.alert("Close Batch", `Close ${batch.id}?`)}
+                style={styles.secondaryButton}
+              >
+                <MaterialCommunityIcons
+                  name="close-circle-outline"
+                  size={18}
+                  color="#ef7568"
+                />
+                <Text style={[styles.secondaryText, styles.closeText]}>
+                  Close Batch
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </ScrollView>
+      <FieldModal
+        key={`${modal}-${location}`}
+        visible={modal === "loss" || modal === "location"}
+        type={modal}
+        batch={{ ...batch, location }}
+        currentBirds={currentBirds}
+        onClose={() => setModal(null)}
+        onSave={(value) => {
+          modal === "loss" ? onSaveLoss(value) : onChangeLocation(value);
+          setModal(null);
+        }}
+      />
+      <SeparationModal
+        visible={modal === "separation"}
+        batch={batch}
+        currentBirds={currentBirds}
+        options={separationOptions}
+        initialValues={separationRecord}
+        onClose={() => setModal(null)}
+        onConfirm={(record) => {
+          onSaveSeparation(record);
+          onCompleteTask("grow-sex-separation");
+          setModal(null);
+        }}
+      />
+      <ConfirmModal
+        visible={modal === "ranging"}
+        batch={batch}
+        currentBirds={currentBirds}
+        onClose={() => setModal(null)}
+        onConfirm={() => {
+          setModal(null);
+          onMoveToRanging({
+            ...batch,
+            id: batch.id.replace(/^GR-/, "RG-"),
+            birds: currentBirds,
+            location,
+            sources: sourceBirds,
+            growingBatch: batch.id,
+            rangingStartDate: new Date().toISOString(),
+            lossHistory: losses,
+            healthSchedule: scheduledTasks,
+            healthCompletions: completed,
+            sexSeparation: separationRecord,
+          });
+        }}
+      />
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
-  screen:{flex:1,backgroundColor:'#020709'},pageWrap:{flexGrow:1,alignItems:'center',backgroundColor:'#020709'},page:{width:'100%',maxWidth:720},hero:{height:248,overflow:'hidden'},heroSafe:{flex:1},header:{flexDirection:'row',alignItems:'center',gap:10,paddingHorizontal:16,paddingTop:Platform.OS==='web'?10:3},backButton:{width:40,height:40,borderRadius:20,borderWidth:1,borderColor:'rgba(190,204,208,.35)',backgroundColor:'rgba(2,8,11,.65)',alignItems:'center',justifyContent:'center'},headerTitle:{color:'#f3f5f6',fontSize:15,fontWeight:'800'},heroCopy:{marginTop:'auto',padding:20},heroTitle:{color:'#fff',fontSize:34,lineHeight:40,fontWeight:'800',fontFamily:Platform.select({ios:'Georgia',android:'serif',web:'Georgia'})},heroDetail:{marginTop:4,color:'#c4cccf',fontSize:11},content:{padding:16,paddingBottom:30},contentCompact:{paddingHorizontal:10},identity:{minHeight:82,borderRadius:7,borderWidth:1,borderColor:'#23343b',backgroundColor:'#091317',padding:13,flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:10},eyebrow:{color:ORANGE,fontSize:7,fontWeight:'800'},identityTitle:{marginTop:5,color:'#fff',fontSize:20,fontWeight:'800'},identityMeta:{marginTop:3,color:'#7c898e',fontSize:9},status:{minHeight:24,maxWidth:130,paddingHorizontal:9,borderRadius:12,backgroundColor:'rgba(30,112,58,.24)',flexDirection:'row',alignItems:'center',gap:5},statusDot:{width:5,height:5,borderRadius:3,backgroundColor:'#6ee58c'},statusText:{flexShrink:1,color:'#6ee58c',fontSize:8,fontWeight:'800'},sectionTitle:{marginTop:20,marginBottom:8,color:'#e8edef',fontSize:15,fontWeight:'800'},progressCard:{borderRadius:7,borderWidth:1,borderColor:'#26373e',backgroundColor:'#091317',overflow:'hidden'},progressTop:{minHeight:112,padding:16,flexDirection:'row',alignItems:'center',justifyContent:'space-between'},progressAge:{color:'#fff',fontSize:24,fontWeight:'800'},progressMessage:{marginTop:5,color:'#849196',fontSize:9},nextLabel:{color:'#6f7d82',fontSize:7,textAlign:'right'},nextValue:{marginTop:4,color:ORANGE,fontSize:13,fontWeight:'800',textAlign:'right'},progressTrack:{height:5,marginHorizontal:16,borderRadius:3,backgroundColor:'#1d2c31',overflow:'hidden'},progressFill:{height:5,backgroundColor:ORANGE},timeline:{minHeight:94,marginTop:15,borderTopWidth:1,borderTopColor:'#1d2d33',paddingTop:13,paddingHorizontal:6,flexDirection:'row',position:'relative'},timelineLine:{position:'absolute',top:31,left:'12%',right:'12%',height:2,backgroundColor:'#26363c'},timelineItem:{flex:1,alignItems:'center'},timelineDot:{width:36,height:36,borderRadius:18,borderWidth:1,borderColor:'#34444a',backgroundColor:'#0d181c',alignItems:'center',justifyContent:'center'},timelineComplete:{borderColor:'#8a4b0f'},timelineActive:{borderWidth:2,borderColor:ORANGE,backgroundColor:'#21170e'},timelineLabel:{minHeight:20,marginTop:6,color:'#748187',fontSize:7,lineHeight:9,textAlign:'center'},timelineLabelActive:{color:ORANGE,fontWeight:'800'},origin:{minHeight:60,marginTop:8,borderRadius:7,borderWidth:1,borderColor:'#1d2d33',backgroundColor:'#081216',flexDirection:'row',alignItems:'center',justifyContent:'space-around'},originDivider:{width:1,height:30,backgroundColor:'#213139'},infoLabel:{color:'#68767b',fontSize:7,textAlign:'center'},infoValue:{marginTop:4,color:'#e0e6e8',fontSize:9,fontWeight:'700',textAlign:'center'},snapshotGrid:{flexDirection:'row',flexWrap:'wrap',gap:8},snapshot:{flex:1,minWidth:0,height:94,borderRadius:7,borderWidth:1,borderColor:'#23343b',backgroundColor:'#091317',alignItems:'center',justifyContent:'center',paddingHorizontal:6},snapshotCompact:{flexBasis:'48%',height:86},snapshotValue:{width:'100%',marginTop:7,color:'#eef2f3',fontSize:13,fontWeight:'800',textAlign:'center'},snapshotLabel:{marginTop:4,color:'#718086',fontSize:7},action:{minHeight:98,borderRadius:7,borderWidth:1,borderColor:'#74410e',backgroundColor:'rgba(255,121,0,.06)',padding:11,flexDirection:'row',alignItems:'center',gap:10},actionIcon:{width:44,height:44,borderRadius:22,backgroundColor:'rgba(255,121,0,.1)',alignItems:'center',justifyContent:'center'},actionCopy:{flex:1,minWidth:0},actionTitle:{color:'#f0f3f4',fontSize:11,fontWeight:'800'},actionDetail:{marginTop:4,color:'#8d9a9e',fontSize:8,lineHeight:12},actionControls:{width:98,alignItems:'stretch',gap:6},actionStatus:{minHeight:21,maxWidth:98,paddingHorizontal:7,borderRadius:11,borderWidth:1,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:4},actionStatusDot:{width:5,height:5,borderRadius:3},actionStatusText:{flexShrink:1,fontSize:7,fontWeight:'800'},actionButton:{width:'100%',height:38,borderRadius:6,backgroundColor:ORANGE,paddingHorizontal:7,alignItems:'center',justifyContent:'center'},buttonDone:{backgroundColor:'#304038'},actionButtonText:{color:'#fff',fontSize:8,fontWeight:'800',textAlign:'center'},sourceCard:{borderRadius:7,borderWidth:1,borderColor:'#1d2d33',backgroundColor:'#091317',paddingHorizontal:11},sourceRow:{minHeight:67,paddingVertical:10,flexDirection:'row',alignItems:'center',gap:9},sourceDivider:{borderBottomWidth:1,borderBottomColor:'#1b2a30'},sourceIcon:{width:34,height:34,borderRadius:17,backgroundColor:'rgba(255,121,0,.08)',alignItems:'center',justifyContent:'center'},sourceCopy:{flex:1,minWidth:0},sourceName:{color:'#edf1f2',fontSize:11,fontWeight:'800'},sourceMeta:{marginTop:3,color:'#7b898e',fontSize:8},sourceBirds:{color:ORANGE,fontSize:9,fontWeight:'800'},healthCard:{minHeight:76,borderRadius:7,borderWidth:1,borderColor:'#25363d',backgroundColor:'#091317',padding:11,flexDirection:'row',alignItems:'center',gap:10},healthIcon:{width:42,height:42,borderRadius:21,backgroundColor:'rgba(255,121,0,.08)',alignItems:'center',justifyContent:'center'},healthCopy:{flex:1,minWidth:0},healthLabel:{color:'#718086',fontSize:6,fontWeight:'800'},healthTitle:{marginTop:4,color:'#edf1f2',fontSize:11,fontWeight:'800'},healthMeta:{marginTop:3,color:'#7b898e',fontSize:8},healthStatus:{minHeight:24,paddingHorizontal:8,borderRadius:12,backgroundColor:'rgba(151,65,48,.2)',justifyContent:'center'},healthStatusDone:{backgroundColor:'rgba(30,112,58,.24)'},healthStatusText:{color:'#ef8a76',fontSize:7,fontWeight:'800'},healthStatusTextDone:{color:'#6ee58c'},summary:{minHeight:88,borderRadius:7,borderWidth:1,borderColor:'#1d2d33',backgroundColor:'#091317',flexDirection:'row',alignItems:'center'},summaryItem:{flex:1,alignItems:'center'},summaryDivider:{width:1,height:38,backgroundColor:'#213139'},summaryValue:{color:'#fff',fontSize:20,fontWeight:'800'},lossValue:{color:'#ef7568'},summaryLabel:{marginTop:5,color:'#77858a',fontSize:8},lossButton:{height:48,borderRadius:7,borderWidth:1,borderColor:ORANGE,backgroundColor:'rgba(255,121,0,.08)',flexDirection:'row',alignItems:'center',justifyContent:'center',gap:7},lossButtonText:{color:ORANGE,fontSize:10,fontWeight:'800'},secondaryRow:{marginTop:8,flexDirection:'row',gap:8},secondaryButton:{flex:1,minHeight:46,borderRadius:7,borderWidth:1,borderColor:'#27383f',backgroundColor:'#091317',paddingHorizontal:8,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:6},secondaryText:{flexShrink:1,color:'#d9e0e2',fontSize:9,fontWeight:'700',textAlign:'center'},closeText:{color:'#ef7568'},modalBackdrop:{flex:1,backgroundColor:'rgba(0,0,0,.76)',alignItems:'center',justifyContent:'center',padding:16},modalCard:{width:'100%',maxWidth:440,borderRadius:8,borderWidth:1,borderColor:'#2a3b42',backgroundColor:'#081216',padding:16},modalHeader:{flexDirection:'row',alignItems:'center',justifyContent:'space-between'},modalTitle:{marginTop:3,color:'#fff',fontSize:20,fontWeight:'800'},closeButton:{width:36,height:36,borderRadius:18,backgroundColor:'#111d21',alignItems:'center',justifyContent:'center'},batchBand:{marginTop:14,minHeight:48,borderRadius:6,backgroundColor:'rgba(255,121,0,.07)',paddingHorizontal:11,flexDirection:'row',alignItems:'center',justifyContent:'space-between'},bandValue:{color:'#b2bdc0',fontSize:9,fontWeight:'700'},fieldLabel:{marginTop:13,marginBottom:5,color:'#cfd6d8',fontSize:9,fontWeight:'700'},muted:{color:'#6f7d82',fontWeight:'400'},field:{height:42,borderRadius:6,borderWidth:1,borderColor:'#293a41',backgroundColor:'#061014',paddingHorizontal:10,flexDirection:'row',alignItems:'center',gap:7},fieldInput:{flex:1,height:40,padding:0,color:'#e7ebec',fontSize:10,outlineStyle:'none'},noteInput:{height:68,borderRadius:6,borderWidth:1,borderColor:'#293a41',backgroundColor:'#061014',padding:10,color:'#e7ebec',fontSize:10,textAlignVertical:'top',outlineStyle:'none'},modalActions:{marginTop:16,flexDirection:'row',gap:8},cancelButton:{flex:1,height:44,borderRadius:6,borderWidth:1,borderColor:'#2a3b42',alignItems:'center',justifyContent:'center'},cancelText:{color:'#c8d0d2',fontSize:10,fontWeight:'700'},saveButton:{flex:1,height:44,borderRadius:6,backgroundColor:ORANGE,alignItems:'center',justifyContent:'center'},saveText:{color:'#fff',fontSize:10,fontWeight:'800'},transition:{height:82,marginTop:14,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:18},transitionIcon:{width:54,height:54,borderRadius:27,borderWidth:1,borderColor:'#70400f',backgroundColor:'rgba(255,121,0,.08)',alignItems:'center',justifyContent:'center'},transitionActive:{backgroundColor:ORANGE},confirmTitle:{color:'#fff',fontSize:14,fontWeight:'800',textAlign:'center'},confirmCopy:{marginTop:7,color:'#839095',fontSize:9,lineHeight:14,textAlign:'center'},
+  screen: { flex: 1, backgroundColor: "#020709" },
+  pageWrap: { flexGrow: 1, alignItems: "center", backgroundColor: "#020709" },
+  page: { width: "100%", maxWidth: 720 },
+  hero: { height: 248, overflow: "hidden" },
+  heroSafe: { flex: 1 },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingTop: Platform.OS === "web" ? 10 : 3,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "rgba(190,204,208,.35)",
+    backgroundColor: "rgba(2,8,11,.65)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerTitle: { color: "#f3f5f6", fontSize: 15, fontWeight: "800" },
+  heroCopy: { marginTop: "auto", padding: 20 },
+  heroTitle: {
+    color: "#fff",
+    fontSize: 34,
+    lineHeight: 40,
+    fontWeight: "800",
+    fontFamily: Platform.select({
+      ios: "Georgia",
+      android: "serif",
+      web: "Georgia",
+    }),
+  },
+  heroDetail: { marginTop: 4, color: "#c4cccf", fontSize: 11 },
+  content: { padding: 16, paddingBottom: 30 },
+  contentCompact: { paddingHorizontal: 10 },
+  identity: {
+    minHeight: 82,
+    borderRadius: 7,
+    borderWidth: 1,
+    borderColor: "#23343b",
+    backgroundColor: "#091317",
+    padding: 13,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  eyebrow: { color: ORANGE, fontSize: 7, fontWeight: "800" },
+  identityTitle: {
+    marginTop: 5,
+    color: "#fff",
+    fontSize: 20,
+    fontWeight: "800",
+  },
+  identityMeta: { marginTop: 3, color: "#7c898e", fontSize: 9 },
+  status: {
+    minHeight: 24,
+    maxWidth: 130,
+    paddingHorizontal: 9,
+    borderRadius: 12,
+    backgroundColor: "rgba(30,112,58,.24)",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  statusDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: "#6ee58c",
+  },
+  statusText: {
+    flexShrink: 1,
+    color: "#6ee58c",
+    fontSize: 8,
+    fontWeight: "800",
+  },
+  sectionTitle: {
+    marginTop: 20,
+    marginBottom: 8,
+    color: "#e8edef",
+    fontSize: 15,
+    fontWeight: "800",
+  },
+  progressCard: {
+    borderRadius: 7,
+    borderWidth: 1,
+    borderColor: "#26373e",
+    backgroundColor: "#091317",
+    overflow: "hidden",
+  },
+  progressTop: {
+    minHeight: 112,
+    padding: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  progressAge: { color: "#fff", fontSize: 24, fontWeight: "800" },
+  progressMessage: { marginTop: 5, color: "#849196", fontSize: 9 },
+  nextLabel: { color: "#6f7d82", fontSize: 7, textAlign: "right" },
+  nextValue: {
+    marginTop: 4,
+    color: ORANGE,
+    fontSize: 13,
+    fontWeight: "800",
+    textAlign: "right",
+  },
+  progressTrack: {
+    height: 5,
+    marginHorizontal: 16,
+    borderRadius: 3,
+    backgroundColor: "#1d2c31",
+    overflow: "hidden",
+  },
+  progressFill: { height: 5, backgroundColor: ORANGE },
+  timeline: {
+    minHeight: 94,
+    marginTop: 15,
+    borderTopWidth: 1,
+    borderTopColor: "#1d2d33",
+    paddingTop: 13,
+    paddingHorizontal: 6,
+    flexDirection: "row",
+    position: "relative",
+  },
+  timelineLine: {
+    position: "absolute",
+    top: 31,
+    left: "12%",
+    right: "12%",
+    height: 2,
+    backgroundColor: "#26363c",
+  },
+  timelineItem: { flex: 1, alignItems: "center" },
+  timelineDot: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "#34444a",
+    backgroundColor: "#0d181c",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  timelineComplete: { borderColor: "#8a4b0f" },
+  timelineActive: {
+    borderWidth: 2,
+    borderColor: ORANGE,
+    backgroundColor: "#21170e",
+  },
+  timelineLabel: {
+    minHeight: 20,
+    marginTop: 6,
+    color: "#748187",
+    fontSize: 7,
+    lineHeight: 9,
+    textAlign: "center",
+  },
+  timelineLabelActive: { color: ORANGE, fontWeight: "800" },
+  origin: {
+    minHeight: 60,
+    marginTop: 8,
+    borderRadius: 7,
+    borderWidth: 1,
+    borderColor: "#1d2d33",
+    backgroundColor: "#081216",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-around",
+  },
+  originDivider: { width: 1, height: 30, backgroundColor: "#213139" },
+  infoLabel: { color: "#68767b", fontSize: 7, textAlign: "center" },
+  infoValue: {
+    marginTop: 4,
+    color: "#e0e6e8",
+    fontSize: 9,
+    fontWeight: "700",
+    textAlign: "center",
+  },
+  snapshotGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  snapshot: {
+    flex: 1,
+    minWidth: 0,
+    height: 94,
+    borderRadius: 7,
+    borderWidth: 1,
+    borderColor: "#23343b",
+    backgroundColor: "#091317",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 6,
+  },
+  snapshotCompact: { flexBasis: "48%", height: 86 },
+  snapshotValue: {
+    width: "100%",
+    marginTop: 7,
+    color: "#eef2f3",
+    fontSize: 13,
+    fontWeight: "800",
+    textAlign: "center",
+  },
+  snapshotLabel: { marginTop: 4, color: "#718086", fontSize: 7 },
+  action: {
+    minHeight: 98,
+    borderRadius: 7,
+    borderWidth: 1,
+    borderColor: "#74410e",
+    backgroundColor: "rgba(255,121,0,.06)",
+    padding: 11,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  actionIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "rgba(255,121,0,.1)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  actionCopy: { flex: 1, minWidth: 0 },
+  actionTitle: { color: "#f0f3f4", fontSize: 11, fontWeight: "800" },
+  actionDetail: { marginTop: 4, color: "#8d9a9e", fontSize: 8, lineHeight: 12 },
+  actionControls: { width: 98, alignItems: "stretch", gap: 6 },
+  actionStatus: {
+    minHeight: 21,
+    maxWidth: 98,
+    paddingHorizontal: 7,
+    borderRadius: 11,
+    borderWidth: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+  },
+  actionStatusDot: { width: 5, height: 5, borderRadius: 3 },
+  actionStatusText: { flexShrink: 1, fontSize: 7, fontWeight: "800" },
+  actionButton: {
+    width: "100%",
+    height: 38,
+    borderRadius: 6,
+    backgroundColor: ORANGE,
+    paddingHorizontal: 7,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  buttonDone: { backgroundColor: "#304038" },
+  actionButtonText: {
+    color: "#fff",
+    fontSize: 8,
+    fontWeight: "800",
+    textAlign: "center",
+  },
+  sourceCard: {
+    borderRadius: 7,
+    borderWidth: 1,
+    borderColor: "#1d2d33",
+    backgroundColor: "#091317",
+    paddingHorizontal: 11,
+  },
+  sourceRow: {
+    minHeight: 67,
+    paddingVertical: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 9,
+  },
+  sourceDivider: { borderBottomWidth: 1, borderBottomColor: "#1b2a30" },
+  sourceIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: "rgba(255,121,0,.08)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  sourceCopy: { flex: 1, minWidth: 0 },
+  sourceName: { color: "#edf1f2", fontSize: 11, fontWeight: "800" },
+  sourceMeta: { marginTop: 3, color: "#7b898e", fontSize: 8 },
+  sourceBirds: { color: ORANGE, fontSize: 9, fontWeight: "800" },
+  healthCard: {
+    minHeight: 76,
+    borderRadius: 7,
+    borderWidth: 1,
+    borderColor: "#25363d",
+    backgroundColor: "#091317",
+    padding: 11,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  healthIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: "rgba(255,121,0,.08)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  healthCopy: { flex: 1, minWidth: 0 },
+  healthLabel: { color: "#718086", fontSize: 6, fontWeight: "800" },
+  healthTitle: {
+    marginTop: 4,
+    color: "#edf1f2",
+    fontSize: 11,
+    fontWeight: "800",
+  },
+  healthMeta: { marginTop: 3, color: "#7b898e", fontSize: 8 },
+  healthStatus: {
+    minHeight: 24,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+    backgroundColor: "rgba(151,65,48,.2)",
+    justifyContent: "center",
+  },
+  healthStatusDone: { backgroundColor: "rgba(30,112,58,.24)" },
+  healthStatusText: { color: "#ef8a76", fontSize: 7, fontWeight: "800" },
+  healthStatusTextDone: { color: "#6ee58c" },
+  summary: {
+    minHeight: 88,
+    borderRadius: 7,
+    borderWidth: 1,
+    borderColor: "#1d2d33",
+    backgroundColor: "#091317",
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  summaryItem: { flex: 1, alignItems: "center" },
+  summaryDivider: { width: 1, height: 38, backgroundColor: "#213139" },
+  summaryValue: { color: "#fff", fontSize: 20, fontWeight: "800" },
+  lossValue: { color: "#ef7568" },
+  summaryLabel: { marginTop: 5, color: "#77858a", fontSize: 8 },
+  lossButton: {
+    height: 48,
+    borderRadius: 7,
+    borderWidth: 1,
+    borderColor: ORANGE,
+    backgroundColor: "rgba(255,121,0,.08)",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+  },
+  lossButtonText: { color: ORANGE, fontSize: 10, fontWeight: "800" },
+  secondaryRow: { marginTop: 8, flexDirection: "row", gap: 8 },
+  secondaryButton: {
+    flex: 1,
+    minHeight: 46,
+    borderRadius: 7,
+    borderWidth: 1,
+    borderColor: "#27383f",
+    backgroundColor: "#091317",
+    paddingHorizontal: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+  },
+  secondaryText: {
+    flexShrink: 1,
+    color: "#d9e0e2",
+    fontSize: 9,
+    fontWeight: "700",
+    textAlign: "center",
+  },
+  closeText: { color: "#ef7568" },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,.76)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 16,
+  },
+  modalCard: {
+    width: "100%",
+    maxWidth: 440,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#2a3b42",
+    backgroundColor: "#081216",
+    padding: 16,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  modalTitle: { marginTop: 3, color: "#fff", fontSize: 20, fontWeight: "800" },
+  closeButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#111d21",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  batchBand: {
+    marginTop: 14,
+    minHeight: 48,
+    borderRadius: 6,
+    backgroundColor: "rgba(255,121,0,.07)",
+    paddingHorizontal: 11,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  bandValue: { color: "#b2bdc0", fontSize: 9, fontWeight: "700" },
+  fieldLabel: {
+    marginTop: 13,
+    marginBottom: 5,
+    color: "#cfd6d8",
+    fontSize: 9,
+    fontWeight: "700",
+  },
+  muted: { color: "#6f7d82", fontWeight: "400" },
+  field: {
+    height: 42,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#293a41",
+    backgroundColor: "#061014",
+    paddingHorizontal: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+  },
+  fieldInput: {
+    flex: 1,
+    height: 40,
+    padding: 0,
+    color: "#e7ebec",
+    fontSize: 10,
+    outlineStyle: "none",
+  },
+  noteInput: {
+    height: 68,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#293a41",
+    backgroundColor: "#061014",
+    padding: 10,
+    color: "#e7ebec",
+    fontSize: 10,
+    textAlignVertical: "top",
+    outlineStyle: "none",
+  },
+  modalActions: { marginTop: 16, flexDirection: "row", gap: 8 },
+  cancelButton: {
+    flex: 1,
+    height: 44,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#2a3b42",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cancelText: { color: "#c8d0d2", fontSize: 10, fontWeight: "700" },
+  saveButton: {
+    flex: 1,
+    height: 44,
+    borderRadius: 6,
+    backgroundColor: ORANGE,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  saveButtonDisabled: { opacity: 0.35 },
+  saveText: { color: "#fff", fontSize: 10, fontWeight: "800" },
+  separationTitle: { marginTop: 14, color: "#fff", fontSize: 14, fontWeight: "800", textAlign: "center" },
+  allocationSummary: { minHeight: 66, marginTop: 14, borderRadius: 7, backgroundColor: "rgba(255,121,0,.07)", flexDirection: "row", alignItems: "center", justifyContent: "space-around" },
+  allocationValue: { color: "#fff", fontSize: 17, fontWeight: "800", textAlign: "center" },
+  allocationError: { color: "#ef7568" },
+  allocationLabel: { marginTop: 3, color: "#77858a", fontSize: 7, textAlign: "center" },
+  allocationDivider: { width: 1, height: 30, backgroundColor: "#324047" },
+  separationList: { marginTop: 10, borderRadius: 7, borderWidth: 1, borderColor: "#26373e", backgroundColor: "#061014", overflow: "hidden" },
+  separationRow: { minHeight: 56, paddingHorizontal: 11, flexDirection: "row", alignItems: "center", gap: 10 },
+  separationDivider: { borderBottomWidth: 1, borderBottomColor: "#1d2d33" },
+  separationName: { flex: 1, minWidth: 0, color: "#dce2e4", fontSize: 10, fontWeight: "700" },
+  quantityControl: { width: 116, height: 36, borderRadius: 6, borderWidth: 1, borderColor: "#314249", flexDirection: "row", alignItems: "center", overflow: "hidden" },
+  quantityButton: { width: 34, height: 36, backgroundColor: "#101c20", alignItems: "center", justifyContent: "center" },
+  quantityInput: { flex: 1, height: 34, padding: 0, color: "#fff", fontSize: 11, fontWeight: "800", textAlign: "center", outlineStyle: "none" },
+  transition: {
+    height: 82,
+    marginTop: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 18,
+  },
+  transitionIcon: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    borderWidth: 1,
+    borderColor: "#70400f",
+    backgroundColor: "rgba(255,121,0,.08)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  transitionActive: { backgroundColor: ORANGE },
+  confirmTitle: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "800",
+    textAlign: "center",
+  },
+  confirmCopy: {
+    marginTop: 7,
+    color: "#839095",
+    fontSize: 9,
+    lineHeight: 14,
+    textAlign: "center",
+  },
 });

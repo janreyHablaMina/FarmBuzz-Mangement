@@ -32,6 +32,8 @@ import VaccinationScheduleScreen, { DEFAULT_BROODING_SETTINGS } from './Vaccinat
 import GrowingScreen from './GrowingScreen';
 import GrowingBatchDetailScreen from './GrowingBatchDetailScreen';
 import GrowingScheduleSettingsScreen, { DEFAULT_GROWING_SETTINGS, DEFAULT_RANGING_SETTINGS } from './GrowingScheduleSettingsScreen';
+import GrowingSettingsScreen, { GrowingSeparationSettingsScreen } from './GrowingSettingsScreen';
+import MaturingScreen from './MaturingScreen';
 import RangingScreen, { RANGING_BATCHES } from './RangingScreen';
 import RangingBatchDetailScreen from './RangingBatchDetailScreen';
 import RangingSettingsScreen, { RangingSelectionSettingsScreen } from './RangingSettingsScreen';
@@ -779,7 +781,7 @@ function FarmWorkspaceCard({ farm, onPress }) {
   );
 }
 
-function FarmDetailScreen({ farm, onBack, onOpenBreeding, onOpenIncubation, onOpenBrooding, onOpenGrowing, onOpenRanging, onOpenSettings }) {
+function FarmDetailScreen({ farm, onBack, onOpenBreeding, onOpenIncubation, onOpenBrooding, onOpenGrowing, onOpenMaturing, onOpenSettings }) {
   const { width } = useWindowDimensions();
   const compact = width < 480;
   const narrow = width < 390;
@@ -812,10 +814,10 @@ function FarmDetailScreen({ farm, onBack, onOpenBreeding, onOpenIncubation, onOp
     tint: THEME_ORANGE_TINT,
     image: GROWING_HERO_IMAGE,
   };
-  const rangingModule = {
-    title: 'Ranging',
-    subtitle: 'Open-range batches and maturity',
-    icon: 'weather-sunny',
+  const maturingModule = {
+    title: 'Maturing',
+    subtitle: 'Ranging and female pullet groups',
+    icon: 'progress-clock',
     color: THEME_ORANGE,
     tint: THEME_ORANGE_TINT,
     image: RANGING_HERO_IMAGE,
@@ -888,7 +890,7 @@ function FarmDetailScreen({ farm, onBack, onOpenBreeding, onOpenIncubation, onOp
               <ModuleCard item={incubationModule} compact={compact} onPress={onOpenIncubation} />
               <ModuleCard item={broodingModule} compact={compact} onPress={onOpenBrooding} />
               <ModuleCard item={growingModule} compact={compact} onPress={onOpenGrowing} />
-              <ModuleCard item={rangingModule} compact={compact} onPress={onOpenRanging} />
+              <ModuleCard item={maturingModule} compact={compact} onPress={onOpenMaturing} />
             </View>
           </View>
         </View>
@@ -1336,6 +1338,7 @@ export default function App() {
   const [growingLossesByBatch, setGrowingLossesByBatch] = useState({});
   const [growingLocationsByBatch, setGrowingLocationsByBatch] = useState({});
   const [growingTasksByBatch, setGrowingTasksByBatch] = useState({});
+  const [growingSeparationsByBatch, setGrowingSeparationsByBatch] = useState({});
   const [growingSettings, setGrowingSettings] = useState(DEFAULT_GROWING_SETTINGS);
   const [addedRangingBatches, setAddedRangingBatches] = useState([]);
   const [selectedRangingBatchId, setSelectedRangingBatchId] = useState('RG-024');
@@ -1450,11 +1453,17 @@ export default function App() {
           onOpenIncubation={() => setScreen('eggs-incubation')}
           onOpenBrooding={() => setScreen('brooding')}
           onOpenGrowing={() => setScreen('growing')}
-          onOpenRanging={() => setScreen('ranging')}
+          onOpenMaturing={() => setScreen('maturing')}
           onOpenSettings={() => {
             setSettingsReturn('farm-detail');
             setScreen('management-settings');
           }}
+        />
+      ) : screen === 'maturing' ? (
+        <MaturingScreen
+          onBack={() => setScreen('farm-detail')}
+          onOpenRanging={() => setScreen('ranging')}
+          onOpenFemale={() => Alert.alert('Female / Pullet', 'The female and pullet workflow will open here.')}
         />
       ) : screen === 'growing' ? (
         <GrowingScreen
@@ -1469,12 +1478,28 @@ export default function App() {
           }}
         />
       ) : screen === 'growing-settings' ? (
-        <GrowingScheduleSettingsScreen
-          initialSettings={growingSettings}
+        <GrowingSettingsScreen
+          settings={growingSettings}
           onBack={() => setScreen('growing')}
+          onOpenSeparation={() => setScreen('growing-separation-settings')}
+          onOpenTasks={() => setScreen('growing-task-settings')}
+        />
+      ) : screen === 'growing-separation-settings' ? (
+        <GrowingSeparationSettingsScreen
+          settings={growingSettings}
+          onBack={() => setScreen('growing-settings')}
           onSave={(settings) => {
             setGrowingSettings(settings);
-            setScreen('growing');
+            setScreen('growing-settings');
+          }}
+        />
+      ) : screen === 'growing-task-settings' ? (
+        <GrowingScheduleSettingsScreen
+          initialSettings={growingSettings}
+          onBack={() => setScreen('growing-settings')}
+          onSave={(settings) => {
+            setGrowingSettings(settings);
+            setScreen('growing-settings');
           }}
         />
       ) : screen === 'growing-batch-detail' ? (
@@ -1485,10 +1510,13 @@ export default function App() {
           locationOverride={growingLocationsByBatch[selectedGrowingBatchId]}
           readyDay={growingSettings.readyDay}
           scheduledTasks={growingSettings.tasks}
+          separationOptions={growingSettings.separationOptions}
+          separationRecord={growingSeparationsByBatch[selectedGrowingBatchId]}
           onBack={() => setScreen('growing')}
           onSaveLoss={(record) => setGrowingLossesByBatch((current) => ({ ...current, [selectedGrowingBatchId]: [record, ...(current[selectedGrowingBatchId] || [])] }))}
           onChangeLocation={(location) => setGrowingLocationsByBatch((current) => ({ ...current, [selectedGrowingBatchId]: location }))}
           onCompleteTask={(task) => setGrowingTasksByBatch((current) => ({ ...current, [selectedGrowingBatchId]: { ...(current[selectedGrowingBatchId] || {}), [task]: true } }))}
+          onSaveSeparation={(record) => setGrowingSeparationsByBatch((current) => ({ ...current, [selectedGrowingBatchId]: record }))}
           onMoveToRanging={(batch) => {
             setAddedRangingBatches((current) => [batch, ...current.filter((item) => item.id !== batch.id)]);
             setSelectedRangingBatchId(batch.id);
@@ -1501,7 +1529,7 @@ export default function App() {
           lossesByBatch={rangingLossesByBatch}
           locationsByBatch={rangingLocationsByBatch}
           readyDay={rangingSettings.readyDay}
-          onBack={() => setScreen('farm-detail')}
+          onBack={() => setScreen('maturing')}
           onOpenSettings={() => setScreen('ranging-settings')}
           onOpenBatch={(batchId) => {
             setSelectedRangingBatchId(batchId);
