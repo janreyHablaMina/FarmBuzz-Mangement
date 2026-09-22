@@ -23,6 +23,8 @@ import EggsIncubationScreen from './EggsIncubationScreen';
 import EggHoldingScreen from './EggHoldingScreen';
 import CreateBatchScreen from './CreateBatchScreen';
 import IncubationBatchDetailScreen from './IncubationBatchDetailScreen';
+import FamilyBatchDetailScreen from './FamilyBatchDetailScreen';
+import EggsIncubationSettingsScreen from './EggsIncubationSettingsScreen';
 import IncubationHistoryScreen from './IncubationHistoryScreen';
 import CandlingScreen from './CandlingScreen';
 import RecordHatchScreen from './RecordHatchScreen';
@@ -86,15 +88,20 @@ const TEAM_BADGE_IMAGE = require('./assets/badge-team.png');
 const TRANSFERS_BADGE_IMAGE = require('./assets/badge-transfers.png');
 const FLOCK_HERO_IMAGE = require('./assets/flock-hero.png');
 const BREEDING_HERO_IMAGE = require('./assets/breeding-hero.png');
-const BROODING_HERO_IMAGE = require('./assets/brooding-card.png');
 const HARDENING_CARD_IMAGE = require('./assets/hardening-card.png');
 const CORDING_CARD_IMAGE = require('./assets/cording-card.png');
 const GROWING_HERO_IMAGE = require('./assets/growing-card.png');
 const RANGING_HERO_IMAGE = require('./assets/ranging-card.png');
+const EGGS_INCUBATION_HERO_IMAGE = require('./assets/eggs-incubation-hero.png');
 const HEALTH_CARE_HERO_IMAGE = require('./assets/health-care-hero.png');
 const SALES_DASHBOARD_HERO_IMAGE = require('./assets/sales-dashboard-hero.png');
 const COLLECTIONS_DASHBOARD_HERO_IMAGE = require('./assets/sales-hero.png');
 const SHOWCASE_IMAGE = require('./assets/Showcase.png');
+
+const ACTIVE_CHICKEN_BATCHES = [
+  { id: 'CB-001', name: 'North House Batch', count: 100, sire: 'Sweater', dams: ['Kelso', 'Hatch', 'Roundhead'] },
+];
+const BATCH_BLOODLINES = ['Sweater', 'Kelso', 'Roundhead', 'Hatch', 'Claret', 'Albany'];
 
 const MODULES = [
   {
@@ -330,6 +337,8 @@ function Stat({ item, isLast, compact, onPress }) {
 }
 
 function ModuleCard({ item, compact, onPress }) {
+  const textOnly = item.variant === 'textOnly';
+
   return (
     <Pressable
       accessibilityRole="button"
@@ -339,55 +348,64 @@ function ModuleCard({ item, compact, onPress }) {
         styles.moduleCard,
         compact && styles.moduleCardCompact,
         item.wide && styles.moduleWide,
-        { borderColor: `${item.color}55` },
+        textOnly && styles.moduleCardTextOnly,
+        { borderColor: textOnly ? '#ffffff55' : `${item.color}55` },
         pressed && styles.cardPressed,
       ]}
     >
-      <Image
-        source={item.image}
-        style={styles.moduleImage}
-        contentFit="cover"
-        contentPosition="center"
-        transition={250}
-        cachePolicy="memory-disk"
-      />
-      <View
-        pointerEvents="none"
-        style={[StyleSheet.absoluteFill, styles.moduleTintOverlay, { backgroundColor: item.tint }]}
-      />
-      <LinearGradient
-        colors={[
-          'rgba(6, 15, 19, 0.78)',
-          'rgba(6, 15, 19, 0.58)',
-          'rgba(6, 15, 19, 0.26)',
-          'rgba(6, 15, 19, 0.06)',
-        ]}
-        locations={[0, 0.38, 0.74, 1]}
-        start={{ x: 0, y: 0.5 }}
-        end={{ x: 1, y: 0.5 }}
-        style={StyleSheet.absoluteFill}
-      />
+      {!textOnly && (
+        <>
+          <Image
+            source={item.image}
+            style={styles.moduleImage}
+            contentFit="cover"
+            contentPosition="center"
+            transition={250}
+            cachePolicy="memory-disk"
+          />
+          <View
+            pointerEvents="none"
+            style={[StyleSheet.absoluteFill, styles.moduleTintOverlay, { backgroundColor: item.tint }]}
+          />
+          <LinearGradient
+            colors={[
+              'rgba(6, 15, 19, 0.78)',
+              'rgba(6, 15, 19, 0.58)',
+              'rgba(6, 15, 19, 0.26)',
+              'rgba(6, 15, 19, 0.06)',
+            ]}
+            locations={[0, 0.38, 0.74, 1]}
+            start={{ x: 0, y: 0.5 }}
+            end={{ x: 1, y: 0.5 }}
+            style={StyleSheet.absoluteFill}
+          />
+        </>
+      )}
 
-      <View style={[
-        styles.moduleIcon,
-        compact && styles.moduleIconCompact,
-        { borderColor: `${item.color}70`, backgroundColor: item.tint },
-      ]}>
-        <AnimatedBadge
-          source={item.badgeImage}
-          icon={item.icon}
-          size={compact ? 24 : 28}
-          color={item.color}
-        />
-      </View>
-      <View style={[styles.moduleCopy, compact && styles.moduleCopyCompact]}>
-        <Text numberOfLines={2} style={[styles.moduleTitle, compact && styles.moduleTitleCompact]}>
+      {!textOnly && (
+        <View style={[
+          styles.moduleIcon,
+          compact && styles.moduleIconCompact,
+          { borderColor: `${item.color}70`, backgroundColor: item.tint },
+        ]}>
+          <AnimatedBadge
+            source={item.badgeImage}
+            icon={item.icon}
+            size={compact ? 24 : 28}
+            color={item.color}
+          />
+        </View>
+      )}
+      <View style={[styles.moduleCopy, compact && styles.moduleCopyCompact, textOnly && styles.moduleCopyTextOnly]}>
+        <Text numberOfLines={2} style={[styles.moduleTitle, textOnly && styles.moduleTitleTextOnly, compact && styles.moduleTitleCompact]}>
           {item.title}
         </Text>
-        <Text numberOfLines={2} style={styles.moduleSubtitle}>
-          {item.subtitle}
-          {item.detail && <Text style={styles.overdue}> {item.detail}</Text>}
-        </Text>
+        {!!item.subtitle && (
+          <Text numberOfLines={2} style={styles.moduleSubtitle}>
+            {item.subtitle}
+            {item.detail && <Text style={styles.overdue}> {item.detail}</Text>}
+          </Text>
+        )}
       </View>
     </Pressable>
   );
@@ -786,7 +804,7 @@ function FarmWorkspaceCard({ farm, onPress }) {
   );
 }
 
-function FarmDetailScreen({ farm, onBack, onOpenBreeding, onOpenIncubation, onOpenBrooding, onOpenGrowing, onOpenMaturing, onOpenHardening, onOpenCording, onOpenSettings }) {
+function FarmDetailScreen({ farm, onBack, onOpenBreeding, onOpenIncubation, onOpenBlankIncubation, onOpenBrooding, onOpenGrowing, onOpenMaturing, onOpenHardening, onOpenCording, onOpenSettings }) {
   const { width } = useWindowDimensions();
   const compact = width < 480;
   const narrow = width < 390;
@@ -803,13 +821,17 @@ function FarmDetailScreen({ farm, onBack, onOpenBreeding, onOpenIncubation, onOp
     ...MODULES.find((item) => item.title === 'Eggs & Incubation'),
     subtitle: 'Holding eggs, batches, hatch progress',
   };
+  const eggsIncubationTextModule = {
+    title: 'Eggs & Incubation',
+    color: '#ffffff',
+    variant: 'textOnly',
+  };
   const broodingModule = {
     title: 'Brooding',
     subtitle: '1 active batch, 38 chicks',
     icon: 'bird',
-    color: THEME_ORANGE,
-    tint: THEME_ORANGE_TINT,
-    image: BROODING_HERO_IMAGE,
+    color: '#ffffff',
+    variant: 'textOnly',
   };
   const growingModule = {
     title: 'Growing',
@@ -904,16 +926,350 @@ function FarmDetailScreen({ farm, onBack, onOpenBreeding, onOpenIncubation, onOp
 
             <View style={styles.sectionHeading}>
               <Text style={[styles.sectionTitle, narrow && styles.sectionTitleNarrow]}>Management Tool</Text>
-              <Text style={styles.sectionMeta}>7 modules</Text>
+              <Text style={styles.sectionMeta}>8 modules</Text>
             </View>
             <View style={[styles.moduleGrid, compact && styles.moduleGridCompact]}>
               <ModuleCard item={breedingModule} compact={compact} onPress={onOpenBreeding} />
               <ModuleCard item={incubationModule} compact={compact} onPress={onOpenIncubation} />
+              <ModuleCard item={eggsIncubationTextModule} compact={compact} onPress={onOpenBlankIncubation} />
               <ModuleCard item={broodingModule} compact={compact} onPress={onOpenBrooding} />
               <ModuleCard item={growingModule} compact={compact} onPress={onOpenGrowing} />
               <ModuleCard item={maturingModule} compact={compact} onPress={onOpenMaturing} />
               <ModuleCard item={hardeningModule} compact={compact} onPress={onOpenHardening} />
               <ModuleCard item={cordingModule} compact={compact} onPress={onOpenCording} />
+            </View>
+          </View>
+        </View>
+      </ScrollView>
+    </View>
+  );
+}
+
+function BatchCountControl({ label, value, icon, onChange }) {
+  return (
+    <View style={styles.batchSetupCountCard}>
+      <View style={styles.batchSetupCountLabel}>
+        <MaterialCommunityIcons name={icon} size={19} color={THEME_ORANGE} />
+        <Text style={styles.batchSetupCountTitle}>{label}</Text>
+      </View>
+      <View style={styles.batchSetupStepper}>
+        <Pressable accessibilityLabel={`Remove ${label}`} onPress={() => onChange(Math.max(1, value - 1))} style={({ pressed }) => [styles.batchSetupStepButton, pressed && styles.pressed]}>
+          <Ionicons name="remove" size={18} color="#aeb8bb" />
+        </Pressable>
+        <Text style={styles.batchSetupCountValue}>{value}</Text>
+        <Pressable accessibilityLabel={`Add ${label}`} onPress={() => onChange(Math.min(6, value + 1))} style={({ pressed }) => [styles.batchSetupStepButton, pressed && styles.pressed]}>
+          <Ionicons name="add" size={18} color="#ffffff" />
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+function BatchBloodlineSelect({ label, value, icon, open, emphasized, onToggle, onChange }) {
+  return (
+    <View style={styles.batchSetupField}>
+      <Pressable onPress={onToggle} style={({ pressed }) => [styles.batchSetupSelect, emphasized && styles.batchSetupSireNodeSelect, open && styles.batchSetupSelectOpen, pressed && styles.pressed]}>
+        <View style={styles.batchSetupSelectCopy}>
+          <View style={styles.batchSetupSelectLabelRow}>
+            <MaterialCommunityIcons name={icon} size={14} color={THEME_ORANGE} />
+            <Text style={styles.batchSetupSelectLabel}>{label.toUpperCase()}</Text>
+          </View>
+          <Text style={styles.batchSetupSelectValue}>{value}</Text>
+        </View>
+        <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={16} color="#7d898e" />
+      </Pressable>
+      {open && (
+        <View style={styles.batchSetupOptions}>
+          {BATCH_BLOODLINES.map((bloodline) => (
+            <Pressable key={bloodline} onPress={() => { onChange(bloodline); onToggle(); }} style={({ pressed }) => [styles.batchSetupOption, pressed && styles.pressed]}>
+              <Text style={[styles.batchSetupOptionText, value === bloodline && styles.batchSetupOptionTextActive]}>{bloodline}</Text>
+              {value === bloodline && <Ionicons name="checkmark" size={17} color={THEME_ORANGE} />}
+            </Pressable>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+}
+
+function AddFamilyBatchScreen({ farm, onBack }) {
+  const { width } = useWindowDimensions();
+  const compact = width < 480;
+  const [batchName, setBatchName] = useState('');
+  const [eggCount, setEggCount] = useState('');
+  const [sires, setSires] = useState(['Sweater']);
+  const [dams, setDams] = useState(['Kelso', 'Hatch', 'Roundhead']);
+  const [openSelect, setOpenSelect] = useState(null);
+
+  const resizeBloodlines = (setter, count) => {
+    setter((current) => Array.from({ length: count }, (_, index) => current[index] || BATCH_BLOODLINES[index % BATCH_BLOODLINES.length]));
+    setOpenSelect(null);
+  };
+
+  return (
+    <View style={styles.screen}>
+      <StatusBar style="light" translucent backgroundColor="transparent" />
+      <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        <View style={styles.page}>
+          <View style={[styles.batchSetupHero, compact && styles.batchSetupHeroCompact]}>
+            <Image source={EGGS_INCUBATION_HERO_IMAGE} style={StyleSheet.absoluteFill} contentFit="cover" contentPosition="center" cachePolicy="memory-disk" />
+            <LinearGradient colors={['rgba(2,7,9,0.2)', 'rgba(2,7,9,0.35)', '#020709']} locations={[0, 0.52, 1]} style={StyleSheet.absoluteFill} />
+            <SafeAreaView edges={['top']} style={styles.heroSafeArea}>
+              <View style={styles.blankIncubationHeader}>
+                <IconButton icon="arrow-back" label="Back to egg batches" onPress={onBack} />
+                <Text style={styles.blankIncubationScreenTitle}>Add Batch</Text>
+              </View>
+              <View style={styles.batchSetupHeroCopy}>
+                <Text style={[styles.blankIncubationFarmName, compact && styles.blankIncubationFarmNameNarrow]}>{farm?.name || 'FB Farm'}</Text>
+                <Text style={styles.blankIncubationTagline}>Set the family structure and bloodlines for this egg batch.</Text>
+              </View>
+            </SafeAreaView>
+          </View>
+
+          <View style={[styles.batchSetupForm, compact && styles.batchSetupFormCompact]}>
+            <Text style={styles.blankIncubationEyebrow}>BATCH FAMILY</Text>
+            <Text style={styles.batchSetupTitle}>Parents in this batch</Text>
+            <Text style={styles.batchSetupDescription}>Choose how many sires and dams are included, then assign each bird's bloodline.</Text>
+
+            <View style={styles.batchSetupDetailsSection}>
+              <Text style={styles.batchSetupSectionTitle}>Batch details</Text>
+              <View style={styles.batchSetupDetailsRow}>
+                <View style={styles.batchSetupTextField}>
+                  <Text style={styles.batchSetupFieldLabel}>BATCH NAME</Text>
+                  <View style={styles.batchSetupInputShell}>
+                    <MaterialCommunityIcons name="tag-outline" size={18} color={THEME_ORANGE} />
+                    <TextInput
+                      value={batchName}
+                      onChangeText={setBatchName}
+                      placeholder="e.g. North House"
+                      placeholderTextColor="#69777c"
+                      selectionColor={THEME_ORANGE}
+                      style={styles.batchSetupTextInput}
+                    />
+                  </View>
+                </View>
+                <View style={styles.batchSetupTextField}>
+                  <Text style={styles.batchSetupFieldLabel}>EGG COUNT</Text>
+                  <View style={styles.batchSetupInputShell}>
+                    <MaterialCommunityIcons name="egg-outline" size={18} color={THEME_ORANGE} />
+                    <TextInput
+                      value={eggCount}
+                      onChangeText={(value) => setEggCount(value.replace(/[^0-9]/g, ''))}
+                      placeholder="e.g. 100"
+                      placeholderTextColor="#69777c"
+                      selectionColor={THEME_ORANGE}
+                      keyboardType="number-pad"
+                      inputMode="numeric"
+                      maxLength={5}
+                      style={styles.batchSetupTextInput}
+                    />
+                    <Text style={styles.batchSetupInputSuffix}>eggs</Text>
+                  </View>
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.batchSetupCountRow}>
+              <BatchCountControl label="Sires" value={sires.length} icon="gender-male" onChange={(count) => resizeBloodlines(setSires, count)} />
+              <BatchCountControl label="Dams" value={dams.length} icon="gender-female" onChange={(count) => resizeBloodlines(setDams, count)} />
+            </View>
+
+            <View style={styles.batchSetupTreeSection}>
+              <Text style={styles.batchSetupSectionTitle}>Family tree</Text>
+              <Text style={styles.batchSetupTreeHint}>Tap a parent node to choose its bloodline.</Text>
+              <View style={styles.batchSetupTreeEditor}>
+                <View style={styles.batchSetupSireList}>
+                  {sires.map((bloodline, index) => (
+                    <View key={`sire-${index}`} style={styles.batchSetupSireBranch}>
+                      <View style={styles.batchSetupSireNode}>
+                        <BatchBloodlineSelect
+                          label={`Sire ${index + 1}`}
+                          value={bloodline}
+                          icon="gender-male"
+                          emphasized
+                          open={openSelect === `sire-${index}`}
+                          onToggle={() => setOpenSelect(openSelect === `sire-${index}` ? null : `sire-${index}`)}
+                          onChange={(value) => setSires((current) => current.map((item, itemIndex) => itemIndex === index ? value : item))}
+                        />
+                      </View>
+                      <View style={styles.batchSetupNodeLine} />
+                    </View>
+                  ))}
+                </View>
+
+                <View style={styles.batchSetupTreeConnector}>
+                  <View style={styles.batchSetupTreeStem} />
+                  <View style={styles.batchSetupTreeTrunk} />
+                </View>
+
+                <View style={styles.batchSetupDamList}>
+                  {dams.map((bloodline, index) => (
+                    <View key={`dam-${index}`} style={styles.batchSetupDamBranch}>
+                      <View style={styles.batchSetupNodeLine} />
+                      <View style={styles.batchSetupDamNode}>
+                        <BatchBloodlineSelect
+                          label={`Dam ${index + 1}`}
+                          value={bloodline}
+                          icon="gender-female"
+                          open={openSelect === `dam-${index}`}
+                          onToggle={() => setOpenSelect(openSelect === `dam-${index}` ? null : `dam-${index}`)}
+                          onChange={(value) => setDams((current) => current.map((item, itemIndex) => itemIndex === index ? value : item))}
+                        />
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            </View>
+          </View>
+        </View>
+      </ScrollView>
+    </View>
+  );
+}
+
+function BlankIncubationScreen({ farm, onBack, onAddBatch, onOpenBatch, onAddTask }) {
+  const { width } = useWindowDimensions();
+  const compact = width < 480;
+  const narrow = width < 390;
+  const [query, setQuery] = useState('');
+  const normalizedQuery = query.trim().toLowerCase();
+  const visibleBatches = ACTIVE_CHICKEN_BATCHES.filter((batch) => (
+    !normalizedQuery || `${batch.id} ${batch.name} ${batch.sire} ${batch.dams.join(' ')}`.toLowerCase().includes(normalizedQuery)
+  ));
+
+  return (
+    <View style={styles.screen}>
+      <StatusBar style="light" translucent backgroundColor="transparent" />
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        <View style={styles.page}>
+          <View style={[styles.hero, compact && styles.heroCompact, narrow && styles.heroNarrow]}>
+            <Image source={EGGS_INCUBATION_HERO_IMAGE} style={StyleSheet.absoluteFill} contentFit="cover" contentPosition="center" cachePolicy="memory-disk" />
+            <LinearGradient
+              colors={['rgba(2, 7, 9, 0.2)', 'rgba(2, 7, 9, 0.18)', '#020709']}
+              locations={[0, 0.46, 1]}
+              style={StyleSheet.absoluteFill}
+            />
+            <SafeAreaView edges={['top']} style={styles.heroSafeArea}>
+              <View style={[styles.blankIncubationHeader, styles.blankIncubationHeaderBetween]}>
+                <View style={styles.blankIncubationHeaderLeft}>
+                  <IconButton icon="arrow-back" label="Back to farm" onPress={onBack} />
+                  <Text style={styles.blankIncubationScreenTitle}>Eggs &amp; Incubation</Text>
+                </View>
+                <IconButton icon="settings-outline" label="Add new task" onPress={onAddTask} />
+              </View>
+              <View style={[styles.blankIncubationHeroCopy, narrow && styles.blankIncubationHeroCopyNarrow]}>
+                <Text style={[styles.blankIncubationFarmName, narrow && styles.blankIncubationFarmNameNarrow]}>
+                  {farm?.name || 'FB Farm'}
+                </Text>
+                <Text style={styles.blankIncubationTagline}>Manage eggs and incubation from setting to hatch.</Text>
+                <View style={styles.blankIncubationMeta}>
+                  <View style={styles.blankIncubationMetaItem}>
+                    <Ionicons name="location-outline" size={16} color="#c0c7c9" />
+                    <Text style={styles.blankIncubationMetaText}>{farm?.location || 'Pampanga, Philippines'}</Text>
+                  </View>
+                  <View style={styles.blankIncubationMetaDivider} />
+                  <View style={styles.blankIncubationMetaItem}>
+                    <Ionicons name="calendar-outline" size={16} color="#c0c7c9" />
+                    <Text style={styles.blankIncubationMetaText}>Est. {farm?.established || '2020'}</Text>
+                  </View>
+                </View>
+              </View>
+            </SafeAreaView>
+          </View>
+
+          <View style={[styles.blankIncubationContent, narrow && styles.blankIncubationContentNarrow]}>
+            <View style={[styles.blankIncubationActionRow, compact && styles.blankIncubationActionRowCompact]}>
+              <View style={styles.blankIncubationSearchBox}>
+                <Ionicons name="search" size={22} color="#9aa4a8" />
+                <TextInput
+                  value={query}
+                  onChangeText={setQuery}
+                  placeholder="Search eggs or batches"
+                  placeholderTextColor="#879195"
+                  selectionColor={THEME_ORANGE}
+                  style={styles.blankIncubationSearchInput}
+                />
+                {!!query && (
+                  <Pressable accessibilityLabel="Clear search" onPress={() => setQuery('')} hitSlop={8}>
+                    <Ionicons name="close-circle" size={18} color="#6c777b" />
+                  </Pressable>
+                )}
+              </View>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Add incubation batch"
+                onPress={onAddBatch}
+                style={({ pressed }) => [styles.blankIncubationAddButton, compact && styles.blankIncubationAddButtonCompact, pressed && styles.pressed]}
+              >
+                <Ionicons name="add" size={24} color="#ffffff" />
+                <Text style={styles.blankIncubationAddButtonText}>Add Batch</Text>
+              </Pressable>
+            </View>
+
+            <View style={styles.blankIncubationListHeading}>
+              <View>
+                <Text style={styles.blankIncubationEyebrow}>ACTIVE BATCHES</Text>
+                <Text style={styles.blankIncubationListTitle}>Egg batches</Text>
+              </View>
+              <Text style={styles.blankIncubationBatchCount}>{visibleBatches.length} active</Text>
+            </View>
+
+            <View style={styles.blankIncubationBatchList}>
+              {visibleBatches.map((batch) => (
+                <Pressable
+                  key={batch.id}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Open ${batch.name}`}
+                  onPress={() => onOpenBatch(batch.id)}
+                  style={({ pressed }) => [styles.blankIncubationBatchCard, pressed && styles.pressed]}
+                >
+                  <View style={styles.blankIncubationBatchHeader}>
+                    <View style={styles.blankIncubationBatchIdentity}>
+                      <View style={styles.blankIncubationBatchIcon}>
+                        <MaterialCommunityIcons name="egg-outline" size={21} color={THEME_ORANGE} />
+                      </View>
+                      <View>
+                        <Text style={styles.blankIncubationBatchName}>{batch.name}</Text>
+                        <Text style={styles.blankIncubationBatchId}>{batch.id}</Text>
+                      </View>
+                    </View>
+                    <View style={styles.blankIncubationChickenCount}>
+                      <Text style={styles.blankIncubationChickenCountValue}>{batch.count}</Text>
+                      <Text style={styles.blankIncubationChickenCountLabel}>eggs</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.blankIncubationFamilyTree}>
+                    <View style={[styles.blankIncubationFamilyNode, styles.blankIncubationSireNode]}>
+                      <View style={styles.blankIncubationLineageLabelRow}>
+                        <MaterialCommunityIcons name="gender-male" size={15} color={THEME_ORANGE} />
+                        <Text style={styles.blankIncubationLineageLabel}>SIRE</Text>
+                      </View>
+                      <Text style={styles.blankIncubationLineageValue}>{batch.sire}</Text>
+                    </View>
+                    <View style={styles.blankIncubationTreeConnector}>
+                      <View style={styles.blankIncubationTreeStem} />
+                      <View style={styles.blankIncubationTreeTrunk} />
+                    </View>
+                    <View style={styles.blankIncubationDamList}>
+                      {batch.dams.map((dam, index) => (
+                        <View key={`${batch.id}-${dam}`} style={styles.blankIncubationDamBranch}>
+                          <View style={styles.blankIncubationDamBranchLine} />
+                          <View style={styles.blankIncubationFamilyNode}>
+                            <View style={styles.blankIncubationLineageLabelRow}>
+                              <MaterialCommunityIcons name="gender-female" size={14} color={THEME_ORANGE} />
+                              <Text style={styles.blankIncubationLineageLabel}>DAM {index + 1}</Text>
+                            </View>
+                            <Text style={styles.blankIncubationLineageValue}>{dam}</Text>
+                          </View>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                </Pressable>
+              ))}
+              {!visibleBatches.length && <Text style={styles.blankIncubationEmptyText}>No batches found</Text>}
             </View>
           </View>
         </View>
@@ -1354,6 +1710,7 @@ export default function App() {
   const [candlingResultsByBatch, setCandlingResultsByBatch] = useState({});
   const [hatchResultsByBatch, setHatchResultsByBatch] = useState({});
   const [selectedBroodingBatchId, setSelectedBroodingBatchId] = useState('BR-024');
+  const [addedBroodingBatches, setAddedBroodingBatches] = useState([]);
   const [broodingLossesByBatch, setBroodingLossesByBatch] = useState({});
   const [broodingSettings, setBroodingSettings] = useState(DEFAULT_BROODING_SETTINGS);
   const [vaccineCompletionsByBatch, setVaccineCompletionsByBatch] = useState({});
@@ -1407,6 +1764,7 @@ export default function App() {
   const [memberOverrides, setMemberOverrides] = useState({});
   const [addedTasks, setAddedTasks] = useState([]);
   const [selectedTask, setSelectedTask] = useState(null);
+  const [addTaskReturn, setAddTaskReturn] = useState('tasks');
   const [taskOverrides, setTaskOverrides] = useState({});
   const [healthRecords, setHealthRecords] = useState([]);
   const [attentionReturn, setAttentionReturn] = useState('dashboard');
@@ -1498,6 +1856,7 @@ export default function App() {
           onBack={() => setScreen('farms')}
           onOpenBreeding={() => setScreen('breeding')}
           onOpenIncubation={() => setScreen('eggs-incubation')}
+          onOpenBlankIncubation={() => setScreen('blank-incubation')}
           onOpenBrooding={() => setScreen('brooding')}
           onOpenGrowing={() => setScreen('growing')}
           onOpenMaturing={() => setScreen('maturing')}
@@ -1506,6 +1865,74 @@ export default function App() {
           onOpenSettings={() => {
             setSettingsReturn('farm-detail');
             setScreen('management-settings');
+          }}
+        />
+      ) : screen === 'blank-incubation' ? (
+        <BlankIncubationScreen
+          farm={selectedFarm}
+          onBack={() => setScreen('farm-detail')}
+          onAddBatch={() => setScreen('add-family-batch')}
+          onOpenBatch={(batchId) => {
+            setSelectedBatchId(batchId);
+            setScreen('family-batch-detail');
+          }}
+          onAddTask={() => {
+            setScreen('eggs-incubation-settings');
+          }}
+        />
+      ) : screen === 'eggs-incubation-settings' ? (
+      <EggsIncubationSettingsScreen
+        addedTasks={addedTasks}
+        onBack={() => setScreen('blank-incubation')}
+      />
+      ) : screen === 'add-family-batch' ? (
+        <AddFamilyBatchScreen farm={selectedFarm} onBack={() => setScreen('blank-incubation')} />
+      ) : screen === 'family-batch-detail' ? (
+        <FamilyBatchDetailScreen
+          batchId={selectedBatchId}
+          candlingResults={candlingResultsByBatch[selectedBatchId]}
+          hatchResults={hatchResultsByBatch[selectedBatchId]}
+          onBack={() => setScreen('blank-incubation')}
+          onOpenCandling={() => {}}
+          onSaveCandling={(results) => setCandlingResultsByBatch((current) => ({ ...current, [selectedBatchId]: results }))}
+          onOpenHatch={() => setScreen('record-family-hatch')}
+        />
+      ) : screen === 'record-family-hatch' ? (
+        <RecordHatchScreen
+          batchId={selectedBatchId}
+          batchOverride={{ id: selectedBatchId, eggCount: 100 }}
+          activeEggCount={100 - (candlingResultsByBatch[selectedBatchId]?.rejected || 0)}
+          sourcesOverride={[
+            { groupName: 'Pairing 1', cross: 'Sweater x Kelso', eggs: 34 },
+            { groupName: 'Pairing 2', cross: 'Sweater x Hatch', eggs: 33 },
+            { groupName: 'Pairing 3', cross: 'Sweater x Roundhead', eggs: 33 },
+          ]}
+          initialResult={hatchResultsByBatch[selectedBatchId]}
+          onBack={() => setScreen('family-batch-detail')}
+          onSave={(result) => {
+            setHatchResultsByBatch((current) => ({ ...current, [selectedBatchId]: result }));
+            const broodingBatchId = `BR-${selectedBatchId.replace(/\D/g, '') || '001'}`;
+            const broodingBatch = {
+              id: broodingBatchId,
+              chicks: result.hatched,
+              startingChicks: result.hatched,
+              age: 'Day 1',
+              ageDays: 1,
+              location: 'Brooder House',
+              status: 'Brooding',
+              note: 'Newly moved from incubation',
+              incubationBatch: selectedBatchId,
+              hatchDate: result.hatchDate,
+              sources: result.sources.map((source) => ({
+                groupName: source.groupName,
+                cross: source.cross,
+                chicks: source.hatched,
+                marking: source.marking,
+              })),
+            };
+            setAddedBroodingBatches((current) => [broodingBatch, ...current.filter((batch) => batch.id !== broodingBatchId)]);
+            setSelectedBroodingBatchId(broodingBatchId);
+            setScreen('brooding');
           }}
         />
       ) : screen === 'maturing' ? (
@@ -1780,10 +2207,21 @@ export default function App() {
         />
       ) : screen === 'brooding' ? (
         <BroodingScreen
+          farm={selectedFarm}
+          addedBatches={addedBroodingBatches}
           lossRecordsByBatch={broodingLossesByBatch}
+          vaccineCompletionsByBatch={vaccineCompletionsByBatch}
+          vaccinationSchedule={broodingSettings.vaccinationSchedule}
           readyDay={broodingSettings.readyDay}
           onBack={() => setScreen('farm-detail')}
           onOpenSettings={() => setScreen('vaccination-schedule')}
+          onMarkTaskDone={(batchId, taskId) => setVaccineCompletionsByBatch((current) => ({
+            ...current,
+            [batchId]: {
+              ...(current[batchId] || {}),
+              [taskId]: { completedAt: new Date().toISOString() },
+            },
+          }))}
           onOpenBatch={(batchId) => {
             setSelectedBroodingBatchId(batchId);
             setScreen('brooding-batch-detail');
@@ -1792,6 +2230,7 @@ export default function App() {
       ) : screen === 'brooding-batch-detail' ? (
         <BroodingBatchDetailScreen
           batchId={selectedBroodingBatchId}
+          batchOverride={addedBroodingBatches.find((batch) => batch.id === selectedBroodingBatchId)}
           lossRecords={broodingLossesByBatch[selectedBroodingBatchId] || []}
           vaccinationSchedule={broodingSettings.vaccinationSchedule}
           vaccineCompletions={vaccineCompletionsByBatch[selectedBroodingBatchId] || {}}
@@ -2278,7 +2717,10 @@ export default function App() {
       ) : screen === 'tasks' ? (
         <TasksScreen
           onBack={() => setScreen('dashboard')}
-          onAddTask={() => setScreen('add-task')}
+          onAddTask={() => {
+            setAddTaskReturn('tasks');
+            setScreen('add-task');
+          }}
           onOpenTask={(task) => {
             setSelectedTask(task);
             setScreen('task-detail');
@@ -2311,10 +2753,10 @@ export default function App() {
       ) : screen === 'add-task' ? (
         <AddTaskScreen
           members={teamMembers}
-          onBack={() => setScreen('tasks')}
+          onBack={() => setScreen(addTaskReturn)}
           onComplete={(task) => {
             setAddedTasks((current) => [task, ...current]);
-            setScreen('tasks');
+            setScreen(addTaskReturn);
           }}
         />
       ) : screen === 'team' ? (
@@ -2464,6 +2906,167 @@ const styles = StyleSheet.create({
   heroCopy: { marginTop: 'auto', paddingHorizontal: 14, paddingBottom: 24, maxWidth: 535 },
   heroCopyCompact: { paddingBottom: 20 },
   heroCopyNarrow: { paddingHorizontal: 11, paddingBottom: 16 },
+  blankIncubationHeader: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    paddingHorizontal: 16, paddingTop: Platform.OS === 'web' ? 10 : 3,
+  },
+  blankIncubationHeaderBetween: { justifyContent: 'space-between' },
+  blankIncubationHeaderLeft: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  blankIncubationScreenTitle: { color: '#f0f2f3', fontSize: 17, fontWeight: '700', letterSpacing: 0 },
+  blankIncubationHeroCopy: { marginTop: 'auto', paddingHorizontal: 18, paddingBottom: 24 },
+  blankIncubationHeroCopyNarrow: { paddingHorizontal: 12, paddingBottom: 18 },
+  blankIncubationFarmName: {
+    color: '#f5f6f6', fontSize: 34, lineHeight: 40, fontWeight: '800', letterSpacing: 0,
+    fontFamily: Platform.select({ ios: 'Georgia', android: 'serif', web: 'Georgia' }),
+    textShadowColor: 'rgba(0, 0, 0, 0.75)', textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 5,
+  },
+  blankIncubationFarmNameNarrow: { fontSize: 29, lineHeight: 34 },
+  blankIncubationTagline: { marginTop: 6, color: '#bac1c3', fontSize: 14, lineHeight: 20, letterSpacing: 0 },
+  blankIncubationMeta: { marginTop: 16, flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 10 },
+  blankIncubationMetaItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  blankIncubationMetaText: { color: '#b8c0c2', fontSize: 12, letterSpacing: 0 },
+  blankIncubationMetaDivider: { width: 1, height: 14, backgroundColor: '#6d777a' },
+  blankIncubationContent: { paddingHorizontal: 10, paddingBottom: 18 },
+  blankIncubationContentNarrow: { paddingHorizontal: 8 },
+  blankIncubationActionRow: { flexDirection: 'row', gap: 10 },
+  blankIncubationActionRowCompact: { gap: 8 },
+  blankIncubationSearchBox: {
+    flex: 1, height: 52, flexDirection: 'row', alignItems: 'center', gap: 10,
+    paddingHorizontal: 16, borderRadius: 8, borderWidth: 1, borderColor: '#28343a',
+    backgroundColor: '#0b1418',
+  },
+  blankIncubationSearchInput: {
+    flex: 1, height: 50, paddingVertical: 0, color: '#e7ebec', fontSize: 14,
+    letterSpacing: 0, outlineStyle: 'none',
+  },
+  blankIncubationAddButton: {
+    height: 52, minWidth: 103, paddingHorizontal: 12, borderRadius: 8,
+    backgroundColor: '#f66f00', flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'center', gap: 7,
+  },
+  blankIncubationAddButtonCompact: { minWidth: 96, paddingHorizontal: 10 },
+  blankIncubationAddButtonText: { color: '#ffffff', fontSize: 11, fontWeight: '800', letterSpacing: 0 },
+  blankIncubationListHeading: {
+    marginTop: 20, marginBottom: 9, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between',
+  },
+  blankIncubationEyebrow: { color: '#899397', fontSize: 10, fontWeight: '600', letterSpacing: 0 },
+  blankIncubationListTitle: { marginTop: 4, color: '#edf1f2', fontSize: 17, fontWeight: '800', letterSpacing: 0 },
+  blankIncubationBatchCount: { color: '#8e9a9e', fontSize: 10, fontWeight: '700' },
+  blankIncubationBatchList: { gap: 9 },
+  blankIncubationBatchCard: {
+    borderRadius: 7, borderWidth: 1, borderColor: '#223138', backgroundColor: '#091317', padding: 13,
+  },
+  blankIncubationBatchHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
+  blankIncubationBatchIdentity: { minWidth: 0, flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  blankIncubationBatchIcon: {
+    width: 40, height: 40, borderRadius: 7, backgroundColor: 'rgba(255, 122, 0, 0.1)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  blankIncubationBatchName: { color: '#eef2f3', fontSize: 13, fontWeight: '800', letterSpacing: 0 },
+  blankIncubationBatchId: { marginTop: 3, color: '#758287', fontSize: 9, letterSpacing: 0 },
+  blankIncubationChickenCount: { alignItems: 'flex-end' },
+  blankIncubationChickenCountValue: { color: '#ffffff', fontSize: 18, lineHeight: 20, fontWeight: '800' },
+  blankIncubationChickenCountLabel: { marginTop: 2, color: '#78868b', fontSize: 8 },
+  blankIncubationFamilyTree: {
+    marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#1b2a30',
+    flexDirection: 'row', alignItems: 'center', minHeight: 178,
+  },
+  blankIncubationFamilyNode: {
+    flex: 1, minWidth: 0, minHeight: 48, borderRadius: 7, borderWidth: 1,
+    borderColor: '#293a40', backgroundColor: '#0d191e', paddingHorizontal: 10, paddingVertical: 8,
+    justifyContent: 'center',
+  },
+  blankIncubationSireNode: { maxWidth: '36%', borderColor: 'rgba(255, 122, 0, 0.45)' },
+  blankIncubationTreeConnector: { width: 30, height: 158, position: 'relative' },
+  blankIncubationTreeStem: {
+    position: 'absolute', left: 0, right: 0, top: '50%', height: 1, backgroundColor: '#526168',
+  },
+  blankIncubationTreeTrunk: {
+    position: 'absolute', right: 0, top: 24, bottom: 24, width: 1, backgroundColor: '#526168',
+  },
+  blankIncubationDamList: { flex: 1, gap: 7 },
+  blankIncubationDamBranch: { flexDirection: 'row', alignItems: 'center' },
+  blankIncubationDamBranchLine: { width: 12, height: 1, backgroundColor: '#526168' },
+  blankIncubationLineageLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  blankIncubationLineageLabel: { color: '#77858a', fontSize: 8, fontWeight: '800', letterSpacing: 0 },
+  blankIncubationLineageValue: { marginTop: 5, color: '#e5eaeb', fontSize: 12, fontWeight: '700', letterSpacing: 0 },
+  blankIncubationEmptyText: { paddingVertical: 28, color: '#748187', fontSize: 11, textAlign: 'center' },
+  batchSetupHero: { height: 242, overflow: 'hidden', backgroundColor: '#101719' },
+  batchSetupHeroCompact: { height: 224 },
+  batchSetupHeroCopy: { marginTop: 'auto', paddingHorizontal: 18, paddingBottom: 22 },
+  batchSetupForm: { paddingHorizontal: 14, paddingTop: 18, paddingBottom: 32 },
+  batchSetupFormCompact: { paddingHorizontal: 10 },
+  batchSetupTitle: { marginTop: 5, color: '#edf1f2', fontSize: 20, fontWeight: '800', letterSpacing: 0 },
+  batchSetupDescription: { marginTop: 6, color: '#89969a', fontSize: 12, lineHeight: 18, letterSpacing: 0 },
+  batchSetupDetailsSection: { marginTop: 20, gap: 9 },
+  batchSetupDetailsRow: { flexDirection: 'row', gap: 9 },
+  batchSetupTextField: { flex: 1, minWidth: 0, gap: 6 },
+  batchSetupInputShell: {
+    height: 48, borderRadius: 7, borderWidth: 1, borderColor: '#283940', backgroundColor: '#0b161a',
+    paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', gap: 8,
+  },
+  batchSetupTextInput: {
+    flex: 1, minWidth: 0, height: 46, paddingVertical: 0, color: '#e8eced', fontSize: 12,
+    letterSpacing: 0, outlineStyle: 'none',
+  },
+  batchSetupInputSuffix: { color: '#78868b', fontSize: 9 },
+  batchSetupCountRow: { marginTop: 18, flexDirection: 'row', gap: 9 },
+  batchSetupCountCard: {
+    flex: 1, minWidth: 0, minHeight: 78, borderRadius: 7, borderWidth: 1,
+    borderColor: '#27373d', backgroundColor: '#0a1519', padding: 11, gap: 10,
+  },
+  batchSetupCountLabel: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  batchSetupCountTitle: { color: '#dfe5e7', fontSize: 11, fontWeight: '700' },
+  batchSetupStepper: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  batchSetupStepButton: {
+    width: 30, height: 30, borderRadius: 6, borderWidth: 1, borderColor: '#304047',
+    backgroundColor: '#111e23', alignItems: 'center', justifyContent: 'center',
+  },
+  batchSetupCountValue: { color: '#ffffff', fontSize: 18, fontWeight: '800' },
+  batchSetupSectionTitle: { color: '#e7ebec', fontSize: 14, fontWeight: '800', letterSpacing: 0 },
+  batchSetupField: { width: '100%', gap: 5 },
+  batchSetupFieldLabel: { color: '#8d999d', fontSize: 9, fontWeight: '700', letterSpacing: 0 },
+  batchSetupSelect: {
+    minHeight: 58, borderRadius: 7, borderWidth: 1, borderColor: '#283940', backgroundColor: '#0b161a',
+    paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 9,
+  },
+  batchSetupSelectOpen: { borderColor: 'rgba(255, 122, 0, 0.65)' },
+  batchSetupSelectCopy: { flex: 1, minWidth: 0 },
+  batchSetupSelectLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  batchSetupSelectLabel: { color: '#819095', fontSize: 8, fontWeight: '800', letterSpacing: 0 },
+  batchSetupSelectValue: { marginTop: 5, color: '#eef2f3', fontSize: 12, fontWeight: '800' },
+  batchSetupOptions: {
+    borderRadius: 7, borderWidth: 1, borderColor: '#2a3a40', backgroundColor: '#0d181d', overflow: 'hidden',
+  },
+  batchSetupOption: {
+    minHeight: 40, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'space-between', borderBottomWidth: 1, borderBottomColor: '#1d2b30',
+  },
+  batchSetupOptionText: { color: '#a4b0b4', fontSize: 11 },
+  batchSetupOptionTextActive: { color: '#ffffff', fontWeight: '800' },
+  batchSetupTreeSection: { marginTop: 22 },
+  batchSetupTreeHint: { marginTop: 4, color: '#758388', fontSize: 10, lineHeight: 15 },
+  batchSetupTreeEditor: {
+    marginTop: 12, minHeight: 200, borderRadius: 7, borderWidth: 1, borderColor: '#22343b',
+    backgroundColor: '#071115', paddingVertical: 14, paddingHorizontal: 10,
+    flexDirection: 'row', alignItems: 'center', overflow: 'visible',
+  },
+  batchSetupSireList: { flex: 1, minWidth: 0, gap: 8, justifyContent: 'center' },
+  batchSetupSireBranch: { flexDirection: 'row', alignItems: 'center' },
+  batchSetupSireNode: { flex: 1, minWidth: 0 },
+  batchSetupTreeConnector: { width: 26, minHeight: 174, alignSelf: 'stretch', position: 'relative' },
+  batchSetupTreeStem: {
+    position: 'absolute', left: 0, right: 0, top: '50%', height: 1, backgroundColor: '#526168',
+  },
+  batchSetupTreeTrunk: {
+    position: 'absolute', right: 0, top: 30, bottom: 30, width: 1, backgroundColor: '#526168',
+  },
+  batchSetupDamList: { flex: 1.35, minWidth: 0, gap: 8, justifyContent: 'center' },
+  batchSetupDamBranch: { flexDirection: 'row', alignItems: 'center' },
+  batchSetupDamNode: { flex: 1, minWidth: 0 },
+  batchSetupNodeLine: { width: 10, height: 1, backgroundColor: '#526168' },
+  batchSetupSireNodeSelect: { borderColor: 'rgba(255, 122, 0, 0.72)' },
   heroEyebrow: { marginBottom: 5, color: THEME_ORANGE, fontSize: 9, fontWeight: '800', letterSpacing: 0 },
   brand: {
     color: '#f5f4f0', fontSize: 38, lineHeight: 44, fontWeight: '800',
@@ -2697,6 +3300,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', paddingHorizontal: 11,
   },
   moduleCardCompact: { height: 94, paddingHorizontal: 7 },
+  moduleCardTextOnly: { backgroundColor: '#000000', justifyContent: 'center' },
   moduleWide: { flexBasis: '100%', maxWidth: '100%' },
   moduleImage: {
     position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, opacity: 1,
@@ -2710,10 +3314,12 @@ const styles = StyleSheet.create({
   badgeMotion: { width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' },
   badgeImage: { width: '92%', height: '92%' },
   moduleCopy: { flex: 1, minWidth: 0, marginLeft: 9, marginRight: 5, zIndex: 1 },
+  moduleCopyTextOnly: { marginLeft: 0, marginRight: 0, alignItems: 'center' },
   moduleCopyCompact: { marginLeft: 7, marginRight: 2 },
   moduleTitle: {
     color: '#edf0f1', fontSize: 14, lineHeight: 18, fontWeight: '700', letterSpacing: 0,
   },
+  moduleTitleTextOnly: { color: '#ffffff', textAlign: 'center' },
   moduleTitleCompact: { fontSize: 12, lineHeight: 15 },
   moduleSubtitle: {
     marginTop: 3, color: '#9ba5a8', fontSize: 9, lineHeight: 13, letterSpacing: 0,
