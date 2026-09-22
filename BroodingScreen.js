@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
+import { Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -23,6 +23,8 @@ export const BROODING_BATCHES = [
 ];
 
 function BatchCard({ batch, vaccinationSchedule, vaccineCompletions, onOpen, onMarkDone }) {
+  const [outcomeVisible, setOutcomeVisible] = useState(false);
+  const [mortalityInput, setMortalityInput] = useState(String(Math.max(0, batch.startingChicks - batch.chicks)));
   const familySources = (batch.sources || []).map((source) => {
     const parents = source.cross.split(/\s+x\s+/i);
     return { ...source, sire: parents[0], dam: parents[1] || source.cross };
@@ -32,6 +34,7 @@ function BatchCard({ batch, vaccinationSchedule, vaccineCompletions, onOpen, onM
     .filter((vaccine) => vaccine.enabled !== false && !vaccineCompletions[vaccine.id])
     .sort((a, b) => a.day - b.day)[0];
   const nextActionTitle = nextVaccine?.name || 'Daily Brooder Check';
+  const isOutcomeTask = nextVaccine?.id === 'brooding-outcome';
   const daysRemaining = nextVaccine ? nextVaccine.day - batch.ageDays : 0;
   const nextActionDue = nextVaccine ? dateAfterDays(batch.hatchDate, nextVaccine.day) : dateAfterDays(new Date(), 0);
   const dueDateValue = new Date(nextActionDue);
@@ -44,6 +47,25 @@ function BatchCard({ batch, vaccinationSchedule, vaccineCompletions, onOpen, onM
         ? `${Math.abs(daysRemaining)} day${Math.abs(daysRemaining) === 1 ? '' : 's'} overdue`
         : `${daysRemaining} day${daysRemaining === 1 ? '' : 's'} remaining`
     : 'Due today';
+  const mortalityValue = Number.parseInt(mortalityInput, 10) || 0;
+  const chicksAtRange = Math.max(0, batch.startingChicks - mortalityValue);
+  const outcomeSuccessRate = batch.startingChicks ? Math.round((chicksAtRange / batch.startingChicks) * 1000) / 10 : 0;
+  const completeTask = () => {
+    if (!isOutcomeTask) {
+      onMarkDone(nextVaccine?.id || `daily-${batch.id}`);
+      return;
+    }
+    setMortalityInput(String(Math.max(0, batch.startingChicks - batch.chicks)));
+    setOutcomeVisible(true);
+  };
+  const saveOutcome = () => {
+    if (!Number.isInteger(mortalityValue) || mortalityValue < 0 || mortalityValue > batch.startingChicks) {
+      Alert.alert('Check mortality', `Enter a whole number from 0 to ${batch.startingChicks}.`);
+      return;
+    }
+    onMarkDone(nextVaccine.id, { mortality: mortalityValue, successRate: outcomeSuccessRate, chicksAtRange });
+    setOutcomeVisible(false);
+  };
   return (
     <View style={styles.batchCard}>
       <Pressable accessibilityLabel={`Open brooding batch ${batch.id}`} onPress={onOpen} style={({ pressed }) => [styles.batchTop, pressed && styles.pressed]}>
@@ -67,7 +89,6 @@ function BatchCard({ batch, vaccinationSchedule, vaccineCompletions, onOpen, onM
                 <View style={styles.damNode}>
                   <View style={styles.damTopRow}>
                     <View style={styles.familyLabelRow}><MaterialCommunityIcons name="gender-female" size={13} color={ORANGE} /><Text style={styles.familyLabel}>DAM {index + 1}</Text></View>
-                    <Text style={styles.damChicks}>{source.chicks} chicks</Text>
                   </View>
                   <Text style={styles.familyValue}>{source.dam}</Text>
                 </View>
@@ -87,8 +108,28 @@ function BatchCard({ batch, vaccinationSchedule, vaccineCompletions, onOpen, onM
             <View style={styles.cardNextActionMeta}><MaterialCommunityIcons name="clock-outline" size={12} color={ORANGE} /><Text style={styles.cardNextActionDetail}>{nextActionRemaining}</Text></View>
           </View>
         </View>
-        <Pressable accessibilityLabel={`Mark ${nextActionTitle} done for ${batch.id}`} onPress={() => onMarkDone(nextVaccine?.id || `daily-${batch.id}`)} style={({ pressed }) => [styles.quickActionButton, pressed && styles.pressed]}><MaterialCommunityIcons name="check" size={14} color="#ffffff" /><Text style={styles.quickActionText}>Mark Done</Text></Pressable>
+        <Pressable accessibilityLabel={`${isOutcomeTask ? 'Record' : 'Mark done'} ${nextActionTitle} for ${batch.id}`} onPress={completeTask} style={({ pressed }) => [styles.quickActionButton, pressed && styles.pressed]}><MaterialCommunityIcons name={isOutcomeTask ? 'chart-box-outline' : 'check'} size={14} color="#ffffff" /><Text style={styles.quickActionText}>{isOutcomeTask ? 'Record' : 'Mark Done'}</Text></Pressable>
       </View>
+      <Modal visible={outcomeVisible} transparent animationType="fade" onRequestClose={() => setOutcomeVisible(false)}>
+        <View style={styles.modalBackdrop}>
+          <Pressable accessibilityLabel="Close outcome modal" onPress={() => setOutcomeVisible(false)} style={StyleSheet.absoluteFill} />
+          <View style={styles.outcomeModal}>
+            <View style={styles.outcomeHeader}>
+              <View><Text style={styles.outcomeEyebrow}>FINAL BROODING TASK</Text><Text style={styles.outcomeTitle}>Record Batch Outcome</Text></View>
+              <Pressable accessibilityLabel="Close" onPress={() => setOutcomeVisible(false)} style={styles.outcomeClose}><Ionicons name="close" size={20} color="#ffffff" /></Pressable>
+            </View>
+            <View style={styles.outcomeBatchBand}><Text style={styles.outcomeBatchId}>{batch.id}</Text><Text style={styles.outcomeBatchCount}>{batch.startingChicks} starting chicks</Text></View>
+            <Text style={styles.outcomeFieldLabel}>Mortality</Text>
+            <View style={styles.outcomeInputShell}><MaterialCommunityIcons name="minus-circle-outline" size={18} color={ORANGE} /><TextInput value={mortalityInput} onChangeText={(value) => setMortalityInput(value.replace(/[^0-9]/g, ''))} keyboardType="number-pad" inputMode="numeric" maxLength={4} selectTextOnFocus selectionColor={ORANGE} style={styles.outcomeInput} /></View>
+            <View style={styles.outcomeSummary}>
+              <View style={styles.outcomeMetric}><Text style={styles.outcomeMetricValue}>{chicksAtRange}</Text><Text style={styles.outcomeMetricLabel}>Ready to Range</Text></View>
+              <View style={styles.outcomeSummaryDivider} />
+              <View style={styles.outcomeMetric}><Text style={styles.outcomeMetricValue}>{outcomeSuccessRate}%</Text><Text style={styles.outcomeMetricLabel}>Success Rate</Text></View>
+            </View>
+            <View style={styles.outcomeActions}><Pressable onPress={() => setOutcomeVisible(false)} style={styles.outcomeCancel}><Text style={styles.outcomeCancelText}>Cancel</Text></Pressable><Pressable onPress={saveOutcome} style={styles.outcomeSave}><MaterialCommunityIcons name="content-save-check-outline" size={17} color="#ffffff" /><Text style={styles.outcomeSaveText}>Record Outcome</Text></Pressable></View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -128,7 +169,7 @@ export default function BroodingScreen({ farm, onBack, onOpenBatch, onOpenSettin
               {!!query && <Pressable accessibilityLabel="Clear search" onPress={() => setQuery('')} hitSlop={8}><Ionicons name="close-circle" size={18} color="#6c777b" /></Pressable>}
             </View>
             <View style={styles.listHeading}><View><Text style={styles.overline}>ACTIVE BATCHES</Text><Text style={styles.listTitle}>Brooding batches</Text></View><Text style={styles.batchCount}>{batches.length} active</Text></View>
-            <View style={styles.batchList}>{batches.map((batch) => <BatchCard key={batch.id} batch={batch} vaccinationSchedule={vaccinationSchedule} vaccineCompletions={vaccineCompletionsByBatch[batch.id] || {}} onOpen={() => onOpenBatch(batch.id)} onMarkDone={(taskId) => onMarkTaskDone(batch.id, taskId)} />)}{!batches.length && <Text style={styles.empty}>No brooding batches found</Text>}</View>
+            <View style={styles.batchList}>{batches.map((batch) => <BatchCard key={batch.id} batch={batch} vaccinationSchedule={vaccinationSchedule} vaccineCompletions={vaccineCompletionsByBatch[batch.id] || {}} onOpen={() => onOpenBatch(batch.id)} onMarkDone={(taskId, details) => onMarkTaskDone(batch.id, taskId, details)} />)}{!batches.length && <Text style={styles.empty}>No brooding batches found</Text>}</View>
           </View>
         </View>
       </ScrollView>
@@ -144,6 +185,7 @@ const styles = StyleSheet.create({
   overline: { color: '#899397', fontSize: 10, fontWeight: '600' },
   listHeading: { marginTop: 20, marginBottom: 9, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' }, listTitle: { marginTop: 4, color: '#edf1f2', fontSize: 17, fontWeight: '800' }, batchCount: { color: '#8e9a9e', fontSize: 10, fontWeight: '700' }, batchList: { gap: 9 },
   batchCard: { borderRadius: 7, borderWidth: 1, borderColor: '#223138', backgroundColor: '#091317', padding: 13 }, batchTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 }, batchIdentity: { minWidth: 0, flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 }, batchIcon: { width: 40, height: 40, borderRadius: 7, backgroundColor: 'rgba(255,122,0,0.1)', alignItems: 'center', justifyContent: 'center' }, batchName: { color: '#eef2f3', fontSize: 13, fontWeight: '800' }, batchId: { marginTop: 3, color: '#758287', fontSize: 9 }, chickCount: { alignItems: 'flex-end' }, chickCountValue: { color: '#ffffff', fontSize: 18, lineHeight: 20, fontWeight: '800' }, chickCountLabel: { marginTop: 2, color: '#78868b', fontSize: 8 },
-  familyTree: { marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#1b2a30', flexDirection: 'row', alignItems: 'center', minHeight: 178 }, sireNode: { flex: 1, minWidth: 0, maxWidth: '36%', minHeight: 48, borderRadius: 7, borderWidth: 1, borderColor: 'rgba(255,122,0,0.45)', backgroundColor: '#0d191e', paddingHorizontal: 10, paddingVertical: 8, justifyContent: 'center' }, familyLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 5 }, familyLabel: { color: '#77858a', fontSize: 8, fontWeight: '800' }, familyValue: { marginTop: 5, color: '#e5eaeb', fontSize: 12, fontWeight: '700' }, treeConnector: { width: 30, height: 158, position: 'relative' }, treeStem: { position: 'absolute', left: 0, right: 0, top: '50%', height: 1, backgroundColor: '#526168' }, treeTrunk: { position: 'absolute', right: 0, top: 24, bottom: 24, width: 1, backgroundColor: '#526168' }, damList: { flex: 1, gap: 7 }, damBranch: { flexDirection: 'row', alignItems: 'center' }, branchLine: { width: 12, height: 1, backgroundColor: '#526168' }, damNode: { flex: 1, minWidth: 0, minHeight: 48, borderRadius: 7, borderWidth: 1, borderColor: '#293a40', backgroundColor: '#0d191e', paddingHorizontal: 10, paddingVertical: 8, justifyContent: 'center' }, damTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 5 }, damChicks: { color: ORANGE, fontSize: 7, fontWeight: '800' }, empty: { paddingVertical: 28, color: '#748187', fontSize: 11, textAlign: 'center' }, pressed: { opacity: 0.76, transform: [{ scale: 0.995 }] },
+  familyTree: { marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#1b2a30', flexDirection: 'row', alignItems: 'center', minHeight: 178 }, sireNode: { flex: 1, minWidth: 0, maxWidth: '36%', minHeight: 48, borderRadius: 7, borderWidth: 1, borderColor: 'rgba(255,122,0,0.45)', backgroundColor: '#0d191e', paddingHorizontal: 10, paddingVertical: 8, justifyContent: 'center' }, familyLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 5 }, familyLabel: { color: '#77858a', fontSize: 8, fontWeight: '800' }, familyValue: { marginTop: 5, color: '#e5eaeb', fontSize: 12, fontWeight: '700' }, treeConnector: { width: 30, height: 158, position: 'relative' }, treeStem: { position: 'absolute', left: 0, right: 0, top: '50%', height: 1, backgroundColor: '#526168' }, treeTrunk: { position: 'absolute', right: 0, top: 24, bottom: 24, width: 1, backgroundColor: '#526168' }, damList: { flex: 1, gap: 7 }, damBranch: { flexDirection: 'row', alignItems: 'center' }, branchLine: { width: 12, height: 1, backgroundColor: '#526168' }, damNode: { flex: 1, minWidth: 0, minHeight: 48, borderRadius: 7, borderWidth: 1, borderColor: '#293a40', backgroundColor: '#0d191e', paddingHorizontal: 10, paddingVertical: 8, justifyContent: 'center' }, damTopRow: { flexDirection: 'row', alignItems: 'center' }, empty: { paddingVertical: 28, color: '#748187', fontSize: 11, textAlign: 'center' }, pressed: { opacity: 0.76, transform: [{ scale: 0.995 }] },
   cardNextAction: { minHeight: 88, marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#293a40', flexDirection: 'row', alignItems: 'center', gap: 10 }, cardNextActionIcon: { width: 44, height: 50, borderRadius: 6, borderWidth: 1, borderColor: '#8f500d', backgroundColor: 'rgba(255,121,0,0.08)', alignItems: 'center', justifyContent: 'center' }, cardNextActionMonth: { color: ORANGE, fontSize: 7, lineHeight: 9, fontWeight: '800' }, cardNextActionDay: { marginTop: 2, color: '#ffffff', fontSize: 17, lineHeight: 18, fontWeight: '800' }, cardNextActionCopy: { flex: 1, minWidth: 0 }, cardNextActionTitle: { color: '#eef2f3', fontSize: 12, fontWeight: '800' }, cardNextActionTiming: { marginTop: 6, gap: 3 }, cardNextActionMeta: { minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 4 }, cardNextActionDetail: { flexShrink: 1, color: ORANGE, fontSize: 9, fontWeight: '700' }, quickActionButton: { height: 38, minWidth: 94, borderRadius: 6, backgroundColor: ORANGE, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 }, quickActionText: { color: '#ffffff', fontSize: 9, fontWeight: '800' },
+  modalBackdrop: { flex: 1, paddingHorizontal: 16, backgroundColor: 'rgba(0,4,6,0.84)', alignItems: 'center', justifyContent: 'center' }, outcomeModal: { width: '100%', maxWidth: 430, borderRadius: 8, borderWidth: 1, borderColor: '#2c3d44', backgroundColor: '#071216', padding: 16 }, outcomeHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }, outcomeEyebrow: { color: ORANGE, fontSize: 8, fontWeight: '800' }, outcomeTitle: { marginTop: 5, color: '#ffffff', fontSize: 21, fontWeight: '800' }, outcomeClose: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, borderColor: '#44535a', alignItems: 'center', justifyContent: 'center' }, outcomeBatchBand: { height: 45, marginTop: 16, borderRadius: 6, backgroundColor: '#0d1a1f', paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, outcomeBatchId: { color: ORANGE, fontSize: 11, fontWeight: '800' }, outcomeBatchCount: { color: '#9ba7aa', fontSize: 9 }, outcomeFieldLabel: { marginTop: 15, marginBottom: 6, color: '#edf1f2', fontSize: 10, fontWeight: '700' }, outcomeInputShell: { height: 48, borderRadius: 7, borderWidth: 1, borderColor: '#304249', backgroundColor: '#081519', paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 9 }, outcomeInput: { flex: 1, height: 46, padding: 0, color: '#ffffff', fontSize: 13, outlineStyle: 'none' }, outcomeSummary: { minHeight: 72, marginTop: 12, borderRadius: 7, borderWidth: 1, borderColor: '#263940', backgroundColor: '#091519', flexDirection: 'row', alignItems: 'center' }, outcomeMetric: { flex: 1, alignItems: 'center' }, outcomeMetricValue: { color: '#ffffff', fontSize: 18, fontWeight: '800' }, outcomeMetricLabel: { marginTop: 4, color: '#7f8c91', fontSize: 8 }, outcomeSummaryDivider: { width: 1, height: 36, backgroundColor: '#263940' }, outcomeActions: { marginTop: 16, flexDirection: 'row', gap: 8 }, outcomeCancel: { flex: 1, height: 44, borderRadius: 7, borderWidth: 1, borderColor: '#304249', alignItems: 'center', justifyContent: 'center' }, outcomeCancelText: { color: '#e4e9ea', fontSize: 10, fontWeight: '700' }, outcomeSave: { flex: 1.4, height: 44, borderRadius: 7, backgroundColor: ORANGE, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }, outcomeSaveText: { color: '#ffffff', fontSize: 10, fontWeight: '800' },
 });

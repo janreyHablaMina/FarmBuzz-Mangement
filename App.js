@@ -91,7 +91,6 @@ const BREEDING_HERO_IMAGE = require('./assets/breeding-hero.png');
 const HARDENING_CARD_IMAGE = require('./assets/hardening-card.png');
 const CORDING_CARD_IMAGE = require('./assets/cording-card.png');
 const GROWING_HERO_IMAGE = require('./assets/growing-card.png');
-const RANGING_HERO_IMAGE = require('./assets/ranging-card.png');
 const EGGS_INCUBATION_HERO_IMAGE = require('./assets/eggs-incubation-hero.png');
 const HEALTH_CARE_HERO_IMAGE = require('./assets/health-care-hero.png');
 const SALES_DASHBOARD_HERO_IMAGE = require('./assets/sales-dashboard-hero.png');
@@ -842,12 +841,9 @@ function FarmDetailScreen({ farm, onBack, onOpenBreeding, onOpenIncubation, onOp
     image: GROWING_HERO_IMAGE,
   };
   const maturingModule = {
-    title: 'Maturing',
-    subtitle: 'Ranging and female pullet groups',
-    icon: 'progress-clock',
-    color: THEME_ORANGE,
-    tint: THEME_ORANGE_TINT,
-    image: RANGING_HERO_IMAGE,
+    title: 'Range',
+    color: '#ffffff',
+    variant: 'textOnly',
   };
   const hardeningModule = {
     title: 'Hardening',
@@ -1859,7 +1855,7 @@ export default function App() {
           onOpenBlankIncubation={() => setScreen('blank-incubation')}
           onOpenBrooding={() => setScreen('brooding')}
           onOpenGrowing={() => setScreen('growing')}
-          onOpenMaturing={() => setScreen('maturing')}
+          onOpenMaturing={() => setScreen('ranging')}
           onOpenHardening={() => setScreen('stag-maintenance')}
           onOpenCording={() => setScreen('cording')}
           onOpenSettings={() => {
@@ -2107,13 +2103,46 @@ export default function App() {
         />
       ) : screen === 'ranging' ? (
         <RangingScreen
+          farm={selectedFarm}
           batches={rangingBatches.map((batch) => completedRangingBatchIds.includes(batch.id) ? { ...batch, status: 'Completed' } : batch)}
           lossesByBatch={rangingLossesByBatch}
           locationsByBatch={rangingLocationsByBatch}
           selectionsByLocation={rangingSelectionsByLocation}
+          taskSchedule={rangingSettings.tasks}
+          taskCompletionsByBatch={rangingTasksByBatch}
           readyDay={rangingSettings.readyDay}
-          onBack={() => setScreen('maturing')}
-          onOpenSettings={() => setScreen('ranging-settings')}
+          nextCordingBirdNumber={nextCordingBirdNumber.current}
+          onBack={() => setScreen('farm-detail')}
+          onOpenSettings={() => setScreen('ranging-task-settings')}
+          onMarkTaskDone={(location, taskId) => setRangingTasksByBatch((current) => ({
+            ...current,
+            [location]: {
+              ...(current[location] || {}),
+              [taskId]: { completedAt: new Date().toISOString() },
+            },
+          }))}
+          onMoveToCording={(record) => {
+            const bird = {
+              farmBuzzId: record.farmBuzzId,
+              _recordKey: record.farmBuzzId,
+              name: record.tpNumber,
+              type: 'Stag',
+              filter: 'stag',
+              bloodline: record.bloodline,
+              status: 'Cording',
+              location: 'Cording Area 1',
+              identificationType: 'TP Number',
+              physicalId: record.tpNumber,
+              image: CORDING_CARD_IMAGE,
+              details: [{ icon: 'tag-outline', text: `TP Number: ${record.tpNumber}` }, { icon: 'dna', text: record.bloodline }, { icon: 'map-marker-outline', text: 'Cording Area 1' }],
+              cordingEntry: { fromArea: record.location, destination: 'Cording Area 1', movedAt: new Date().toISOString() },
+            };
+            setCordingBirds((current) => [bird, ...current]);
+            setAddedBirds((current) => [bird, ...current]);
+            setCordingAreas((current) => current.map((area) => area.name === 'Cording Area 1' ? { ...area, count: area.count + 1 } : area));
+            setRangingTasksByBatch((current) => ({ ...current, [record.location]: { ...(current[record.location] || {}), [record.taskId]: { completedAt: new Date().toISOString() } } }));
+            nextCordingBirdNumber.current += 1;
+          }}
           onOpenBatch={(location) => {
             setSelectedRangingBatchId(location);
             setScreen('ranging-batch-detail');
@@ -2139,11 +2168,8 @@ export default function App() {
         <GrowingScheduleSettingsScreen
           variant="ranging"
           initialSettings={rangingSettings}
-          onBack={() => setScreen('ranging-settings')}
-          onSave={(settings) => {
-            setRangingSettings(settings);
-            setScreen('ranging-settings');
-          }}
+          onBack={() => setScreen('ranging')}
+          onSave={setRangingSettings}
         />
       ) : screen === 'ranging-batch-detail' ? (
         <RangingAreaDetailScreen
@@ -2215,11 +2241,11 @@ export default function App() {
           readyDay={broodingSettings.readyDay}
           onBack={() => setScreen('farm-detail')}
           onOpenSettings={() => setScreen('vaccination-schedule')}
-          onMarkTaskDone={(batchId, taskId) => setVaccineCompletionsByBatch((current) => ({
+          onMarkTaskDone={(batchId, taskId, details = {}) => setVaccineCompletionsByBatch((current) => ({
             ...current,
             [batchId]: {
               ...(current[batchId] || {}),
-              [taskId]: { completedAt: new Date().toISOString() },
+              [taskId]: { completedAt: new Date().toISOString(), ...details },
             },
           }))}
           onOpenBatch={(batchId) => {
