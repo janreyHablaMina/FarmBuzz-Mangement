@@ -33,7 +33,7 @@ import BroodingBatchDetailScreen from './BroodingBatchDetailScreen';
 import VaccinationScheduleScreen, { DEFAULT_BROODING_SETTINGS } from './VaccinationScheduleScreen';
 import GrowingScreen from './GrowingScreen';
 import GrowingBatchDetailScreen from './GrowingBatchDetailScreen';
-import GrowingScheduleSettingsScreen, { DEFAULT_GROWING_SETTINGS, DEFAULT_RANGING_SETTINGS, DEFAULT_STAG_SETTINGS } from './GrowingScheduleSettingsScreen';
+import GrowingScheduleSettingsScreen, { DEFAULT_CORDATE_SETTINGS, DEFAULT_GROWING_SETTINGS, DEFAULT_RANGING_SETTINGS, DEFAULT_STAG_SETTINGS } from './GrowingScheduleSettingsScreen';
 import GrowingSettingsScreen, { GrowingSeparationSettingsScreen } from './GrowingSettingsScreen';
 import MaturingScreen from './MaturingScreen';
 import PulletScreen, { PULLET_BATCHES, PulletBatchDetailScreen } from './PulletScreen';
@@ -803,7 +803,7 @@ function FarmWorkspaceCard({ farm, onPress }) {
   );
 }
 
-function FarmDetailScreen({ farm, onBack, onOpenBreeding, onOpenIncubation, onOpenBlankIncubation, onOpenBrooding, onOpenGrowing, onOpenMaturing, onOpenHardening, onOpenCording, onOpenSettings }) {
+function FarmDetailScreen({ farm, onBack, onOpenBreeding, onOpenIncubation, onOpenBlankIncubation, onOpenBrooding, onOpenGrowing, onOpenMaturing, onOpenHardening, onOpenCording, onOpenCordate, onOpenSettings }) {
   const { width } = useWindowDimensions();
   const compact = width < 480;
   const narrow = width < 390;
@@ -860,6 +860,11 @@ function FarmDetailScreen({ farm, onBack, onOpenBreeding, onOpenIncubation, onOp
     color: THEME_ORANGE,
     tint: THEME_ORANGE_TINT,
     image: CORDING_CARD_IMAGE,
+  };
+  const cordateModule = {
+    title: 'Cordate',
+    color: '#ffffff',
+    variant: 'textOnly',
   };
   const breedingStats = [
     { label: 'Active Pairings', value: '3', icon: 'link-variant', color: THEME_ORANGE },
@@ -922,7 +927,7 @@ function FarmDetailScreen({ farm, onBack, onOpenBreeding, onOpenIncubation, onOp
 
             <View style={styles.sectionHeading}>
               <Text style={[styles.sectionTitle, narrow && styles.sectionTitleNarrow]}>Management Tool</Text>
-              <Text style={styles.sectionMeta}>8 modules</Text>
+              <Text style={styles.sectionMeta}>9 modules</Text>
             </View>
             <View style={[styles.moduleGrid, compact && styles.moduleGridCompact]}>
               <ModuleCard item={breedingModule} compact={compact} onPress={onOpenBreeding} />
@@ -933,6 +938,168 @@ function FarmDetailScreen({ farm, onBack, onOpenBreeding, onOpenIncubation, onOp
               <ModuleCard item={maturingModule} compact={compact} onPress={onOpenMaturing} />
               <ModuleCard item={hardeningModule} compact={compact} onPress={onOpenHardening} />
               <ModuleCard item={cordingModule} compact={compact} onPress={onOpenCording} />
+              <ModuleCard item={cordateModule} compact={compact} onPress={onOpenCordate} />
+            </View>
+          </View>
+        </View>
+      </ScrollView>
+    </View>
+  );
+}
+
+function CordateScreen({ farm, areas = [], birds = [], onBack, onOpenBatch, onOpenSettings }) {
+  const cordateBatches = areas.map((area, index) => {
+    const areaBirds = birds.filter((bird) => bird.location === area.name);
+    return {
+      id: `CD-${String(index + 1).padStart(3, '0')}`,
+      name: area.name,
+      count: area.count,
+      bloodline: areaBirds[0]?.bloodline || 'No birds transferred',
+      source: areaBirds[0]?.cordingEntry?.fromArea || 'Range',
+      birds: areaBirds,
+    };
+  });
+
+  return (
+    <View style={styles.cordateScreen}>
+      <StatusBar style="light" translucent backgroundColor="transparent" />
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.cordateScroll}>
+        <View style={styles.cordatePage}>
+          <View style={styles.cordateBanner}>
+            <Image source={CORDING_CARD_IMAGE} style={StyleSheet.absoluteFill} contentFit="cover" contentPosition="center" />
+            <LinearGradient colors={['rgba(0,0,0,.12)', 'rgba(0,0,0,.44)', '#000000']} locations={[0, .52, 1]} style={StyleSheet.absoluteFill} />
+            <SafeAreaView edges={['top']} style={styles.cordateBannerSafe}>
+              <View style={[styles.cordateHeader, styles.cordateHeaderWithSettings]}>
+                <View style={styles.cordateHeaderLeft}>
+                  <Pressable accessibilityRole="button" accessibilityLabel="Back to farm" onPress={onBack} style={styles.cordateBackButton}>
+                    <Ionicons name="arrow-back" size={22} color="#ffffff" />
+                  </Pressable>
+                  <Text style={styles.cordateHeaderTitle}>Cordate</Text>
+                </View>
+                <Pressable accessibilityRole="button" accessibilityLabel="Cordate settings" onPress={onOpenSettings} style={styles.cordateBackButton}>
+                  <Ionicons name="settings-outline" size={21} color="#ffffff" />
+                </Pressable>
+              </View>
+              <View style={styles.cordateHeroCopy}>
+                <Text style={styles.cordateFarmName}>{farm?.name || 'FB Farm'}</Text>
+                <Text style={styles.cordateSubtitle}>Manage cordate batches and assigned birds.</Text>
+                <View style={styles.cordateMeta}>
+                  <Ionicons name="location-outline" size={14} color="#dce2e4" />
+                  <Text style={styles.cordateMetaText}>{farm?.location || 'Pampanga, Philippines'}</Text>
+                  <View style={styles.cordateMetaDivider} />
+                  <Ionicons name="calendar-outline" size={14} color="#dce2e4" />
+                  <Text style={styles.cordateMetaText}>Est. {farm?.established || '2020'}</Text>
+                </View>
+              </View>
+            </SafeAreaView>
+          </View>
+          <View style={styles.cordateListWrap}>
+            <View style={styles.cordateListHeading}>
+              <View>
+                <Text style={styles.cordateOverline}>ACTIVE BATCHES</Text>
+                <Text style={styles.cordateListTitle}>Cordate batches</Text>
+              </View>
+              <Text style={styles.cordateCount}>{cordateBatches.length} active</Text>
+            </View>
+            <View style={styles.cordateBatchList}>
+              {cordateBatches.map((batch) => (
+                <View key={batch.id} style={styles.cordateBatchCard}>
+                  <Pressable accessibilityRole="button" accessibilityLabel={`Open ${batch.name}`} onPress={() => onOpenBatch(batch.name)} style={({ pressed }) => [styles.cordateBatchTop, pressed && styles.pressed]}>
+                  <View style={styles.cordateBatchIcon}>
+                    <MaterialCommunityIcons name="home-account" size={22} color={THEME_ORANGE} />
+                  </View>
+                  <View style={styles.cordateBatchCopy}>
+                    <Text style={styles.cordateBatchName}>{batch.name}</Text>
+                    <Text style={styles.cordateBatchMeta}>{batch.id} · From {batch.source}</Text>
+                    <Text style={styles.cordateBatchBloodline}>{batch.bloodline}</Text>
+                  </View>
+                  <View style={styles.cordateBatchCount}>
+                    <Text style={styles.cordateBatchNumber}>{batch.count}</Text>
+                    <Text style={styles.cordateBatchUnit}>birds</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color="#7f8b8f" />
+                  </Pressable>
+                </View>
+              ))}
+            </View>
+          </View>
+        </View>
+      </ScrollView>
+    </View>
+  );
+}
+
+function CordateBatchDetailScreen({ areaName, birds = [], onBack }) {
+  const [query, setQuery] = useState('');
+  const [bloodlineFilter, setBloodlineFilter] = useState('All');
+  const mockBirds = [
+    { farmBuzzId: 'FB-000101', physicalId: 'TP-101', bloodline: 'Kelso', status: 'Conditioning', location: areaName },
+    { farmBuzzId: 'FB-000102', physicalId: 'TP-102', bloodline: 'Hatch', status: 'Holding', location: areaName },
+    { farmBuzzId: 'FB-000103', physicalId: 'TP-103', bloodline: 'Roundhead', status: 'Holding', location: areaName },
+    { farmBuzzId: 'FB-000104', physicalId: 'TP-104', bloodline: 'Kelso', status: 'Conditioning', location: areaName },
+    { farmBuzzId: 'FB-000105', physicalId: 'TP-105', bloodline: 'Sweater', status: 'Holding', location: areaName },
+  ];
+  const sourceBirds = birds.filter((bird) => bird.location === areaName);
+  const areaBirds = sourceBirds.length ? sourceBirds : mockBirds;
+  const bloodlines = ['All', ...new Set(areaBirds.map((bird) => bird.bloodline).filter(Boolean))];
+  const visibleBirds = areaBirds.filter((bird) => {
+    const search = query.trim().toLowerCase();
+    const matchesSearch = !search || [bird.physicalId, bird.name, bird.farmBuzzId, bird.bloodline].some((value) => String(value || '').toLowerCase().includes(search));
+    const matchesBloodline = bloodlineFilter === 'All' || bird.bloodline === bloodlineFilter;
+    return matchesSearch && matchesBloodline;
+  });
+
+  return (
+    <View style={styles.cordateScreen}>
+      <StatusBar style="light" translucent backgroundColor="transparent" />
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.cordateScroll}>
+        <View style={styles.cordatePage}>
+          <View style={styles.cordateDetailBanner}>
+            <Image source={CORDING_CARD_IMAGE} style={StyleSheet.absoluteFill} contentFit="cover" contentPosition="center" />
+            <LinearGradient colors={['rgba(0,0,0,.18)', 'rgba(0,0,0,.55)', '#000000']} locations={[0, .55, 1]} style={StyleSheet.absoluteFill} />
+            <SafeAreaView edges={['top']} style={styles.cordateBannerSafe}>
+              <View style={styles.cordateHeader}>
+                <Pressable accessibilityRole="button" accessibilityLabel="Back to cordate" onPress={onBack} style={styles.cordateBackButton}>
+                  <Ionicons name="arrow-back" size={22} color="#ffffff" />
+                </Pressable>
+                <Text style={styles.cordateHeaderTitle}>Cordate</Text>
+              </View>
+              <View style={styles.cordateHeroCopy}>
+                <Text style={styles.cordateOverline}>BIRD LIST</Text>
+                <Text style={styles.cordateFarmName}>{areaName || 'Cordate Area'}</Text>
+                <Text style={styles.cordateSubtitle}>{areaBirds.length} assigned bird{areaBirds.length === 1 ? '' : 's'}</Text>
+              </View>
+            </SafeAreaView>
+          </View>
+          <View style={styles.cordateDetailBody}>
+            <View style={styles.cordateSearch}>
+              <Ionicons name="search" size={20} color="#9aa4a8" />
+              <TextInput value={query} onChangeText={setQuery} placeholder="Search birds or bloodline" placeholderTextColor="#879195" style={styles.cordateSearchInput} />
+              {!!query && <Pressable onPress={() => setQuery('')}><Ionicons name="close-circle" size={18} color="#6c777b" /></Pressable>}
+            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.cordateFilterList}>
+              {bloodlines.map((bloodline) => (
+                <Pressable key={bloodline} onPress={() => setBloodlineFilter(bloodline)} style={[styles.cordateFilter, bloodlineFilter === bloodline && styles.cordateFilterActive]}>
+                  <Text style={[styles.cordateFilterText, bloodlineFilter === bloodline && styles.cordateFilterTextActive]}>{bloodline}</Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+            <View style={styles.cordateBirdListScreen}>
+              {visibleBirds.length ? visibleBirds.map((bird, index) => (
+                <View key={bird._recordKey || bird.farmBuzzId} style={styles.cordateBirdRow}>
+                  <View style={styles.cordateBirdMarker}>
+                    <Text style={styles.cordateBirdMarkerText}>{String(index + 1).padStart(2, '0')}</Text>
+                  </View>
+                  <View style={styles.cordateBirdCopy}>
+                    <View style={styles.cordateBirdTitleRow}>
+                      <Text numberOfLines={1} style={styles.cordateBirdName}>{bird.physicalId || bird.name || bird.farmBuzzId}</Text>
+                      {bird.status === 'Conditioning' && <Text numberOfLines={1} style={styles.cordateBirdStatus}>Conditioning</Text>}
+                    </View>
+                    <Text numberOfLines={1} style={styles.cordateBirdMeta}>{bird.farmBuzzId || 'Pending'}</Text>
+                    <Text numberOfLines={1} style={styles.cordateBirdBloodline}>{bird.bloodline || 'Unassigned bloodline'}</Text>
+                  </View>
+                </View>
+              )) : <Text style={styles.cordateEmptyBirds}>No birds match this view</Text>}
             </View>
           </View>
         </View>
@@ -1721,9 +1888,11 @@ export default function App() {
   const [stagAreas, setStagAreas] = useState(DEFAULT_STAG_AREAS);
   const [selectedStagArea, setSelectedStagArea] = useState('Hardening Area 1');
   const [stagSettings, setStagSettings] = useState(DEFAULT_STAG_SETTINGS);
-  const [cordingAreas, setCordingAreas] = useState([{ name: 'Cording Area 1', count: 0 }, { name: 'Cording Area 2', count: 0 }]);
+  const [cordingAreas, setCordingAreas] = useState([{ name: 'Cordate Area 1', count: 0 }, { name: 'Cordate Area 2', count: 0 }]);
   const [cordingBirds, setCordingBirds] = useState([]);
   const nextCordingBirdNumber = useRef(101);
+  const [selectedCordateArea, setSelectedCordateArea] = useState('Cordate Area 1');
+  const [cordateSettings, setCordateSettings] = useState(DEFAULT_CORDATE_SETTINGS);
   const [selectedRangingBatchId, setSelectedRangingBatchId] = useState('Range Area 2');
   const [rangingLossesByBatch, setRangingLossesByBatch] = useState({});
   const [rangingLocationsByBatch, setRangingLocationsByBatch] = useState({});
@@ -1858,6 +2027,7 @@ export default function App() {
           onOpenMaturing={() => setScreen('ranging')}
           onOpenHardening={() => setScreen('stag-maintenance')}
           onOpenCording={() => setScreen('cording')}
+          onOpenCordate={() => setScreen('cordate')}
           onOpenSettings={() => {
             setSettingsReturn('farm-detail');
             setScreen('management-settings');
@@ -1952,6 +2122,34 @@ export default function App() {
           areas={cordingAreas}
           birds={cordingBirds}
           onBack={() => setScreen('farm-detail')}
+        />
+      ) : screen === 'cordate' ? (
+        <CordateScreen
+          farm={selectedFarm}
+          areas={cordingAreas}
+          birds={cordingBirds}
+          onBack={() => setScreen('farm-detail')}
+          onOpenBatch={(areaName) => {
+            setSelectedCordateArea(areaName);
+            setScreen('cordate-detail');
+          }}
+          onOpenSettings={() => setScreen('cordate-task-settings')}
+        />
+      ) : screen === 'cordate-detail' ? (
+        <CordateBatchDetailScreen
+          areaName={selectedCordateArea}
+          birds={cordingBirds}
+          onBack={() => setScreen('cordate')}
+        />
+      ) : screen === 'cordate-task-settings' ? (
+        <GrowingScheduleSettingsScreen
+          variant="cordate"
+          initialSettings={cordateSettings}
+          onBack={() => setScreen('cordate')}
+          onSave={(settings) => {
+            setCordateSettings(settings);
+            setScreen('cordate');
+          }}
         />
       ) : screen === 'stag-maintenance-settings' ? (
         <GrowingScheduleSettingsScreen
@@ -2112,6 +2310,8 @@ export default function App() {
           taskCompletionsByBatch={rangingTasksByBatch}
           readyDay={rangingSettings.readyDay}
           nextCordingBirdNumber={nextCordingBirdNumber.current}
+          hasCordateTransfers={cordingBirds.length > 0}
+          defaultCordateDestination={(cordingAreas.find((area) => area.count > 0) || cordingAreas[0])?.name || 'Cordate Area 1'}
           onBack={() => setScreen('farm-detail')}
           onOpenSettings={() => setScreen('ranging-task-settings')}
           onMarkTaskDone={(location, taskId) => setRangingTasksByBatch((current) => ({
@@ -2122,6 +2322,7 @@ export default function App() {
             },
           }))}
           onMoveToCording={(record) => {
+            const destination = record.destination || (cordingAreas.find((area) => area.count > 0) || cordingAreas[0])?.name || 'Cordate Area 1';
             const bird = {
               farmBuzzId: record.farmBuzzId,
               _recordKey: record.farmBuzzId,
@@ -2129,17 +2330,17 @@ export default function App() {
               type: 'Stag',
               filter: 'stag',
               bloodline: record.bloodline,
-              status: 'Cording',
-              location: 'Cording Area 1',
+              status: 'Cordate',
+              location: destination,
               identificationType: 'TP Number',
               physicalId: record.tpNumber,
               image: CORDING_CARD_IMAGE,
-              details: [{ icon: 'tag-outline', text: `TP Number: ${record.tpNumber}` }, { icon: 'dna', text: record.bloodline }, { icon: 'map-marker-outline', text: 'Cording Area 1' }],
-              cordingEntry: { fromArea: record.location, destination: 'Cording Area 1', movedAt: new Date().toISOString() },
+              details: [{ icon: 'tag-outline', text: `TP Number: ${record.tpNumber}` }, { icon: 'dna', text: record.bloodline }, { icon: 'map-marker-outline', text: destination }],
+              cordingEntry: { fromArea: record.location, destination, notes: record.notes, movedAt: new Date().toISOString() },
             };
             setCordingBirds((current) => [bird, ...current]);
             setAddedBirds((current) => [bird, ...current]);
-            setCordingAreas((current) => current.map((area) => area.name === 'Cording Area 1' ? { ...area, count: area.count + 1 } : area));
+            setCordingAreas((current) => current.some((area) => area.name === destination) ? current.map((area) => area.name === destination ? { ...area, count: area.count + 1 } : area) : [{ name: destination, count: 1 }, ...current]);
             setRangingTasksByBatch((current) => ({ ...current, [record.location]: { ...(current[record.location] || {}), [record.taskId]: { completedAt: new Date().toISOString() } } }));
             nextCordingBirdNumber.current += 1;
           }}
@@ -3349,6 +3550,102 @@ const styles = StyleSheet.create({
   moduleTitleCompact: { fontSize: 12, lineHeight: 15 },
   moduleSubtitle: {
     marginTop: 3, color: '#9ba5a8', fontSize: 9, lineHeight: 13, letterSpacing: 0,
+  },
+  cordateScreen: { flex: 1, backgroundColor: '#000000' },
+  cordateScroll: { flexGrow: 1, alignItems: 'center', backgroundColor: '#000000' },
+  cordatePage: { width: '100%', maxWidth: 720, minHeight: '100%', backgroundColor: '#000000' },
+  cordateBanner: { height: 252, overflow: 'hidden' },
+  cordateDetailBanner: { height: 246, overflow: 'hidden' },
+  cordateBannerSafe: { flex: 1 },
+  cordateHeader: {
+    paddingHorizontal: 16, paddingTop: Platform.OS === 'web' ? 10 : 3,
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+  },
+  cordateHeaderWithSettings: { justifyContent: 'space-between' },
+  cordateHeaderLeft: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  cordateBackButton: {
+    width: 40, height: 40, borderRadius: 20, borderWidth: 1,
+    borderColor: 'rgba(190,204,208,.35)', backgroundColor: 'rgba(2,8,11,.65)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  cordateHeaderTitle: { color: '#ffffff', fontSize: 17, lineHeight: 21, fontWeight: '700' },
+  cordateDetailSafe: { flex: 1, minHeight: '100%' },
+  cordateDetailHero: { paddingHorizontal: 20, paddingTop: 28, paddingBottom: 18 },
+  cordateDetailBody: { paddingHorizontal: 10, paddingBottom: 30 },
+  cordateHeroCopy: { marginTop: 'auto', paddingHorizontal: 20, paddingBottom: 22 },
+  cordateFarmName: {
+    color: '#ffffff', fontSize: 34, lineHeight: 40, fontWeight: '800',
+    fontFamily: Platform.select({ ios: 'Georgia', android: 'serif', web: 'Georgia' }),
+  },
+  cordateSubtitle: { marginTop: 3, color: '#c2cbce', fontSize: 13, lineHeight: 18 },
+  cordateMeta: { marginTop: 12, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  cordateMetaText: { color: '#d3dade', fontSize: 10 },
+  cordateMetaDivider: { width: 1, height: 12, marginHorizontal: 5, backgroundColor: 'rgba(210,220,224,.35)' },
+  cordateListWrap: { paddingHorizontal: 10, paddingBottom: 30 },
+  cordateListHeading: {
+    marginTop: 20, marginBottom: 9, flexDirection: 'row',
+    alignItems: 'flex-end', justifyContent: 'space-between',
+  },
+  cordateOverline: { color: '#899397', fontSize: 10, fontWeight: '600' },
+  cordateListTitle: { marginTop: 4, color: '#edf1f2', fontSize: 17, lineHeight: 22, fontWeight: '800' },
+  cordateCount: { color: '#8e9a9e', fontSize: 10, fontWeight: '700' },
+  cordateBatchList: { gap: 9 },
+  cordateBatchCard: {
+    minHeight: 92, borderRadius: 7, borderWidth: 1, borderColor: '#223138',
+    backgroundColor: '#091317', padding: 13,
+  },
+  cordateBatchTop: { flexDirection: 'row', alignItems: 'center', gap: 11 },
+  cordateBatchIcon: {
+    width: 44, height: 44, borderRadius: 7, backgroundColor: 'rgba(255,122,0,.1)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  cordateBatchCopy: { flex: 1, minWidth: 0 },
+  cordateBatchName: { color: '#eef2f3', fontSize: 13, lineHeight: 17, fontWeight: '800' },
+  cordateBatchMeta: { marginTop: 3, color: '#758287', fontSize: 9, lineHeight: 13 },
+  cordateBatchBloodline: { marginTop: 8, color: THEME_ORANGE, fontSize: 10, lineHeight: 13, fontWeight: '800' },
+  cordateBatchCount: { alignItems: 'flex-end' },
+  cordateBatchNumber: { color: '#ffffff', fontSize: 20, lineHeight: 22, fontWeight: '800' },
+  cordateBatchUnit: { marginTop: 2, color: '#78868b', fontSize: 8 },
+  cordateSearch: {
+    height: 52, borderRadius: 7, borderWidth: 1, borderColor: '#26373e',
+    backgroundColor: '#081216', paddingHorizontal: 13, flexDirection: 'row',
+    alignItems: 'center', gap: 8,
+  },
+  cordateSearchInput: { flex: 1, height: 50, padding: 0, color: '#e7ebec', fontSize: 12, outlineStyle: 'none' },
+  cordateFilterList: { paddingVertical: 10, gap: 7 },
+  cordateFilter: {
+    height: 34, borderRadius: 17, borderWidth: 1, borderColor: '#26373e',
+    backgroundColor: '#071014', paddingHorizontal: 13, alignItems: 'center', justifyContent: 'center',
+  },
+  cordateFilterActive: { borderColor: THEME_ORANGE, backgroundColor: 'rgba(255,122,0,.12)' },
+  cordateFilterText: { color: '#a6b0b4', fontSize: 10, fontWeight: '800' },
+  cordateFilterTextActive: { color: '#ffffff' },
+  cordateBirdList: { marginTop: 13, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#203139', gap: 8 },
+  cordateBirdListScreen: {
+    gap: 8,
+  },
+  cordateBirdRow: {
+    minHeight: 72, borderRadius: 8, borderWidth: 1, borderColor: '#213239',
+    backgroundColor: '#071014', padding: 11, flexDirection: 'row', alignItems: 'center', gap: 10,
+  },
+  cordateBirdMarker: {
+    width: 34, height: 34, borderRadius: 7, borderWidth: 1, borderColor: 'rgba(255,122,0,.45)',
+    backgroundColor: 'rgba(255,122,0,.1)', alignItems: 'center', justifyContent: 'center',
+  },
+  cordateBirdMarkerText: { color: THEME_ORANGE, fontSize: 10, lineHeight: 13, fontWeight: '900' },
+  cordateBirdCopy: { flex: 1, minWidth: 0 },
+  cordateBirdTitleRow: { minHeight: 24, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
+  cordateBirdName: { flex: 1, color: '#eef2f3', fontSize: 13, lineHeight: 17, fontWeight: '900' },
+  cordateBirdStatus: {
+    minWidth: 72, minHeight: 22, borderRadius: 11, borderWidth: 1, borderColor: '#6f420f',
+    backgroundColor: 'rgba(255,122,0,.08)', paddingHorizontal: 8, color: THEME_ORANGE,
+    fontSize: 9, lineHeight: 20, fontWeight: '900', textAlign: 'center',
+  },
+  cordateBirdMeta: { marginTop: 2, color: '#718086', fontSize: 9, lineHeight: 12, fontWeight: '700' },
+  cordateBirdBloodline: { marginTop: 6, color: THEME_ORANGE, fontSize: 10, lineHeight: 13, fontWeight: '800' },
+  cordateEmptyBirds: {
+    minHeight: 120, borderRadius: 8, borderWidth: 1, borderColor: '#213239', backgroundColor: '#071014',
+    color: '#77868b', fontSize: 10, lineHeight: 14, padding: 24, textAlign: 'center', textAlignVertical: 'center',
   },
   overdue: { color: '#ff3d4d' },
   setupPanel: {

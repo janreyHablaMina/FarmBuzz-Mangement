@@ -163,6 +163,7 @@ function BirdCard({ bird, compact, onPress }) {
   const genderColor = bird.filter === 'hen' || bird.filter === 'pullet' ? '#ff2448' : '#168cff';
   const genderIcon = bird.filter === 'hen' || bird.filter === 'pullet' ? 'gender-female' : 'gender-male';
   const farmBuzzId = getFarmBuzzId(bird);
+  const quickDetails = bird.details?.slice(0, 2) || [];
 
   return (
     <Pressable
@@ -171,21 +172,51 @@ function BirdCard({ bird, compact, onPress }) {
       onPress={onPress}
       style={({ pressed }) => [styles.birdCard, compact && styles.birdCardCompact, pressed && styles.cardPressed]}
     >
-      <Image source={bird.image} style={[styles.birdImage, compact && styles.birdImageCompact]} contentFit="cover" transition={250} cachePolicy="memory-disk" />
-      <View style={styles.birdContent}>
-        <View style={styles.birdTitleRow}>
-          <Text numberOfLines={1} style={[styles.birdName, compact && styles.birdNameCompact]}>{bird.name}</Text>
-          <MaterialCommunityIcons name={genderIcon} size={compact ? 15 : 17} color={genderColor} />
-          {!compact && <Text style={styles.birdType}>{bird.type}</Text>}
-        </View>
-        <Text numberOfLines={1} style={styles.bloodline}>{bird.bloodline}</Text>
-        <View style={styles.farmIdRow}>
-          <Text style={styles.farmIdLabel}>ID</Text>
+      <View style={styles.recordHeader}>
+        <View style={styles.recordIdBlock}>
+          <MaterialCommunityIcons name="identifier" size={15} color="#ff8500" />
           <Text numberOfLines={1} style={styles.farmIdText}>{farmBuzzId}</Text>
         </View>
+        <View style={[styles.typeBadge, { borderColor: `${genderColor}55` }]}>
+          <MaterialCommunityIcons name={genderIcon} size={13} color={genderColor} />
+          <Text style={[styles.birdType, { color: genderColor }]}>{bird.type}</Text>
+        </View>
       </View>
-      <View style={[styles.statusSide, compact && styles.statusSideCompact]}><View style={[styles.statusDot, { backgroundColor: bird.statusColor }]} /><Text numberOfLines={2} style={[styles.statusInlineText, compact && styles.statusInlineTextCompact, { color: bird.statusColor }]}>{bird.status}</Text></View>
-      <Ionicons name="chevron-forward" size={compact ? 18 : 21} color="#8e999d" />
+
+      <View style={styles.recordBody}>
+        <View style={styles.portraitFrame}>
+          <Image
+            source={bird.image}
+            style={styles.birdImage}
+            contentFit="cover"
+            transition={250}
+            cachePolicy="memory-disk"
+          />
+        </View>
+        <View style={styles.recordContent}>
+          <Text numberOfLines={1} style={[styles.birdName, compact && styles.birdNameCompact]}>{bird.name}</Text>
+          <Text numberOfLines={2} style={styles.bloodline}>{bird.bloodline}</Text>
+          <View style={styles.detailGrid}>
+            {quickDetails.map((detail) => (
+              <View key={`${bird.name}-${detail.text}`} style={styles.detailPill}>
+                <MaterialCommunityIcons name={detail.icon} size={13} color="#9fb0b6" />
+                <Text numberOfLines={1} style={styles.detailText}>{detail.text}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.recordFooter}>
+        <View style={styles.statusBlock}>
+          <View style={[styles.statusDot, { backgroundColor: bird.statusColor }]} />
+          <View style={styles.statusTextBlock}>
+            <Text style={styles.footerLabel}>STATUS</Text>
+            <Text numberOfLines={1} style={[styles.statusInlineText, { color: bird.statusColor }]}>{bird.status}</Text>
+          </View>
+        </View>
+        <Ionicons name="chevron-forward" size={20} color="#718086" />
+      </View>
     </Pressable>
   );
 }
@@ -228,8 +259,8 @@ export default function FlockScreen({
               cachePolicy="memory-disk"
             />
             <LinearGradient
-              colors={['rgba(2, 7, 9, 0.24)', 'rgba(2, 7, 9, 0.12)', '#040a0d']}
-              locations={[0, 0.43, 1]}
+              colors={['rgba(2, 7, 9, 0.12)', 'rgba(2, 7, 9, 0.44)', '#020709']}
+              locations={[0, 0.54, 1]}
               style={StyleSheet.absoluteFill}
             />
             <SafeAreaView edges={['top']} style={styles.heroSafeArea}>
@@ -301,6 +332,14 @@ export default function FlockScreen({
               ))}
             </View>
 
+            <View style={styles.listHeading}>
+              <View>
+                <Text style={styles.overline}>ACTIVE FLOCK</Text>
+                <Text style={styles.listTitle}>Birds</Text>
+              </View>
+              <Text style={styles.listCount}>{visibleBirds.length} shown</Text>
+            </View>
+
             <View style={styles.birdList}>
               {visibleBirds.map((bird) => (
                 <BirdCard
@@ -329,8 +368,8 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#020709' },
   pageWrap: { flexGrow: 1, alignItems: 'center', backgroundColor: '#020709' },
   page: { width: '100%', maxWidth: 720, backgroundColor: '#020709' },
-  hero: { height: 250, overflow: 'hidden', backgroundColor: '#101719' },
-  heroCompact: { height: 245 },
+  hero: { height: 252, overflow: 'hidden', backgroundColor: '#020709' },
+  heroCompact: { height: 230 },
   heroSafeArea: { flex: 1 },
   heroHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -342,9 +381,9 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(190, 204, 208, 0.35)', backgroundColor: 'rgba(2, 8, 11, 0.65)',
     alignItems: 'center', justifyContent: 'center',
   },
-  screenTitle: { color: '#f4f6f6', fontSize: 19, fontWeight: '700', letterSpacing: 0 },
-  heroCopy: { marginTop: 'auto', paddingHorizontal: 18, paddingBottom: 24 },
-  heroCopyNarrow: { paddingHorizontal: 12, paddingBottom: 18 },
+  screenTitle: { color: '#f4f6f6', fontSize: 17, fontWeight: '700', letterSpacing: 0 },
+  heroCopy: { marginTop: 'auto', paddingHorizontal: 20, paddingBottom: 22 },
+  heroCopyNarrow: { paddingHorizontal: 14, paddingBottom: 18 },
   farmName: {
     color: '#f5f6f6', fontSize: 34, lineHeight: 40, fontWeight: '800', letterSpacing: 0,
     fontFamily: Platform.select({ ios: 'Georgia', android: 'serif', web: 'Georgia' }),
@@ -352,68 +391,90 @@ const styles = StyleSheet.create({
     textShadowRadius: 5,
   },
   farmNameNarrow: { fontSize: 29, lineHeight: 34 },
-  farmTagline: { marginTop: 6, color: '#bac1c3', fontSize: 14, lineHeight: 20, letterSpacing: 0 },
-  farmMeta: { marginTop: 16, flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 10 },
+  farmTagline: { marginTop: 3, color: '#c2cbce', fontSize: 13, lineHeight: 18, letterSpacing: 0 },
+  farmMeta: { marginTop: 12, flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 },
   metaItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  metaText: { color: '#b8c0c2', fontSize: 12, letterSpacing: 0 },
-  metaDivider: { width: 1, height: 14, backgroundColor: '#6d777a' },
-  content: { paddingHorizontal: 16, paddingBottom: 18 },
+  metaText: { color: '#d3dade', fontSize: 10, letterSpacing: 0 },
+  metaDivider: { width: 1, height: 12, marginHorizontal: 5, backgroundColor: 'rgba(210,220,224,.35)' },
+  content: { paddingHorizontal: 10, paddingBottom: 30 },
   contentNarrow: { paddingHorizontal: 8 },
   actionRow: { flexDirection: 'row', gap: 10, marginTop: 0 },
   actionRowCompact: { flexDirection: 'row', gap: 8 },
   searchBox: {
-    flex: 1, height: 52, flexDirection: 'row', alignItems: 'center', gap: 10,
-    paddingHorizontal: 16, borderRadius: 8, borderWidth: 1, borderColor: '#28343a',
-    backgroundColor: '#0b1418',
+    flex: 1, height: 54, flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingHorizontal: 14, borderRadius: 7, borderWidth: 1, borderColor: '#26373e',
+    backgroundColor: '#081216',
   },
   searchInput: {
-    flex: 1, height: 50, paddingVertical: 0, color: '#e7ebec', fontSize: 14,
+    flex: 1, height: 52, paddingVertical: 0, color: '#e7ebec', fontSize: 12,
     letterSpacing: 0, outlineStyle: 'none',
   },
   addBirdButton: {
-    height: 52, minWidth: 165, paddingHorizontal: 22, borderRadius: 8,
+    height: 54, minWidth: 112, paddingHorizontal: 16, borderRadius: 7,
     backgroundColor: '#f66f00', flexDirection: 'row', alignItems: 'center',
-    justifyContent: 'center', gap: 11,
+    justifyContent: 'center', gap: 8,
   },
-  addBirdButtonCompact: { width: 52, minWidth: 52, paddingHorizontal: 0 },
-  addBirdText: { color: '#fff', fontSize: 15, fontWeight: '700', letterSpacing: 0 },
-  filterRow: { width: '100%', flexDirection: 'row', gap: 6, paddingVertical: 16 },
-  filterRowCompact: { gap: 4 },
+  addBirdButtonCompact: { width: 54, minWidth: 54, paddingHorizontal: 0 },
+  addBirdText: { color: '#fff', fontSize: 11, fontWeight: '800', letterSpacing: 0 },
+  filterRow: { width: '100%', flexDirection: 'row', gap: 7, paddingTop: 12, paddingBottom: 6 },
+  filterRowCompact: { gap: 5 },
   filterChip: {
-    flex: 1, minWidth: 0, height: 62, borderRadius: 8, borderWidth: 1, borderColor: '#172329',
-    backgroundColor: '#0b1418', alignItems: 'center', justifyContent: 'center',
+    flex: 1, minWidth: 0, height: 38, borderRadius: 19, borderWidth: 1, borderColor: '#26373e',
+    backgroundColor: '#071014', alignItems: 'center', justifyContent: 'center',
   },
-  filterChipCompact: { height: 58 },
-  filterChipActive: { borderColor: '#ff7900', backgroundColor: 'rgba(255, 121, 0, 0.08)' },
+  filterChipCompact: { height: 34 },
+  filterChipActive: { borderColor: '#ff7900', backgroundColor: 'rgba(255, 121, 0, 0.12)' },
   filterLabelRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 },
-  filterLabel: { color: '#e4e8e9', fontSize: 13, fontWeight: '600', letterSpacing: 0 },
-  filterLabelCompact: { fontSize: 10 },
-  filterCount: { marginTop: 3, color: '#9ba5a8', fontSize: 11, letterSpacing: 0 },
-  filterCountCompact: { fontSize: 9 },
+  filterLabel: { color: '#dce3e5', fontSize: 10, fontWeight: '800', letterSpacing: 0 },
+  filterLabelCompact: { fontSize: 9 },
+  filterCount: { marginTop: 1, color: '#9ba5a8', fontSize: 8, letterSpacing: 0 },
+  filterCountCompact: { fontSize: 7 },
   filterCountActive: { color: '#ff9a1f' },
-  birdList: { gap: 8 },
+  listHeading: { marginTop: 12, marginBottom: 9, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
+  overline: { color: '#899397', fontSize: 10, fontWeight: '600' },
+  listTitle: { marginTop: 4, color: '#edf1f2', fontSize: 17, lineHeight: 22, fontWeight: '800' },
+  listCount: { color: '#8e9a9e', fontSize: 10, fontWeight: '700' },
+  birdList: { gap: 10 },
   birdCard: {
-    minHeight: 82, borderRadius: 8, borderWidth: 1, borderColor: '#172329',
-    backgroundColor: '#0a1317', flexDirection: 'row', alignItems: 'center',
-    padding: 6, gap: 10, overflow: 'hidden',
+    borderRadius: 7, borderWidth: 1, borderColor: '#22343b',
+    backgroundColor: '#071115', overflow: 'hidden',
   },
-  birdCardCompact: { minHeight: 78, padding: 6, gap: 8 },
-  birdImage: { width: 68, height: 68, borderRadius: 6, backgroundColor: '#152126' },
-  birdImageCompact: { width: 62, height: 66 },
-  birdContent: { flex: 1, minWidth: 0, alignSelf: 'stretch', justifyContent: 'center' },
-  birdTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, minWidth: 0 },
-  birdName: { color: '#f0f2f3', fontSize: 16, lineHeight: 20, fontWeight: '600', letterSpacing: 0, maxWidth: '62%' },
-  birdNameCompact: { fontSize: 14, lineHeight: 18, maxWidth: '78%' },
-  birdType: { color: '#a4adb0', fontSize: 11, letterSpacing: 0 },
-  bloodline: { marginTop: 3, color: '#929da0', fontSize: 10, lineHeight: 14, letterSpacing: 0 },
-  farmIdRow: { marginTop: 2, flexDirection: 'row', alignItems: 'center', gap: 4 },
-  farmIdLabel: { color: '#ff8500', fontSize: 7, lineHeight: 10, fontWeight: '800', letterSpacing: 0 },
-  farmIdText: { color: '#c98745', fontSize: 8, lineHeight: 10, fontWeight: '600', letterSpacing: 0 },
-  statusSide: { width: 92, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 5 },
-  statusSideCompact: { width: 68 },
-  statusDot: { width: 6, height: 6, borderRadius: 3 },
-  statusInlineText: { fontSize: 9, lineHeight: 12, fontWeight: '600', letterSpacing: 0 },
-  statusInlineTextCompact: { maxWidth: 56, fontSize: 8, lineHeight: 10, textAlign: 'right' },
+  birdCardCompact: {},
+  recordHeader: {
+    minHeight: 38, paddingHorizontal: 12, borderBottomWidth: 1, borderBottomColor: '#1b2a30',
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+    backgroundColor: '#09171b',
+  },
+  recordIdBlock: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  recordBody: { padding: 12, flexDirection: 'row', gap: 12 },
+  portraitFrame: {
+    width: 84, height: 84, borderRadius: 7, borderWidth: 1, borderColor: '#26383f',
+    overflow: 'hidden', backgroundColor: '#152126',
+  },
+  birdImage: { width: '100%', height: '100%' },
+  recordContent: { flex: 1, minWidth: 0 },
+  birdName: { color: '#f3f5f5', fontSize: 17, lineHeight: 22, fontWeight: '800', letterSpacing: 0 },
+  birdNameCompact: { fontSize: 13, lineHeight: 18 },
+  typeBadge: { flexShrink: 0, minHeight: 23, paddingHorizontal: 7, borderRadius: 12, borderWidth: 1, flexDirection: 'row', alignItems: 'center', gap: 3 },
+  birdType: { fontSize: 9, fontWeight: '700', letterSpacing: 0 },
+  bloodline: { marginTop: 4, color: '#9ba6aa', fontSize: 11, lineHeight: 15, letterSpacing: 0 },
+  detailGrid: { marginTop: 10, flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  detailPill: {
+    maxWidth: '48%', minHeight: 26, paddingHorizontal: 8, borderRadius: 5,
+    backgroundColor: '#0c1a1f', flexDirection: 'row', alignItems: 'center', gap: 5,
+  },
+  detailText: { flexShrink: 1, color: '#c9d1d3', fontSize: 9, lineHeight: 12, fontWeight: '700', letterSpacing: 0 },
+  recordFooter: {
+    minHeight: 46, paddingHorizontal: 12, borderTopWidth: 1, borderTopColor: '#1b2a30',
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+    backgroundColor: '#061014',
+  },
+  statusBlock: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  statusTextBlock: { flex: 1, minWidth: 0 },
+  footerLabel: { color: '#6f7f85', fontSize: 8, lineHeight: 10, fontWeight: '800', letterSpacing: 0 },
+  farmIdText: { flexShrink: 1, color: '#d9e0e2', fontSize: 9, lineHeight: 12, fontWeight: '700', letterSpacing: 0 },
+  statusDot: { width: 9, height: 9, borderRadius: 5 },
+  statusInlineText: { flexShrink: 1, fontSize: 9, lineHeight: 12, fontWeight: '700', letterSpacing: 0 },
   cardPressed: { opacity: 0.75, transform: [{ scale: 0.995 }] },
   emptyState: { height: 190, alignItems: 'center', justifyContent: 'center', gap: 8 },
   emptyText: { color: '#7f8a8e', fontSize: 13 },
