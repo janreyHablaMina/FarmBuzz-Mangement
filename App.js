@@ -97,6 +97,8 @@ const HEALTH_CARE_HERO_IMAGE = require('./assets/health-care-hero.png');
 const SALES_DASHBOARD_HERO_IMAGE = require('./assets/sales-dashboard-hero.png');
 const COLLECTIONS_DASHBOARD_HERO_IMAGE = require('./assets/sales-hero.png');
 const SHOWCASE_IMAGE = require('./assets/Showcase.png');
+const BROODING_CARD_IMAGE = require('./assets/brooding-card.png');
+const RANGING_CARD_IMAGE = require('./assets/ranging-card.png');
 
 const ACTIVE_CHICKEN_BATCHES = [
   { id: 'CB-001', incubationBatchId: 'INC-024', name: 'North House Batch', count: 100, sire: 'Sweater', dams: ['Kelso', 'Hatch', 'Roundhead'], nextTask: { month: 'SEP', day: '13', title: 'Candling', timing: '4 days overdue', action: 'candling' } },
@@ -804,7 +806,7 @@ function FarmWorkspaceCard({ farm, onPress }) {
   );
 }
 
-function FarmDetailScreen({ farm, onBack, onOpenBreeding, onOpenIncubation, onOpenBlankIncubation, onOpenBrooding, onOpenGrowing, onOpenMaturing, onOpenHardening, onOpenCording, onOpenCordate, onOpenSettings }) {
+function FarmDetailScreen({ farm, metrics, onBack, onOpenBreeding, onOpenIncubation, onOpenBlankIncubation, onOpenBrooding, onOpenGrowing, onOpenMaturing, onOpenHardening, onOpenCording, onOpenCordate, onOpenSettings }) {
   const { width } = useWindowDimensions();
   const compact = width < 480;
   const narrow = width < 390;
@@ -812,67 +814,46 @@ function FarmDetailScreen({ farm, onBack, onOpenBreeding, onOpenIncubation, onOp
   const location = farm?.location || 'Pampanga, Philippines';
   const establishedYear = farm?.established || '2020';
   const heroImage = farm?.image || DASHBOARD_HERO_IMAGE;
-  const breedingModule = {
-    ...MODULES.find((item) => item.title === 'Breeding'),
-    subtitle: 'Pairings, eggs, hatch readiness',
-    image: BREEDING_HERO_IMAGE,
-  };
-  const incubationModule = {
-    ...MODULES.find((item) => item.title === 'Eggs & Incubation'),
-    subtitle: 'Holding eggs, batches, hatch progress',
-  };
   const eggsIncubationTextModule = {
     title: 'Eggs & Incubation',
-    color: '#ffffff',
-    variant: 'textOnly',
+    subtitle: '2 active batches, 18 holding eggs',
+    icon: 'egg-outline',
+    color: THEME_ORANGE,
+    tint: THEME_ORANGE_TINT,
+    image: EGGS_INCUBATION_HERO_IMAGE,
   };
   const broodingModule = {
     title: 'Brooding',
     subtitle: '1 active batch, 38 chicks',
     icon: 'bird',
-    color: '#ffffff',
-    variant: 'textOnly',
-  };
-  const growingModule = {
-    title: 'Growing',
-    subtitle: '1 active batch, 26 juveniles',
-    icon: 'bird',
     color: THEME_ORANGE,
     tint: THEME_ORANGE_TINT,
-    image: GROWING_HERO_IMAGE,
+    image: BROODING_CARD_IMAGE,
   };
   const maturingModule = {
     title: 'Range',
-    color: '#ffffff',
-    variant: 'textOnly',
-  };
-  const hardeningModule = {
-    title: 'Hardening',
-    subtitle: 'Conditioning and ongoing stag care',
-    icon: 'shield-check-outline',
+    subtitle: '3 active batches, 42 birds',
+    icon: 'leaf',
     color: THEME_ORANGE,
     tint: THEME_ORANGE_TINT,
-    image: HARDENING_CARD_IMAGE,
+    image: RANGING_CARD_IMAGE,
   };
-  const cordingModule = {
-    title: 'Cording',
-    subtitle: 'Individual housing and permanent IDs',
-    icon: 'home-account',
+  const cordateModule = {
+    title: 'Cordate',
+    subtitle: '2 areas, 14 stags',
+    icon: 'home-variant',
     color: THEME_ORANGE,
     tint: THEME_ORANGE_TINT,
     image: CORDING_CARD_IMAGE,
   };
-  const cordateModule = {
-    title: 'Cordate',
-    color: '#ffffff',
-    variant: 'textOnly',
-  };
-  const breedingStats = [
-    { label: 'Active Pairings', value: '3', icon: 'link-variant', color: THEME_ORANGE },
-    { label: 'Holding Eggs', value: '15', icon: 'egg-outline', color: THEME_ORANGE },
-    { label: 'Due Soon', value: '1', icon: 'clock-outline', color: THEME_ORANGE },
-    { label: 'Farm Members', value: String(farm?.members || 3), icon: 'account-group-outline', color: THEME_ORANGE },
+
+  const defaultMetrics = [
+    { label: 'Incubating', value: '2', icon: 'egg-outline', color: THEME_ORANGE },
+    { label: 'Brooding', value: '1', icon: 'bird', color: THEME_ORANGE },
+    { label: 'Ranging', value: '3', icon: 'leaf', color: THEME_ORANGE },
+    { label: 'Cordate', value: '14', icon: 'home-variant', color: THEME_ORANGE },
   ];
+  const stats = metrics || defaultMetrics;
 
   return (
     <View style={styles.screen}>
@@ -916,29 +897,24 @@ function FarmDetailScreen({ farm, onBack, onOpenBreeding, onOpenIncubation, onOp
 
           <View style={[styles.content, narrow && styles.contentNarrow]}>
             <View style={[styles.statsPanel, compact && styles.statsPanelCompact]}>
-              {breedingStats.map((item, index) => (
+              {stats.map((item, index) => (
                 <Stat
                   key={item.label}
                   item={item}
                   compact={compact}
-                  isLast={index === breedingStats.length - 1}
+                  isLast={index === stats.length - 1}
                 />
               ))}
             </View>
 
             <View style={styles.sectionHeading}>
               <Text style={[styles.sectionTitle, narrow && styles.sectionTitleNarrow]}>Management Tool</Text>
-              <Text style={styles.sectionMeta}>9 modules</Text>
+              <Text style={styles.sectionMeta}>4 modules</Text>
             </View>
             <View style={[styles.moduleGrid, compact && styles.moduleGridCompact]}>
-              <ModuleCard item={breedingModule} compact={compact} onPress={onOpenBreeding} />
-              <ModuleCard item={incubationModule} compact={compact} onPress={onOpenIncubation} />
               <ModuleCard item={eggsIncubationTextModule} compact={compact} onPress={onOpenBlankIncubation} />
               <ModuleCard item={broodingModule} compact={compact} onPress={onOpenBrooding} />
-              <ModuleCard item={growingModule} compact={compact} onPress={onOpenGrowing} />
               <ModuleCard item={maturingModule} compact={compact} onPress={onOpenMaturing} />
-              <ModuleCard item={hardeningModule} compact={compact} onPress={onOpenHardening} />
-              <ModuleCard item={cordingModule} compact={compact} onPress={onOpenCording} />
               <ModuleCard item={cordateModule} compact={compact} onPress={onOpenCordate} />
             </View>
           </View>
@@ -2210,6 +2186,12 @@ export default function App() {
       ) : screen === 'farm-detail' ? (
         <FarmDetailScreen
           farm={selectedFarm}
+          metrics={[
+            { label: 'Incubating', detail: 'active batches', value: String(ACTIVE_CHICKEN_BATCHES.length), icon: 'egg-outline', color: THEME_ORANGE },
+            { label: 'Brooding', detail: 'active chicks', value: String(addedBroodingBatches.length + 1), icon: 'bird', color: THEME_ORANGE },
+            { label: 'Ranging', detail: 'active batches', value: String(rangingBatches.length), icon: 'leaf', color: THEME_ORANGE },
+            { label: 'Cordate', detail: 'stags housed', value: String(cordingBirds.length), icon: 'home-variant', color: THEME_ORANGE },
+          ]}
           onBack={() => setScreen('farms')}
           onOpenBreeding={() => setScreen('breeding')}
           onOpenIncubation={() => setScreen('eggs-incubation')}
@@ -3802,7 +3784,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', paddingHorizontal: 11,
   },
   moduleCardCompact: { height: 94, paddingHorizontal: 7 },
-  moduleCardTextOnly: { backgroundColor: '#000000', justifyContent: 'center' },
+  moduleCardTextOnly: { backgroundColor: '#0a141a', justifyContent: 'center' },
   moduleWide: { flexBasis: '100%', maxWidth: '100%' },
   moduleImage: {
     position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, opacity: 1,
