@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   Alert,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -98,7 +99,7 @@ const COLLECTIONS_DASHBOARD_HERO_IMAGE = require('./assets/sales-hero.png');
 const SHOWCASE_IMAGE = require('./assets/Showcase.png');
 
 const ACTIVE_CHICKEN_BATCHES = [
-  { id: 'CB-001', name: 'North House Batch', count: 100, sire: 'Sweater', dams: ['Kelso', 'Hatch', 'Roundhead'] },
+  { id: 'CB-001', incubationBatchId: 'INC-024', name: 'North House Batch', count: 100, sire: 'Sweater', dams: ['Kelso', 'Hatch', 'Roundhead'], nextTask: { month: 'SEP', day: '13', title: 'Candling', timing: '4 days overdue', action: 'candling' } },
 ];
 const BATCH_BLOODLINES = ['Sweater', 'Kelso', 'Roundhead', 'Hatch', 'Claret', 'Albany'];
 
@@ -1032,22 +1033,61 @@ function CordateScreen({ farm, areas = [], birds = [], onBack, onOpenBatch, onOp
 function CordateBatchDetailScreen({ areaName, birds = [], onBack }) {
   const [query, setQuery] = useState('');
   const [bloodlineFilter, setBloodlineFilter] = useState('All');
+  const [bloodlineOpen, setBloodlineOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState('All');
+  const [statusOpen, setStatusOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [bulkSelect, setBulkSelect] = useState(false);
+  const [bulkTargetStatus, setBulkTargetStatus] = useState('Conditioning');
+  const [selectedBirds, setSelectedBirds] = useState({});
+  const [statusByBird, setStatusByBird] = useState({});
+  const bulkStatusOptions = ['Conditioning', 'Standby', 'Ready', 'Sold', 'Loss'];
   const mockBirds = [
     { farmBuzzId: 'FB-000101', physicalId: 'TP-101', bloodline: 'Kelso', status: 'Conditioning', location: areaName },
-    { farmBuzzId: 'FB-000102', physicalId: 'TP-102', bloodline: 'Hatch', status: 'Holding', location: areaName },
-    { farmBuzzId: 'FB-000103', physicalId: 'TP-103', bloodline: 'Roundhead', status: 'Holding', location: areaName },
+    { farmBuzzId: 'FB-000102', physicalId: 'TP-102', bloodline: 'Hatch', status: 'Standby', location: areaName },
+    { farmBuzzId: 'FB-000103', physicalId: 'TP-103', bloodline: 'Roundhead', status: 'Standby', location: areaName },
     { farmBuzzId: 'FB-000104', physicalId: 'TP-104', bloodline: 'Kelso', status: 'Conditioning', location: areaName },
-    { farmBuzzId: 'FB-000105', physicalId: 'TP-105', bloodline: 'Sweater', status: 'Holding', location: areaName },
+    { farmBuzzId: 'FB-000105', physicalId: 'TP-105', bloodline: 'Sweater', status: 'Standby', location: areaName },
   ];
   const sourceBirds = birds.filter((bird) => bird.location === areaName);
   const areaBirds = sourceBirds.length ? sourceBirds : mockBirds;
-  const bloodlines = ['All', ...new Set(areaBirds.map((bird) => bird.bloodline).filter(Boolean))];
-  const visibleBirds = areaBirds.filter((bird) => {
+  const getBirdKey = (bird) => bird._recordKey || bird.farmBuzzId || bird.physicalId || bird.name;
+  const displayBirds = areaBirds.map((bird) => ({ ...bird, status: statusByBird[getBirdKey(bird)] || bird.status }));
+  const selectedCount = Object.values(selectedBirds).filter(Boolean).length;
+  const bloodlines = ['All', ...new Set(displayBirds.map((bird) => bird.bloodline).filter(Boolean))];
+  const statusOptions = ['All', ...new Set(displayBirds.map((bird) => bird.status).filter(Boolean))];
+  const visibleBirds = displayBirds.filter((bird) => {
     const search = query.trim().toLowerCase();
     const matchesSearch = !search || [bird.physicalId, bird.name, bird.farmBuzzId, bird.bloodline].some((value) => String(value || '').toLowerCase().includes(search));
     const matchesBloodline = bloodlineFilter === 'All' || bird.bloodline === bloodlineFilter;
-    return matchesSearch && matchesBloodline;
+    const matchesStatus = statusFilter === 'All' || bird.status === statusFilter;
+    return matchesSearch && matchesBloodline && matchesStatus;
   });
+  const startBulkSelect = (status) => { setBulkTargetStatus(status); setBulkSelect(true); setSelectedBirds({}); setMenuOpen(false); };
+  const cancelBulkSelect = () => { setBulkSelect(false); setSelectedBirds({}); };
+  const toggleBirdSelection = (bird) => {
+    if (!bulkSelect) return;
+    const key = getBirdKey(bird);
+    setSelectedBirds((current) => ({ ...current, [key]: !current[key] }));
+  };
+  const selectVisibleBirds = () => {
+    setSelectedBirds((current) => {
+      const next = { ...current };
+      visibleBirds.forEach((bird) => { next[getBirdKey(bird)] = true; });
+      return next;
+    });
+  };
+  const applyBulkStatus = (status) => {
+    if (!selectedCount) return Alert.alert('Select birds', 'Choose one or more birds before changing status.');
+    setStatusByBird((current) => {
+      const next = { ...current };
+      Object.entries(selectedBirds).forEach(([key, selected]) => {
+        if (selected) next[key] = status;
+      });
+      return next;
+    });
+    cancelBulkSelect();
+  };
 
   return (
     <View style={styles.cordateScreen}>
@@ -1058,11 +1098,26 @@ function CordateBatchDetailScreen({ areaName, birds = [], onBack }) {
             <Image source={CORDING_CARD_IMAGE} style={StyleSheet.absoluteFill} contentFit="cover" contentPosition="center" />
             <LinearGradient colors={['rgba(0,0,0,.18)', 'rgba(0,0,0,.55)', '#000000']} locations={[0, .55, 1]} style={StyleSheet.absoluteFill} />
             <SafeAreaView edges={['top']} style={styles.cordateBannerSafe}>
-              <View style={styles.cordateHeader}>
-                <Pressable accessibilityRole="button" accessibilityLabel="Back to cordate" onPress={onBack} style={styles.cordateBackButton}>
-                  <Ionicons name="arrow-back" size={22} color="#ffffff" />
+              <View style={[styles.cordateHeader, styles.cordateHeaderWithSettings]}>
+                <View style={styles.cordateHeaderLeft}>
+                  <Pressable accessibilityRole="button" accessibilityLabel="Back to cordate" onPress={onBack} style={styles.cordateBackButton}>
+                    <Ionicons name="arrow-back" size={22} color="#ffffff" />
+                  </Pressable>
+                  <Text style={styles.cordateHeaderTitle}>Cordate</Text>
+                </View>
+                <Pressable accessibilityRole="button" accessibilityLabel="Cordate actions" onPress={() => setMenuOpen((open) => !open)} style={styles.cordateBackButton}>
+                  <Ionicons name="ellipsis-horizontal" size={22} color="#ffffff" />
                 </Pressable>
-                <Text style={styles.cordateHeaderTitle}>Cordate</Text>
+                {menuOpen && (
+                  <View style={styles.cordateActionMenu}>
+                    {bulkStatusOptions.map((status) => (
+                      <Pressable key={status} onPress={() => startBulkSelect(status)} style={styles.cordateActionMenuItem}>
+                        <Ionicons name="albums-outline" size={16} color={THEME_ORANGE} />
+                        <Text style={styles.cordateActionMenuText}>{status}</Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                )}
               </View>
               <View style={styles.cordateHeroCopy}>
                 <Text style={styles.cordateOverline}>BIRD LIST</Text>
@@ -1077,18 +1132,73 @@ function CordateBatchDetailScreen({ areaName, birds = [], onBack }) {
               <TextInput value={query} onChangeText={setQuery} placeholder="Search birds or bloodline" placeholderTextColor="#879195" style={styles.cordateSearchInput} />
               {!!query && <Pressable onPress={() => setQuery('')}><Ionicons name="close-circle" size={18} color="#6c777b" /></Pressable>}
             </View>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.cordateFilterList}>
-              {bloodlines.map((bloodline) => (
-                <Pressable key={bloodline} onPress={() => setBloodlineFilter(bloodline)} style={[styles.cordateFilter, bloodlineFilter === bloodline && styles.cordateFilterActive]}>
-                  <Text style={[styles.cordateFilterText, bloodlineFilter === bloodline && styles.cordateFilterTextActive]}>{bloodline}</Text>
+            <View style={styles.cordateDropdownRow}>
+              <View style={styles.cordateDropdownWrap}>
+                <Pressable onPress={() => { setBloodlineOpen((open) => !open); setStatusOpen(false); }} style={styles.cordateDropdownField}>
+                  <Text style={styles.cordateDropdownLabel}>Bloodline</Text>
+                  <Text numberOfLines={1} style={styles.cordateDropdownValue}>{bloodlineFilter}</Text>
+                  <Ionicons name={bloodlineOpen ? 'chevron-up' : 'chevron-down'} size={16} color="#dfe6e8" />
                 </Pressable>
-              ))}
-            </ScrollView>
+                {bloodlineOpen && (
+                  <View style={styles.cordateDropdownMenu}>
+                    {bloodlines.map((bloodline) => (
+                      <Pressable key={bloodline} onPress={() => { setBloodlineFilter(bloodline); setBloodlineOpen(false); }} style={[styles.cordateDropdownOption, bloodlineFilter === bloodline && styles.cordateDropdownOptionActive]}>
+                        <Text style={[styles.cordateDropdownOptionText, bloodlineFilter === bloodline && styles.cordateDropdownOptionTextActive]}>{bloodline}</Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                )}
+              </View>
+              <View style={styles.cordateDropdownWrap}>
+                <Pressable onPress={() => { setStatusOpen((open) => !open); setBloodlineOpen(false); }} style={styles.cordateDropdownField}>
+                  <Text style={styles.cordateDropdownLabel}>Status</Text>
+                  <Text numberOfLines={1} style={styles.cordateDropdownValue}>{statusFilter}</Text>
+                  <Ionicons name={statusOpen ? 'chevron-up' : 'chevron-down'} size={16} color="#dfe6e8" />
+                </Pressable>
+                {statusOpen && (
+                  <View style={styles.cordateDropdownMenu}>
+                    {statusOptions.map((status) => (
+                      <Pressable key={status} onPress={() => { setStatusFilter(status); setStatusOpen(false); }} style={[styles.cordateDropdownOption, statusFilter === status && styles.cordateDropdownOptionActive]}>
+                        <Text style={[styles.cordateDropdownOptionText, statusFilter === status && styles.cordateDropdownOptionTextActive]}>{status}</Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                )}
+              </View>
+            </View>
+            {bulkSelect && (
+              <View style={styles.cordateBulkPanel}>
+                <View style={styles.cordateBulkHeader}>
+                  <View>
+                    <Text style={styles.cordateBulkLabel}>CHANGE TO</Text>
+                    <Text style={styles.cordateBulkTitle}>{bulkTargetStatus}</Text>
+                  </View>
+                  <Text style={styles.cordateBulkCount}>{selectedCount} selected</Text>
+                  <View style={styles.cordateBulkHeaderActions}>
+                    <Pressable onPress={selectVisibleBirds} style={styles.cordateBulkSmallButton}>
+                      <Text style={styles.cordateBulkSmallText}>Select All</Text>
+                    </Pressable>
+                    <Pressable onPress={cancelBulkSelect} style={styles.cordateBulkSmallButton}>
+                      <Text style={styles.cordateBulkSmallText}>Cancel</Text>
+                    </Pressable>
+                  </View>
+                </View>
+                <Pressable onPress={() => applyBulkStatus(bulkTargetStatus)} style={styles.cordateBulkApplyButton}>
+                  <Text style={styles.cordateBulkApplyText}>Apply to selected birds</Text>
+                </Pressable>
+              </View>
+            )}
             <View style={styles.cordateBirdListScreen}>
               {visibleBirds.length ? visibleBirds.map((bird, index) => (
-                <View key={bird._recordKey || bird.farmBuzzId} style={styles.cordateBirdRow}>
-                  <View style={styles.cordateBirdMarker}>
-                    <Text style={styles.cordateBirdMarkerText}>{String(index + 1).padStart(2, '0')}</Text>
+                <Pressable key={getBirdKey(bird)} onPress={() => toggleBirdSelection(bird)} style={[styles.cordateBirdRow, selectedBirds[getBirdKey(bird)] && styles.cordateBirdRowSelected]}>
+                  <View style={[styles.cordateBirdMarker, selectedBirds[getBirdKey(bird)] && styles.cordateBirdMarkerSelected, !bulkSelect && { borderWidth: 0 }]}>
+                    {bulkSelect && selectedBirds[getBirdKey(bird)] ? (
+                      <Ionicons name="checkmark" size={24} color="#ffffff" />
+                    ) : index < 2 ? (
+                      <Image source={{ uri: index === 0 ? BIRDS[0].image : BIRDS[2].image }} style={{ width: '100%', height: '100%', borderRadius: 8 }} contentFit="cover" />
+                    ) : (
+                      <Image source={FLOCK_BADGE_IMAGE} style={{ width: '100%', height: '100%', borderRadius: 8 }} contentFit="cover" />
+                    )}
                   </View>
                   <View style={styles.cordateBirdCopy}>
                     <View style={styles.cordateBirdTitleRow}>
@@ -1098,7 +1208,7 @@ function CordateBatchDetailScreen({ areaName, birds = [], onBack }) {
                     <Text numberOfLines={1} style={styles.cordateBirdMeta}>{bird.farmBuzzId || 'Pending'}</Text>
                     <Text numberOfLines={1} style={styles.cordateBirdBloodline}>{bird.bloodline || 'Unassigned bloodline'}</Text>
                   </View>
-                </View>
+                </Pressable>
               )) : <Text style={styles.cordateEmptyBirds}>No birds match this view</Text>}
             </View>
           </View>
@@ -1167,6 +1277,25 @@ function AddFamilyBatchScreen({ farm, onBack }) {
   const resizeBloodlines = (setter, count) => {
     setter((current) => Array.from({ length: count }, (_, index) => current[index] || BATCH_BLOODLINES[index % BATCH_BLOODLINES.length]));
     setOpenSelect(null);
+  };
+
+  const saveBatch = () => {
+    const name = batchName.trim();
+    const eggs = Number.parseInt(eggCount, 10);
+    if (!name) {
+      Alert.alert('Batch name required', 'Enter a batch name before saving.');
+      return;
+    }
+    if (!eggs || eggs < 1) {
+      Alert.alert('Egg count required', 'Enter how many eggs are in this batch.');
+      return;
+    }
+
+    Alert.alert(
+      'Batch saved',
+      `${name} was saved with ${eggs} eggs.`,
+      [{ text: 'OK', onPress: onBack }],
+    );
   };
 
   return (
@@ -1284,6 +1413,11 @@ function AddFamilyBatchScreen({ farm, onBack }) {
                 </View>
               </View>
             </View>
+
+            <Pressable accessibilityRole="button" accessibilityLabel="Save egg batch" onPress={saveBatch} style={({ pressed }) => [styles.batchSetupSaveButton, pressed && styles.pressed]}>
+              <MaterialCommunityIcons name="content-save-outline" size={20} color="#ffffff" />
+              <Text style={styles.batchSetupSaveText}>Save Batch</Text>
+            </Pressable>
           </View>
         </View>
       </ScrollView>
@@ -1296,10 +1430,26 @@ function BlankIncubationScreen({ farm, onBack, onAddBatch, onOpenBatch, onAddTas
   const compact = width < 480;
   const narrow = width < 390;
   const [query, setQuery] = useState('');
+  const [candlingBatch, setCandlingBatch] = useState(null);
+  const [candlingRejected, setCandlingRejected] = useState(0);
+  const [candlingRecheck, setCandlingRecheck] = useState(0);
   const normalizedQuery = query.trim().toLowerCase();
   const visibleBatches = ACTIVE_CHICKEN_BATCHES.filter((batch) => (
     !normalizedQuery || `${batch.id} ${batch.name} ${batch.sire} ${batch.dams.join(' ')}`.toLowerCase().includes(normalizedQuery)
   ));
+  const candlingTotal = candlingBatch?.count || 0;
+  const candlingDeveloping = Math.max(0, candlingTotal - candlingRejected - candlingRecheck);
+  const openCandlingModal = (batch) => {
+    setCandlingBatch(batch);
+    setCandlingRejected(0);
+    setCandlingRecheck(0);
+  };
+  const changeCandlingRejected = (amount) => setCandlingRejected((current) => Math.max(0, Math.min(current + amount, candlingTotal - candlingRecheck)));
+  const changeCandlingRecheck = (amount) => setCandlingRecheck((current) => Math.max(0, Math.min(current + amount, candlingTotal - candlingRejected)));
+  const saveCandling = () => {
+    Alert.alert('Candling recorded', `${candlingDeveloping} developing, ${candlingRejected} rejected, ${candlingRecheck} to recheck.`);
+    setCandlingBatch(null);
+  };
 
   return (
     <View style={styles.screen}>
@@ -1430,6 +1580,7 @@ function BlankIncubationScreen({ farm, onBack, onAddBatch, onOpenBatch, onAddTas
                       ))}
                     </View>
                   </View>
+
                 </Pressable>
               ))}
               {!visibleBatches.length && <Text style={styles.blankIncubationEmptyText}>No batches found</Text>}
@@ -1437,6 +1588,47 @@ function BlankIncubationScreen({ farm, onBack, onAddBatch, onOpenBatch, onAddTas
           </View>
         </View>
       </ScrollView>
+      <Modal visible={!!candlingBatch} transparent animationType="fade" onRequestClose={() => setCandlingBatch(null)}>
+        <View style={styles.blankIncubationModalBackdrop}>
+          <Pressable accessibilityLabel="Close record candling modal" onPress={() => setCandlingBatch(null)} style={StyleSheet.absoluteFill} />
+          <View style={styles.blankIncubationCandlingModal}>
+            <View style={styles.blankIncubationModalHeader}>
+              <View>
+                <Text style={styles.blankIncubationModalEyebrow}>NEXT ACTION</Text>
+                <Text style={styles.blankIncubationModalTitle}>Record Candling</Text>
+              </View>
+              <Pressable accessibilityLabel="Close" onPress={() => setCandlingBatch(null)} style={styles.blankIncubationModalClose}>
+                <Ionicons name="close" size={20} color="#ffffff" />
+              </Pressable>
+            </View>
+            <View style={styles.blankIncubationModalBatch}>
+              <Text style={styles.blankIncubationModalBatchName}>{candlingBatch?.name}</Text>
+              <Text style={styles.blankIncubationModalBatchCount}>{candlingTotal} eggs</Text>
+            </View>
+            <View style={styles.blankIncubationCandlingSummary}>
+              <View style={styles.blankIncubationCandlingMetric}><Text style={styles.blankIncubationCandlingValue}>{candlingDeveloping}</Text><Text style={styles.blankIncubationCandlingLabel}>Developing</Text></View>
+              <View style={styles.blankIncubationCandlingDivider} />
+              <View style={styles.blankIncubationCandlingMetric}><Text style={styles.blankIncubationCandlingValue}>{candlingRejected}</Text><Text style={styles.blankIncubationCandlingLabel}>Rejected</Text></View>
+              <View style={styles.blankIncubationCandlingDivider} />
+              <View style={styles.blankIncubationCandlingMetric}><Text style={styles.blankIncubationCandlingValue}>{candlingRecheck}</Text><Text style={styles.blankIncubationCandlingLabel}>Recheck</Text></View>
+            </View>
+            <View style={styles.blankIncubationCounterList}>
+              <View style={styles.blankIncubationCounterRow}>
+                <View style={styles.blankIncubationCounterCopy}><Text style={styles.blankIncubationCounterTitle}>Rejected</Text><Text style={styles.blankIncubationCounterDetail}>Clear or stopped eggs</Text></View>
+                <View style={styles.blankIncubationCounterStepper}><Pressable onPress={() => changeCandlingRejected(-1)} style={styles.blankIncubationCounterButton}><Ionicons name="remove" size={18} color="#c8ced0" /></Pressable><Text style={styles.blankIncubationCounterValue}>{candlingRejected}</Text><Pressable onPress={() => changeCandlingRejected(1)} style={styles.blankIncubationCounterButton}><Ionicons name="add" size={18} color="#ffffff" /></Pressable></View>
+              </View>
+              <View style={[styles.blankIncubationCounterRow, styles.blankIncubationCounterRowLast]}>
+                <View style={styles.blankIncubationCounterCopy}><Text style={styles.blankIncubationCounterTitle}>Recheck</Text><Text style={styles.blankIncubationCounterDetail}>Uncertain eggs to check again</Text></View>
+                <View style={styles.blankIncubationCounterStepper}><Pressable onPress={() => changeCandlingRecheck(-1)} style={styles.blankIncubationCounterButton}><Ionicons name="remove" size={18} color="#c8ced0" /></Pressable><Text style={styles.blankIncubationCounterValue}>{candlingRecheck}</Text><Pressable onPress={() => changeCandlingRecheck(1)} style={styles.blankIncubationCounterButton}><Ionicons name="add" size={18} color="#ffffff" /></Pressable></View>
+              </View>
+            </View>
+            <View style={styles.blankIncubationModalActions}>
+              <Pressable onPress={() => setCandlingBatch(null)} style={styles.blankIncubationModalCancel}><Text style={styles.blankIncubationModalCancelText}>Cancel</Text></Pressable>
+              <Pressable onPress={saveCandling} style={styles.blankIncubationModalSave}><MaterialCommunityIcons name="content-save-check-outline" size={17} color="#ffffff" /><Text style={styles.blankIncubationModalSaveText}>Save Candling</Text></Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -3218,6 +3410,83 @@ const styles = StyleSheet.create({
   blankIncubationLineageLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   blankIncubationLineageLabel: { color: '#77858a', fontSize: 8, fontWeight: '800', letterSpacing: 0 },
   blankIncubationLineageValue: { marginTop: 5, color: '#e5eaeb', fontSize: 12, fontWeight: '700', letterSpacing: 0 },
+  blankIncubationNextTask: {
+    minHeight: 88, marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#293a40',
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+  },
+  blankIncubationTaskDate: {
+    width: 44, height: 50, borderRadius: 6, borderWidth: 1, borderColor: '#8f500d',
+    backgroundColor: 'rgba(255, 122, 0, 0.08)', alignItems: 'center', justifyContent: 'center',
+  },
+  blankIncubationTaskMonth: { color: THEME_ORANGE, fontSize: 7, lineHeight: 9, fontWeight: '800' },
+  blankIncubationTaskDay: { marginTop: 2, color: '#ffffff', fontSize: 17, lineHeight: 18, fontWeight: '800' },
+  blankIncubationTaskCopy: { flex: 1, minWidth: 0 },
+  blankIncubationTaskTitle: { color: '#eef2f3', fontSize: 12, fontWeight: '800', letterSpacing: 0 },
+  blankIncubationTaskTiming: { marginTop: 6, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 4 },
+  blankIncubationTaskDetail: { flexShrink: 1, color: THEME_ORANGE, fontSize: 9, fontWeight: '700', letterSpacing: 0 },
+  blankIncubationTaskButton: {
+    height: 38, minWidth: 116, borderRadius: 6, backgroundColor: THEME_ORANGE,
+    paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4,
+  },
+  blankIncubationTaskButtonText: { color: '#ffffff', fontSize: 9, fontWeight: '800', letterSpacing: 0 },
+  blankIncubationModalBackdrop: {
+    flex: 1, paddingHorizontal: 16, backgroundColor: 'rgba(0, 4, 6, 0.84)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  blankIncubationCandlingModal: {
+    width: '100%', maxWidth: 430, borderRadius: 8, borderWidth: 1,
+    borderColor: '#2c3d44', backgroundColor: '#071216', padding: 16,
+  },
+  blankIncubationModalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  blankIncubationModalEyebrow: { color: THEME_ORANGE, fontSize: 8, fontWeight: '800', letterSpacing: 0 },
+  blankIncubationModalTitle: { marginTop: 5, color: '#ffffff', fontSize: 21, fontWeight: '800', letterSpacing: 0 },
+  blankIncubationModalClose: {
+    width: 40, height: 40, borderRadius: 20, borderWidth: 1, borderColor: '#44535a',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  blankIncubationModalBatch: {
+    minHeight: 45, marginTop: 16, borderRadius: 6, backgroundColor: '#0d1a1f',
+    paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+  },
+  blankIncubationModalBatchName: { flex: 1, color: THEME_ORANGE, fontSize: 11, fontWeight: '800' },
+  blankIncubationModalBatchCount: { color: '#9ba7aa', fontSize: 9 },
+  blankIncubationCandlingSummary: {
+    minHeight: 72, marginTop: 12, borderRadius: 7, borderWidth: 1, borderColor: '#263940',
+    backgroundColor: '#091519', flexDirection: 'row', alignItems: 'center',
+  },
+  blankIncubationCandlingMetric: { flex: 1, alignItems: 'center' },
+  blankIncubationCandlingValue: { color: '#ffffff', fontSize: 18, fontWeight: '800' },
+  blankIncubationCandlingLabel: { marginTop: 4, color: '#7f8c91', fontSize: 8 },
+  blankIncubationCandlingDivider: { width: 1, height: 36, backgroundColor: '#263940' },
+  blankIncubationCounterList: {
+    marginTop: 12, borderRadius: 8, borderWidth: 1, borderColor: '#263940',
+    backgroundColor: '#081216', overflow: 'hidden',
+  },
+  blankIncubationCounterRow: {
+    minHeight: 72, paddingHorizontal: 12, borderBottomWidth: 1, borderBottomColor: '#1b292f',
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+  },
+  blankIncubationCounterRowLast: { borderBottomWidth: 0 },
+  blankIncubationCounterCopy: { flex: 1, minWidth: 0 },
+  blankIncubationCounterTitle: { color: '#e8ebec', fontSize: 13, fontWeight: '700' },
+  blankIncubationCounterDetail: { marginTop: 3, color: '#7f8a8e', fontSize: 9 },
+  blankIncubationCounterStepper: {
+    height: 38, borderRadius: 7, borderWidth: 1, borderColor: '#304047',
+    backgroundColor: '#081115', flexDirection: 'row', alignItems: 'center', overflow: 'hidden',
+  },
+  blankIncubationCounterButton: { width: 37, height: 38, alignItems: 'center', justifyContent: 'center' },
+  blankIncubationCounterValue: { minWidth: 36, color: '#f1f3f3', fontSize: 15, fontWeight: '800', textAlign: 'center' },
+  blankIncubationModalActions: { marginTop: 16, flexDirection: 'row', gap: 8 },
+  blankIncubationModalCancel: {
+    flex: 1, height: 44, borderRadius: 7, borderWidth: 1, borderColor: '#304249',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  blankIncubationModalCancelText: { color: '#e4e9ea', fontSize: 10, fontWeight: '700' },
+  blankIncubationModalSave: {
+    flex: 1.4, height: 44, borderRadius: 7, backgroundColor: THEME_ORANGE,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+  },
+  blankIncubationModalSaveText: { color: '#ffffff', fontSize: 10, fontWeight: '800' },
   blankIncubationEmptyText: { paddingVertical: 28, color: '#748187', fontSize: 11, textAlign: 'center' },
   batchSetupHero: { height: 242, overflow: 'hidden', backgroundColor: '#101719' },
   batchSetupHeroCompact: { height: 224 },
@@ -3294,6 +3563,12 @@ const styles = StyleSheet.create({
   batchSetupDamNode: { flex: 1, minWidth: 0 },
   batchSetupNodeLine: { width: 10, height: 1, backgroundColor: '#526168' },
   batchSetupSireNodeSelect: { borderColor: 'rgba(255, 122, 0, 0.72)' },
+  batchSetupSaveButton: {
+    minHeight: 50, marginTop: 14, borderRadius: 8, backgroundColor: THEME_ORANGE,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    paddingHorizontal: 14,
+  },
+  batchSetupSaveText: { color: '#ffffff', fontSize: 13, lineHeight: 18, fontWeight: '800' },
   heroEyebrow: { marginBottom: 5, color: THEME_ORANGE, fontSize: 9, fontWeight: '800', letterSpacing: 0 },
   brand: {
     color: '#f5f4f0', fontSize: 38, lineHeight: 44, fontWeight: '800',
@@ -3569,6 +3844,13 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   cordateHeaderTitle: { color: '#ffffff', fontSize: 17, lineHeight: 21, fontWeight: '700' },
+  cordateActionMenu: {
+    position: 'absolute', right: 16, top: Platform.OS === 'web' ? 54 : 47, zIndex: 4,
+    minWidth: 140, borderRadius: 8, borderWidth: 1, borderColor: '#31434a',
+    backgroundColor: '#071216', padding: 4,
+  },
+  cordateActionMenuItem: { minHeight: 28, borderRadius: 6, paddingHorizontal: 9, flexDirection: 'row', alignItems: 'center', gap: 7 },
+  cordateActionMenuText: { color: '#eef2f3', fontSize: 9, lineHeight: 12, fontWeight: '800' },
   cordateDetailSafe: { flex: 1, minHeight: '100%' },
   cordateDetailHero: { paddingHorizontal: 20, paddingTop: 28, paddingBottom: 18 },
   cordateDetailBody: { paddingHorizontal: 10, paddingBottom: 30 },
@@ -3612,6 +3894,27 @@ const styles = StyleSheet.create({
     alignItems: 'center', gap: 8,
   },
   cordateSearchInput: { flex: 1, height: 50, padding: 0, color: '#e7ebec', fontSize: 12, outlineStyle: 'none' },
+  cordateDropdownRow: { marginVertical: 10, flexDirection: 'row', gap: 8, zIndex: 3 },
+  cordateDropdownWrap: { flex: 1, minWidth: 0, position: 'relative' },
+  cordateDropdownField: {
+    minHeight: 48, borderRadius: 7, borderWidth: 1, borderColor: '#26373e',
+    backgroundColor: '#071014', paddingHorizontal: 11, flexDirection: 'row',
+    alignItems: 'center', gap: 8,
+  },
+  cordateDropdownLabel: { color: '#79868b', fontSize: 8, lineHeight: 11, fontWeight: '800' },
+  cordateDropdownValue: { flex: 1, color: '#edf2f3', fontSize: 11, lineHeight: 14, fontWeight: '900' },
+  cordateDropdownMenu: {
+    position: 'absolute', left: 0, right: 0, top: 54, zIndex: 6,
+    borderRadius: 7, borderWidth: 1, borderColor: '#30434a',
+    backgroundColor: '#071216', overflow: 'hidden',
+  },
+  cordateDropdownOption: {
+    minHeight: 36, paddingHorizontal: 11, borderBottomWidth: 1,
+    borderBottomColor: '#17262b', justifyContent: 'center',
+  },
+  cordateDropdownOptionActive: { backgroundColor: 'rgba(255,122,0,.1)' },
+  cordateDropdownOptionText: { color: '#cbd3d6', fontSize: 10, lineHeight: 13, fontWeight: '800' },
+  cordateDropdownOptionTextActive: { color: THEME_ORANGE },
   cordateFilterList: { paddingVertical: 10, gap: 7 },
   cordateFilter: {
     height: 34, borderRadius: 17, borderWidth: 1, borderColor: '#26373e',
@@ -3620,6 +3923,25 @@ const styles = StyleSheet.create({
   cordateFilterActive: { borderColor: THEME_ORANGE, backgroundColor: 'rgba(255,122,0,.12)' },
   cordateFilterText: { color: '#a6b0b4', fontSize: 10, fontWeight: '800' },
   cordateFilterTextActive: { color: '#ffffff' },
+  cordateBulkPanel: {
+    marginBottom: 10, borderRadius: 8, borderWidth: 1, borderColor: '#26373e',
+    backgroundColor: '#071014', padding: 10,
+  },
+  cordateBulkHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  cordateBulkLabel: { color: '#7d898e', fontSize: 7, lineHeight: 10, fontWeight: '900' },
+  cordateBulkTitle: { color: '#eef2f3', fontSize: 12, lineHeight: 16, fontWeight: '900' },
+  cordateBulkCount: { marginLeft: 'auto', color: '#879397', fontSize: 9, lineHeight: 12, fontWeight: '800' },
+  cordateBulkHeaderActions: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  cordateBulkSmallButton: {
+    minHeight: 28, borderRadius: 6, borderWidth: 1, borderColor: '#30434a',
+    paddingHorizontal: 9, alignItems: 'center', justifyContent: 'center',
+  },
+  cordateBulkSmallText: { color: '#cbd3d6', fontSize: 8, lineHeight: 11, fontWeight: '800' },
+  cordateBulkApplyButton: {
+    minHeight: 36, marginTop: 10, borderRadius: 7, backgroundColor: THEME_ORANGE,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  cordateBulkApplyText: { color: '#ffffff', fontSize: 10, lineHeight: 13, fontWeight: '900' },
   cordateBirdList: { marginTop: 13, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#203139', gap: 8 },
   cordateBirdListScreen: {
     gap: 8,
@@ -3628,10 +3950,12 @@ const styles = StyleSheet.create({
     minHeight: 72, borderRadius: 8, borderWidth: 1, borderColor: '#213239',
     backgroundColor: '#071014', padding: 11, flexDirection: 'row', alignItems: 'center', gap: 10,
   },
+  cordateBirdRowSelected: { borderColor: THEME_ORANGE, backgroundColor: 'rgba(255,122,0,.07)' },
   cordateBirdMarker: {
-    width: 34, height: 34, borderRadius: 7, borderWidth: 1, borderColor: 'rgba(255,122,0,.45)',
-    backgroundColor: 'rgba(255,122,0,.1)', alignItems: 'center', justifyContent: 'center',
+    width: 48, height: 48, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(255,122,0,.45)',
+    backgroundColor: 'rgba(255,122,0,.1)', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
   },
+  cordateBirdMarkerSelected: { borderColor: THEME_ORANGE, backgroundColor: THEME_ORANGE },
   cordateBirdMarkerText: { color: THEME_ORANGE, fontSize: 10, lineHeight: 13, fontWeight: '900' },
   cordateBirdCopy: { flex: 1, minWidth: 0 },
   cordateBirdTitleRow: { minHeight: 24, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },

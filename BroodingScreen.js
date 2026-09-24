@@ -68,13 +68,13 @@ function BatchCard({ batch, vaccinationSchedule, vaccineCompletions, onOpen, onM
   };
   return (
     <View style={styles.batchCard}>
-      <Pressable accessibilityLabel={`Open brooding batch ${batch.id}`} onPress={onOpen} style={({ pressed }) => [styles.batchTop, pressed && styles.pressed]}>
+      <View style={styles.batchTop}>
         <View style={styles.batchIdentity}>
           <View style={styles.batchIcon}><MaterialCommunityIcons name="bird" size={23} color={ORANGE} /></View>
           <View><Text style={styles.batchName}>{batch.location}</Text><Text style={styles.batchId}>{batch.id}</Text></View>
         </View>
         <View style={styles.chickCount}><Text style={styles.chickCountValue}>{batch.chicks}</Text><Text style={styles.chickCountLabel}>chicks</Text></View>
-      </Pressable>
+      </View>
       {!!familySources.length && (
         <View style={styles.familyTree}>
           <View style={styles.sireNode}>

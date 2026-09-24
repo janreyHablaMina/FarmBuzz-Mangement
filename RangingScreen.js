@@ -74,10 +74,10 @@ function LocationCard({ group, readyDay, taskSchedule, taskCompletions, onMarkTa
   const sire = familySources[0]?.sire || 'Not recorded';
   return (
     <View style={styles.batch}>
-      <Pressable accessibilityLabel={`Open ranging location ${group.location}`} onPress={onPress} style={({ pressed }) => [styles.batchTop, pressed && styles.pressed]}>
+      <View style={styles.batchTop}>
         <View style={styles.identity}><View style={styles.batchIcon}><MaterialCommunityIcons name="bird" size={22} color={ORANGE} /></View><View><Text style={styles.batchId}>{group.location}</Text><Text style={styles.location}>{group.batches[0]?.id || 'Range batch'}</Text></View></View>
         <View style={styles.birdCount}><Text style={styles.birds}>{group.birds}</Text><Text style={styles.muted}>birds</Text></View>
-      </Pressable>
+      </View>
       <View style={styles.familyTree}>
         <View style={[styles.familyNode, styles.sireNode]}><View style={styles.familyLabelRow}><MaterialCommunityIcons name="gender-male" size={14} color={ORANGE} /><Text style={styles.familyLabel}>SIRE</Text></View><Text style={styles.familyValue}>{sire}</Text></View>
         <View style={styles.treeConnector}><View style={styles.treeStem} /><View style={styles.treeTrunk} /></View>

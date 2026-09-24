@@ -52,7 +52,6 @@ export default function EggsIncubationSettingsScreen({ onBack, addedTasks = [] }
       custom: true,
     })),
   ];
-  const enabledCount = visibleTasks.filter((task) => task.enabled).length;
 
   const updateTask = (id, updates) => setTasks((current) => current.map((task) => task.id === id ? { ...task, ...updates } : task));
   const moveTask = (index, direction) => {
@@ -112,16 +111,6 @@ export default function EggsIncubationSettingsScreen({ onBack, addedTasks = [] }
           </View>
 
           <View style={[styles.content, compact && styles.contentCompact]}>
-            <View style={styles.summaryCard}>
-              <View style={styles.summaryIcon}><MaterialCommunityIcons name="clipboard-check-outline" size={24} color={ORANGE} /></View>
-              <View style={styles.summaryCopy}>
-                <Text style={styles.summaryTitle}>Farm incubation task program</Text>
-                <Text style={styles.summaryDetail}>Tasks are scheduled automatically for every new batch.</Text>
-              </View>
-              <View style={styles.summaryCount}><Text style={styles.summaryCountValue}>{enabledCount}</Text><Text style={styles.summaryCountLabel}>Enabled</Text></View>
-            </View>
-
-            <Text style={styles.helperText}>Your farm defines the task timing. FarmBuzz schedules the program you save.</Text>
 
             <View style={styles.sectionHeader}>
               <View><Text style={styles.eyebrow}>SCHEDULE</Text><Text style={styles.sectionTitle}>After eggs are set</Text></View>
