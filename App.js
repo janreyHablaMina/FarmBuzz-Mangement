@@ -925,6 +925,7 @@ function FarmDetailScreen({ farm, metrics, onBack, onOpenBreeding, onOpenIncubat
 }
 
 function CordateScreen({ farm, areas = [], birds = [], onBack, onOpenBatch, onOpenSettings }) {
+  const [query, setQuery] = useState('');
   const cordateBatches = areas.map((area, index) => {
     const areaBirds = birds.filter((bird) => bird.location === area.name);
     return {
@@ -936,6 +937,7 @@ function CordateScreen({ farm, areas = [], birds = [], onBack, onOpenBatch, onOp
       birds: areaBirds,
     };
   });
+  const shownBatches = cordateBatches.filter((batch) => !query || batch.name.toLowerCase().includes(query.toLowerCase()) || batch.id.toLowerCase().includes(query.toLowerCase()));
 
   return (
     <View style={styles.cordateScreen}>
@@ -971,15 +973,26 @@ function CordateScreen({ farm, areas = [], birds = [], onBack, onOpenBatch, onOp
             </SafeAreaView>
           </View>
           <View style={styles.cordateListWrap}>
+            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 20 }}>
+              <View style={{ flex: 1, height: 48, borderRadius: 7, borderWidth: 1, borderColor: '#26373e', backgroundColor: '#081216', paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Ionicons name="search" size={20} color="#8d999d" />
+                <TextInput value={query} onChangeText={setQuery} placeholder="Search batches" placeholderTextColor="#748187" selectionColor={THEME_ORANGE} style={{ flex: 1, height: 46, padding: 0, color: '#e7ebec', fontSize: 12, outlineStyle: 'none' }} />
+                {!!query && <Pressable onPress={() => setQuery('')}><Ionicons name="close-circle" size={18} color="#6c777b" /></Pressable>}
+              </View>
+              <Pressable style={({ pressed }) => [{ minWidth: 100, height: 48, borderRadius: 7, backgroundColor: THEME_ORANGE, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }, pressed && styles.pressed]}>
+                <Ionicons name="add" size={20} color="#fff" />
+                <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>Add Batch</Text>
+              </Pressable>
+            </View>
             <View style={styles.cordateListHeading}>
               <View>
                 <Text style={styles.cordateOverline}>ACTIVE BATCHES</Text>
                 <Text style={styles.cordateListTitle}>Cordate batches</Text>
               </View>
-              <Text style={styles.cordateCount}>{cordateBatches.length} active</Text>
+              <Text style={styles.cordateCount}>{shownBatches.length} active</Text>
             </View>
             <View style={styles.cordateBatchList}>
-              {cordateBatches.map((batch) => (
+              {shownBatches.map((batch) => (
                 <View key={batch.id} style={styles.cordateBatchCard}>
                   <Pressable accessibilityRole="button" accessibilityLabel={`Open ${batch.name}`} onPress={() => onOpenBatch(batch.name)} style={({ pressed }) => [styles.cordateBatchTop, pressed && styles.pressed]}>
                   <View style={styles.cordateBatchIcon}>
@@ -1006,7 +1019,7 @@ function CordateScreen({ farm, areas = [], birds = [], onBack, onOpenBatch, onOp
   );
 }
 
-function CordateBatchDetailScreen({ areaName, birds = [], onBack }) {
+function CordateBatchDetailScreen({ areaName, birds = [], nextCordingBirdNumber, onBack, onAddBirdToCordate }) {
   const [query, setQuery] = useState('');
   const [bloodlineFilter, setBloodlineFilter] = useState('All');
   const [bloodlineOpen, setBloodlineOpen] = useState(false);
@@ -1017,7 +1030,22 @@ function CordateBatchDetailScreen({ areaName, birds = [], onBack }) {
   const [bulkTargetStatus, setBulkTargetStatus] = useState('Conditioning');
   const [selectedBirds, setSelectedBirds] = useState({});
   const [statusByBird, setStatusByBird] = useState({});
+  
+  const [addModalVisible, setAddModalVisible] = useState(false);
+  const [newImage, setNewImage] = useState(null);
+  const [newTpNumber, setNewTpNumber] = useState('');
+  const [newWingBand, setNewWingBand] = useState('');
+  const [newLegBand, setNewLegBand] = useState('');
+  const [newBloodline, setNewBloodline] = useState('');
+  const [newBloodlineOpen, setNewBloodlineOpen] = useState(false);
+
+  const handlePickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8 });
+    if (!result.canceled) setNewImage(result.assets[0].uri);
+  };
+
   const bulkStatusOptions = ['Conditioning', 'Standby', 'Ready', 'Sold', 'Loss'];
+  const damBloodlines = ['Kelso', 'Hatch', 'Roundhead', 'Sweater', 'Grey'];
   const mockBirds = [
     { farmBuzzId: 'FB-000101', physicalId: 'TP-101', bloodline: 'Kelso', status: 'Conditioning', location: areaName },
     { farmBuzzId: 'FB-000102', physicalId: 'TP-102', bloodline: 'Hatch', status: 'Standby', location: areaName },
@@ -1103,10 +1131,16 @@ function CordateBatchDetailScreen({ areaName, birds = [], onBack }) {
             </SafeAreaView>
           </View>
           <View style={styles.cordateDetailBody}>
-            <View style={styles.cordateSearch}>
-              <Ionicons name="search" size={20} color="#9aa4a8" />
-              <TextInput value={query} onChangeText={setQuery} placeholder="Search birds or bloodline" placeholderTextColor="#879195" style={styles.cordateSearchInput} />
-              {!!query && <Pressable onPress={() => setQuery('')}><Ionicons name="close-circle" size={18} color="#6c777b" /></Pressable>}
+            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 20 }}>
+              <View style={{ flex: 1, height: 48, borderRadius: 7, borderWidth: 1, borderColor: '#26373e', backgroundColor: '#081216', paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Ionicons name="search" size={20} color="#8d999d" />
+                <TextInput value={query} onChangeText={setQuery} placeholder="Search birds or bloodline" placeholderTextColor="#879195" selectionColor={THEME_ORANGE} style={{ flex: 1, height: 46, padding: 0, color: '#e7ebec', fontSize: 12, outlineStyle: 'none' }} />
+                {!!query && <Pressable onPress={() => setQuery('')}><Ionicons name="close-circle" size={18} color="#6c777b" /></Pressable>}
+              </View>
+              <Pressable onPress={() => setAddModalVisible(true)} style={({ pressed }) => [{ minWidth: 100, height: 48, borderRadius: 7, backgroundColor: THEME_ORANGE, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }, pressed && styles.pressed]}>
+                <Ionicons name="add" size={20} color="#fff" />
+                <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>Add Bird</Text>
+              </Pressable>
             </View>
             <View style={styles.cordateDropdownRow}>
               <View style={styles.cordateDropdownWrap}>
@@ -1190,6 +1224,89 @@ function CordateBatchDetailScreen({ areaName, birds = [], onBack }) {
           </View>
         </View>
       </ScrollView>
+      <Modal visible={addModalVisible} transparent animationType="fade" onRequestClose={() => setAddModalVisible(false)}>
+        <View style={styles.modalBackdrop}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => { setNewBloodlineOpen(false); setAddModalVisible(false); }} />
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={styles.modalEyebrow}>CORDATE AREA</Text>
+                <Text style={styles.modalTitle}>Add Bird</Text>
+              </View>
+              <Pressable onPress={() => { setNewBloodlineOpen(false); setAddModalVisible(false); }} style={styles.modalClose}>
+                <Ionicons name="close" size={20} color="#fff" />
+              </Pressable>
+            </View>
+            <View style={{ flexDirection: 'row', gap: 16, marginTop: 15 }}>
+              <View style={{ alignItems: 'center' }}>
+                <Text style={[styles.fieldLabel, { marginTop: 0, alignSelf: 'flex-start' }]}>Photo</Text>
+                <Pressable onPress={handlePickImage} style={{ width: 64, height: 64, borderRadius: 32, borderWidth: 1, borderColor: '#304249', backgroundColor: '#0d1a1f', overflow: 'hidden', alignItems: 'center', justifyContent: 'center' }}>
+                  {newImage ? <Image source={{ uri: newImage }} style={{ width: '100%', height: '100%' }} contentFit="cover" /> : <Ionicons name="camera-outline" size={24} color="#68777c" />}
+                </Pressable>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.fieldLabel, { marginTop: 0 }]}>FarmBuzz ID</Text>
+                <View style={[styles.inputField, { backgroundColor: '#0d1a1f' }]}>
+                  <MaterialCommunityIcons name="identifier" size={18} color={THEME_ORANGE} />
+                  <Text style={{ flex: 1, color: '#fff', fontSize: 13, fontWeight: '800' }}>FB-{String(nextCordingBirdNumber).padStart(6, '0')}</Text>
+                  <Text style={{ color: '#758489', fontSize: 7, fontWeight: '700' }}>AUTO</Text>
+                </View>
+              </View>
+            </View>
+            <Text style={styles.fieldLabel}>TP Number</Text>
+            <View style={styles.inputField}>
+              <MaterialCommunityIcons name="tag-outline" size={18} color={THEME_ORANGE} />
+              <TextInput value={newTpNumber} onChangeText={setNewTpNumber} placeholder="Enter TP number" placeholderTextColor="#68777c" selectionColor={THEME_ORANGE} autoCapitalize="characters" style={styles.modalInput} />
+            </View>
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.fieldLabel}>Wing Band</Text>
+                <View style={styles.inputField}>
+                  <MaterialCommunityIcons name="tag-multiple-outline" size={18} color={THEME_ORANGE} />
+                  <TextInput value={newWingBand} onChangeText={setNewWingBand} placeholder="Optional" placeholderTextColor="#68777c" selectionColor={THEME_ORANGE} autoCapitalize="characters" style={styles.modalInput} />
+                </View>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.fieldLabel}>Leg Band</Text>
+                <View style={styles.inputField}>
+                  <MaterialCommunityIcons name="tag-multiple-outline" size={18} color={THEME_ORANGE} />
+                  <TextInput value={newLegBand} onChangeText={setNewLegBand} placeholder="Optional" placeholderTextColor="#68777c" selectionColor={THEME_ORANGE} autoCapitalize="characters" style={styles.modalInput} />
+                </View>
+              </View>
+            </View>
+            <Text style={styles.fieldLabel}>Dam Bloodline</Text>
+            <View style={styles.dropdownWrap}>
+              <Pressable onPress={() => setNewBloodlineOpen(!newBloodlineOpen)} style={[styles.dropdownField, newBloodlineOpen && styles.dropdownFieldOpen]}>
+                <MaterialCommunityIcons name="dna" size={18} color={THEME_ORANGE} />
+                <Text style={[styles.dropdownText, !newBloodline && styles.dropdownPlaceholder]}>{newBloodline || 'Choose dam bloodline'}</Text>
+                <Ionicons name={newBloodlineOpen ? 'chevron-up' : 'chevron-down'} size={18} color="#dfe6e8" />
+              </Pressable>
+              {newBloodlineOpen && (
+                <View style={[styles.dropdownMenu, { zIndex: 1000 }]}>
+                  {damBloodlines.map((option) => (
+                    <Pressable key={option} onPress={() => { setNewBloodline(option); setNewBloodlineOpen(false); }} style={[styles.dropdownOption, newBloodline === option && styles.dropdownOptionSelected]}>
+                      <Text style={styles.bloodlineValue}>{option}</Text>
+                      {newBloodline === option && <Ionicons name="checkmark" size={17} color={THEME_ORANGE} />}
+                    </Pressable>
+                  ))}
+                </View>
+              )}
+            </View>
+            <View style={[styles.modalActions, { marginTop: 20 }]}>
+              <Pressable onPress={() => { setNewBloodlineOpen(false); setAddModalVisible(false); }} style={styles.cancelButton}>
+                <Text style={styles.cancelText}>Cancel</Text>
+              </Pressable>
+              <Pressable onPress={() => {
+                if (!newTpNumber.trim() || !newBloodline) return Alert.alert('Complete record', 'Please enter TP number and select a bloodline.');
+                onAddBirdToCordate?.({ image: newImage, tpNumber: newTpNumber.trim(), wingBand: newWingBand.trim(), legBand: newLegBand.trim(), bloodline: newBloodline, location: areaName });
+                setNewImage(null); setNewTpNumber(''); setNewWingBand(''); setNewLegBand(''); setNewBloodline(''); setNewBloodlineOpen(false); setAddModalVisible(false);
+              }} style={styles.saveButton}>
+                <Text style={styles.saveText}>Save Bird</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -2313,7 +2430,35 @@ export default function App() {
         <CordateBatchDetailScreen
           areaName={selectedCordateArea}
           birds={cordingBirds}
+          nextCordingBirdNumber={nextCordingBirdNumber.current}
           onBack={() => setScreen('cordate')}
+          onAddBirdToCordate={(record) => {
+            const bird = {
+              farmBuzzId: `FB-${String(nextCordingBirdNumber.current).padStart(6, '0')}`,
+              _recordKey: `FB-${String(nextCordingBirdNumber.current).padStart(6, '0')}`,
+              name: record.tpNumber,
+              type: 'Stag',
+              filter: 'stag',
+              bloodline: record.bloodline,
+              status: 'Conditioning',
+              location: record.location,
+              identificationType: 'TP Number',
+              physicalId: record.tpNumber,
+              wingBand: record.wingBand,
+              legBand: record.legBand,
+              image: record.image || CORDING_CARD_IMAGE,
+              details: [
+                { icon: 'tag-outline', text: `TP: ${record.tpNumber}` },
+                ...(record.wingBand ? [{ icon: 'tag-multiple-outline', text: `WB: ${record.wingBand}` }] : []),
+                ...(record.legBand ? [{ icon: 'tag-multiple-outline', text: `LB: ${record.legBand}` }] : []),
+                { icon: 'dna', text: record.bloodline },
+                { icon: 'map-marker-outline', text: record.location }
+              ],
+            };
+            setCordingBirds((current) => [bird, ...current]);
+            setAddedBirds((current) => [bird, ...current]);
+            nextCordingBirdNumber.current += 1;
+          }}
         />
       ) : screen === 'cordate-task-settings' ? (
         <GrowingScheduleSettingsScreen
@@ -2488,6 +2633,7 @@ export default function App() {
           defaultCordateDestination={(cordingAreas.find((area) => area.count > 0) || cordingAreas[0])?.name || 'Cordate Area 1'}
           onBack={() => setScreen('farm-detail')}
           onOpenCordate={() => setScreen('cordate')}
+          onOpenCordateDetail={(destination) => { setSelectedCordateArea(destination); setScreen('cordate-detail'); }}
           onOpenSettings={() => setScreen('ranging-task-settings')}
           onMarkTaskDone={(location, taskId) => setRangingTasksByBatch((current) => ({
             ...current,
@@ -2516,8 +2662,10 @@ export default function App() {
             setCordingBirds((current) => [bird, ...current]);
             setAddedBirds((current) => [bird, ...current]);
             setCordingAreas((current) => current.some((area) => area.name === destination) ? current.map((area) => area.name === destination ? { ...area, count: area.count + 1 } : area) : [{ name: destination, count: 1 }, ...current]);
-            setRangingTasksByBatch((current) => ({ ...current, [record.location]: { ...(current[record.location] || {}), [record.taskId]: { completedAt: new Date().toISOString() } } }));
+            setRangingTasksByBatch((current) => ({ ...current, [record.location]: { ...(current[record.location] || {}), [record.taskId]: { completedAt: new Date().toISOString(), destination } } }));
             nextCordingBirdNumber.current += 1;
+            setSelectedCordateArea(destination);
+            setScreen('cordate-detail');
           }}
           onOpenBatch={(location) => {
             setSelectedRangingBatchId(location);
@@ -4053,4 +4201,27 @@ const styles = StyleSheet.create({
   hatcherySummaryLabel: { marginTop: 3, color: '#929ca0', fontSize: 8, lineHeight: 11, fontWeight: '700' },
   hatcheryToolRow: { minHeight: 66, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 9 },
   cardPressed: { opacity: 0.72, transform: [{ scale: 0.99 }] },
+  modalBackdrop: { flex: 1, padding: 16, backgroundColor: 'rgba(0,4,6,.84)', alignItems: 'center', justifyContent: 'center' },
+  modalCard: { width: '100%', maxWidth: 430, borderRadius: 8, borderWidth: 1, borderColor: '#2c3d44', backgroundColor: '#071216', padding: 16 },
+  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  modalEyebrow: { color: THEME_ORANGE, fontSize: 8, fontWeight: '800' },
+  modalTitle: { marginTop: 4, color: '#fff', fontSize: 21, fontWeight: '800' },
+  modalClose: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, borderColor: '#44535a', alignItems: 'center', justifyContent: 'center' },
+  fieldLabel: { marginTop: 15, marginBottom: 6, color: '#edf1f2', fontSize: 10, fontWeight: '700' },
+  inputField: { height: 48, borderRadius: 7, borderWidth: 1, borderColor: '#304249', backgroundColor: '#081519', paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 9 },
+  modalInput: { flex: 1, height: 46, padding: 0, color: '#fff', fontSize: 12, outlineStyle: 'none' },
+  dropdownWrap: { position: 'relative', zIndex: 2 },
+  dropdownField: { height: 48, borderRadius: 7, borderWidth: 1, borderColor: '#304249', backgroundColor: '#081519', paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 9 },
+  dropdownFieldOpen: { borderColor: '#9a560d' },
+  dropdownText: { flex: 1, color: '#fff', fontSize: 12, fontWeight: '700' },
+  dropdownPlaceholder: { color: '#68777c', fontWeight: '600' },
+  dropdownMenu: { marginTop: 6, overflow: 'hidden', borderRadius: 7, borderWidth: 1, borderColor: '#304249', backgroundColor: '#081519' },
+  dropdownOption: { minHeight: 48, paddingHorizontal: 12, paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: '#17262b', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
+  dropdownOptionSelected: { backgroundColor: 'rgba(255,121,0,.08)' },
+  bloodlineValue: { color: '#fff', fontSize: 12, fontWeight: '700' },
+  modalActions: { marginTop: 18, flexDirection: 'row', gap: 8 },
+  cancelButton: { flex: 1, height: 44, borderRadius: 7, borderWidth: 1, borderColor: '#304249', alignItems: 'center', justifyContent: 'center' },
+  cancelText: { color: '#e4e9ea', fontSize: 10, fontWeight: '700' },
+  saveButton: { flex: 1.4, height: 44, borderRadius: 7, backgroundColor: THEME_ORANGE, alignItems: 'center', justifyContent: 'center' },
+  saveText: { color: '#fff', fontSize: 10, fontWeight: '800' },
 });
