@@ -2487,6 +2487,7 @@ export default function App() {
           hasCordateTransfers={cordingBirds.length > 0}
           defaultCordateDestination={(cordingAreas.find((area) => area.count > 0) || cordingAreas[0])?.name || 'Cordate Area 1'}
           onBack={() => setScreen('farm-detail')}
+          onOpenCordate={() => setScreen('cordate')}
           onOpenSettings={() => setScreen('ranging-task-settings')}
           onMarkTaskDone={(location, taskId) => setRangingTasksByBatch((current) => ({
             ...current,
