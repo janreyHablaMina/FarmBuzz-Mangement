@@ -135,11 +135,9 @@ export default function RecordHatchScreen({ batchId, activeEggCount, initialResu
                 <View style={styles.sourceControls}>
                   <Text style={styles.controlLabel}>Total Chicks Hatched</Text>
                   <View style={styles.stepper}>
-                    <Pressable onPress={() => changeOverallCount(-10)} style={styles.stepButton}><Ionicons name="remove-circle-outline" size={17} color="#abb6b9" /></Pressable>
-                    <Pressable onPress={() => changeOverallCount(-1)} style={styles.stepButton}><Ionicons name="remove" size={17} color="#abb6b9" /></Pressable>
+                    <Pressable onPress={() => changeOverallCount(-1)} style={styles.stepButton}><Ionicons name="remove-circle-outline" size={17} color="#abb6b9" /></Pressable>
                     <TextInput value={String(overallHatched)} onChangeText={enterOverallCount} keyboardType="number-pad" inputMode="numeric" selectTextOnFocus maxLength={4} style={[styles.stepValue, { width: 50 }]} />
-                    <Pressable onPress={() => changeOverallCount(1)} style={styles.stepButton}><Ionicons name="add" size={17} color="#fff" /></Pressable>
-                    <Pressable onPress={() => changeOverallCount(10)} style={styles.stepButton}><Ionicons name="add-circle-outline" size={17} color="#fff" /></Pressable>
+                    <Pressable onPress={() => changeOverallCount(1)} style={styles.stepButton}><Ionicons name="add-circle-outline" size={17} color="#fff" /></Pressable>
                   </View>
                 </View>
                 <View style={[styles.markingField, styles.notesField]}>

@@ -1019,7 +1019,7 @@ function CordateScreen({ farm, areas = [], birds = [], onBack, onOpenBatch, onOp
   );
 }
 
-function CordateBatchDetailScreen({ areaName, birds = [], nextCordingBirdNumber, onBack, onAddBirdToCordate }) {
+function CordateBatchDetailScreen({ areaName, birds = [], nextCordingBirdNumber, statusOverrides = {}, onBack, onAddBirdToCordate, onOpenBird }) {
   const [query, setQuery] = useState('');
   const [bloodlineFilter, setBloodlineFilter] = useState('All');
   const [bloodlineOpen, setBloodlineOpen] = useState(false);
@@ -1034,8 +1034,7 @@ function CordateBatchDetailScreen({ areaName, birds = [], nextCordingBirdNumber,
   const [addModalVisible, setAddModalVisible] = useState(false);
   const [newImage, setNewImage] = useState(null);
   const [newTpNumber, setNewTpNumber] = useState('');
-  const [newWingBand, setNewWingBand] = useState('');
-  const [newLegBand, setNewLegBand] = useState('');
+  const [newBand, setNewBand] = useState('');
   const [newBloodline, setNewBloodline] = useState('');
   const [newBloodlineOpen, setNewBloodlineOpen] = useState(false);
 
@@ -1047,16 +1046,16 @@ function CordateBatchDetailScreen({ areaName, birds = [], nextCordingBirdNumber,
   const bulkStatusOptions = ['Conditioning', 'Standby', 'Ready', 'Sold', 'Loss'];
   const damBloodlines = ['Kelso', 'Hatch', 'Roundhead', 'Sweater', 'Grey'];
   const mockBirds = [
-    { farmBuzzId: 'FB-000101', physicalId: 'TP-101', bloodline: 'Kelso', status: 'Conditioning', location: areaName },
-    { farmBuzzId: 'FB-000102', physicalId: 'TP-102', bloodline: 'Hatch', status: 'Standby', location: areaName },
-    { farmBuzzId: 'FB-000103', physicalId: 'TP-103', bloodline: 'Roundhead', status: 'Standby', location: areaName },
-    { farmBuzzId: 'FB-000104', physicalId: 'TP-104', bloodline: 'Kelso', status: 'Conditioning', location: areaName },
-    { farmBuzzId: 'FB-000105', physicalId: 'TP-105', bloodline: 'Sweater', status: 'Standby', location: areaName },
+    { farmBuzzId: 'FB-000101', physicalId: 'TP-101', band: 'C-101', bloodline: 'Kelso', sireBloodline: 'Sweater', damBloodline: 'Kelso', sourceBatch: 'RG-024 North Range', status: 'Conditioning', location: areaName, image: BIRDS[0].image, vaccinations: [{ name: 'Newcastle B1', date: 'Aug 18, 2026', status: 'Done' }, { name: 'Fowl Pox', date: 'Sep 2, 2026', status: 'Done' }] },
+    { farmBuzzId: 'FB-000102', physicalId: 'TP-102', band: 'C-102', bloodline: 'Hatch', sireBloodline: 'Roundhead', damBloodline: 'Hatch', sourceBatch: 'RG-024 North Range', status: 'Standby', location: areaName, image: BIRDS[2].image, vaccinations: [{ name: 'Newcastle B1', date: 'Aug 18, 2026', status: 'Done' }] },
+    { farmBuzzId: 'FB-000103', physicalId: 'TP-103', band: 'C-103', bloodline: 'Roundhead', sireBloodline: 'Kelso', damBloodline: 'Roundhead', sourceBatch: 'RG-023 South Range', status: 'Standby', location: areaName, image: BIRDS[4]?.image || BIRDS[0].image, vaccinations: [{ name: 'Newcastle B1', date: 'Aug 12, 2026', status: 'Done' }] },
+    { farmBuzzId: 'FB-000104', physicalId: 'TP-104', band: 'C-104', bloodline: 'Kelso', sireBloodline: 'Sweater', damBloodline: 'Kelso', sourceBatch: 'RG-023 South Range', status: 'Conditioning', location: areaName, image: BIRDS[0].image, vaccinations: [{ name: 'Newcastle B1', date: 'Aug 12, 2026', status: 'Done' }, { name: 'Deworming', date: 'Sep 5, 2026', status: 'Done' }] },
+    { farmBuzzId: 'FB-000105', physicalId: 'TP-105', band: 'C-105', bloodline: 'Sweater', sireBloodline: 'Sweater', damBloodline: 'Grey', sourceBatch: 'RG-022 West Range', status: 'Standby', location: areaName, image: BIRDS[2].image, vaccinations: [{ name: 'Newcastle B1', date: 'Aug 6, 2026', status: 'Done' }] },
   ];
   const sourceBirds = birds.filter((bird) => bird.location === areaName);
   const areaBirds = sourceBirds.length ? sourceBirds : mockBirds;
   const getBirdKey = (bird) => bird._recordKey || bird.farmBuzzId || bird.physicalId || bird.name;
-  const displayBirds = areaBirds.map((bird) => ({ ...bird, status: statusByBird[getBirdKey(bird)] || bird.status }));
+  const displayBirds = areaBirds.map((bird) => ({ ...bird, status: statusByBird[getBirdKey(bird)] || statusOverrides[getBirdKey(bird)] || bird.status }));
   const selectedCount = Object.values(selectedBirds).filter(Boolean).length;
   const bloodlines = ['All', ...new Set(displayBirds.map((bird) => bird.bloodline).filter(Boolean))];
   const statusOptions = ['All', ...new Set(displayBirds.map((bird) => bird.status).filter(Boolean))];
@@ -1200,14 +1199,14 @@ function CordateBatchDetailScreen({ areaName, birds = [], nextCordingBirdNumber,
             )}
             <View style={styles.cordateBirdListScreen}>
               {visibleBirds.length ? visibleBirds.map((bird, index) => (
-                <Pressable key={getBirdKey(bird)} onPress={() => toggleBirdSelection(bird)} style={[styles.cordateBirdRow, selectedBirds[getBirdKey(bird)] && styles.cordateBirdRowSelected]}>
+                <Pressable key={getBirdKey(bird)} onPress={() => (bulkSelect ? toggleBirdSelection(bird) : onOpenBird?.(bird))} style={[styles.cordateBirdRow, selectedBirds[getBirdKey(bird)] && styles.cordateBirdRowSelected]}>
                   <View style={[styles.cordateBirdMarker, selectedBirds[getBirdKey(bird)] && styles.cordateBirdMarkerSelected, !bulkSelect && { borderWidth: 0 }]}>
                     {bulkSelect && selectedBirds[getBirdKey(bird)] ? (
                       <Ionicons name="checkmark" size={24} color="#ffffff" />
-                    ) : index < 2 ? (
-                      <Image source={{ uri: index === 0 ? BIRDS[0].image : BIRDS[2].image }} style={{ width: '100%', height: '100%', borderRadius: 8 }} contentFit="cover" />
+                    ) : bird.image ? (
+                      <Image source={typeof bird.image === 'string' ? { uri: bird.image } : bird.image} style={{ width: '100%', height: '100%', borderRadius: 8 }} contentFit="cover" />
                     ) : (
-                      <Image source={FLOCK_BADGE_IMAGE} style={{ width: '100%', height: '100%', borderRadius: 8 }} contentFit="cover" />
+                      <Image source={{ uri: BIRDS[index % BIRDS.length]?.image || BIRDS[0].image }} style={{ width: '100%', height: '100%', borderRadius: 8 }} contentFit="cover" />
                     )}
                   </View>
                   <View style={styles.cordateBirdCopy}>
@@ -1258,21 +1257,10 @@ function CordateBatchDetailScreen({ areaName, birds = [], nextCordingBirdNumber,
               <MaterialCommunityIcons name="tag-outline" size={18} color={THEME_ORANGE} />
               <TextInput value={newTpNumber} onChangeText={setNewTpNumber} placeholder="Enter TP number" placeholderTextColor="#68777c" selectionColor={THEME_ORANGE} autoCapitalize="characters" style={styles.modalInput} />
             </View>
-            <View style={{ flexDirection: 'row', gap: 12 }}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.fieldLabel}>Wing Band</Text>
-                <View style={styles.inputField}>
-                  <MaterialCommunityIcons name="tag-multiple-outline" size={18} color={THEME_ORANGE} />
-                  <TextInput value={newWingBand} onChangeText={setNewWingBand} placeholder="Optional" placeholderTextColor="#68777c" selectionColor={THEME_ORANGE} autoCapitalize="characters" style={styles.modalInput} />
-                </View>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.fieldLabel}>Leg Band</Text>
-                <View style={styles.inputField}>
-                  <MaterialCommunityIcons name="tag-multiple-outline" size={18} color={THEME_ORANGE} />
-                  <TextInput value={newLegBand} onChangeText={setNewLegBand} placeholder="Optional" placeholderTextColor="#68777c" selectionColor={THEME_ORANGE} autoCapitalize="characters" style={styles.modalInput} />
-                </View>
-              </View>
+            <Text style={styles.fieldLabel}>Band</Text>
+            <View style={styles.inputField}>
+              <MaterialCommunityIcons name="tag-multiple-outline" size={18} color={THEME_ORANGE} />
+              <TextInput value={newBand} onChangeText={setNewBand} placeholder="Optional" placeholderTextColor="#68777c" selectionColor={THEME_ORANGE} autoCapitalize="characters" style={styles.modalInput} />
             </View>
             <Text style={styles.fieldLabel}>Dam Bloodline</Text>
             <View style={styles.dropdownWrap}>
@@ -1298,12 +1286,327 @@ function CordateBatchDetailScreen({ areaName, birds = [], nextCordingBirdNumber,
               </Pressable>
               <Pressable onPress={() => {
                 if (!newTpNumber.trim() || !newBloodline) return Alert.alert('Complete record', 'Please enter TP number and select a bloodline.');
-                onAddBirdToCordate?.({ image: newImage, tpNumber: newTpNumber.trim(), wingBand: newWingBand.trim(), legBand: newLegBand.trim(), bloodline: newBloodline, location: areaName });
-                setNewImage(null); setNewTpNumber(''); setNewWingBand(''); setNewLegBand(''); setNewBloodline(''); setNewBloodlineOpen(false); setAddModalVisible(false);
+                onAddBirdToCordate?.({ image: newImage, tpNumber: newTpNumber.trim(), band: newBand.trim(), bloodline: newBloodline, location: areaName });
+                setNewImage(null); setNewTpNumber(''); setNewBand(''); setNewBloodline(''); setNewBloodlineOpen(false); setAddModalVisible(false);
               }} style={styles.saveButton}>
                 <Text style={styles.saveText}>Save Bird</Text>
               </Pressable>
             </View>
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
+}
+
+function CordateBirdDetailScreen({ bird, onBack, onChangeStatus }) {
+  const [parentsVisible, setParentsVisible] = useState(false);
+  const [statusVisible, setStatusVisible] = useState(false);
+  const [pendingStatus, setPendingStatus] = useState(null);
+  const [pendingAction, setPendingAction] = useState(null);
+  const [lossVisible, setLossVisible] = useState(false);
+  const [lossBirdPhoto, setLossBirdPhoto] = useState(null);
+  const [lossBandPhoto, setLossBandPhoto] = useState(null);
+  const [lossNote, setLossNote] = useState('');
+
+  if (!bird) {
+    return (
+      <View style={styles.cordateScreen}>
+        <View style={styles.cordateMissingBird}>
+          <MaterialCommunityIcons name="bird" size={36} color="#718086" />
+          <Text style={styles.cordateStoryTitle}>Bird record unavailable</Text>
+          <Pressable onPress={onBack} style={styles.cordateStoryPrimaryButton}>
+            <Text style={styles.cordateStoryPrimaryText}>Back to Cordate</Text>
+          </Pressable>
+        </View>
+      </View>
+    );
+  }
+
+  const birdName = bird.physicalId || bird.name || bird.farmBuzzId || 'Cordate bird';
+  const band = bird.band || bird.wingBand || bird.legBand || 'Not recorded';
+  const damBloodline = bird.damBloodline || bird.bloodline || 'Not recorded';
+  const sireBloodline = bird.sireBloodline || bird.parentBloodline || 'Not recorded';
+  const sourceBatch = bird.sourceBatch || bird.batchName || bird.cordingEntry?.fromArea || 'Cordate intake';
+  const sourceNote = bird.cordingEntry?.notes || bird.storyNote || 'Moved into Cordate for conditioning and monitoring.';
+  const vaccines = bird.vaccinations || bird.vaccineHistory || [];
+  const directStatusOptions = ['Conditioning', 'Standby', 'Ready', 'Sold', 'Loss'];
+  const actionOptions = [
+    { label: 'Sell Bird', detail: 'Mark this bird as sold', icon: 'cash', status: 'Sold' },
+    { label: 'Transfer Owner', detail: 'Record owner transfer', icon: 'account-switch-outline', status: 'Transferred' },
+    { label: 'Move TP / Area', detail: 'Move to another TP or area', icon: 'map-marker-right-outline', status: 'Moved' },
+    { label: 'Fight Loss', detail: 'Attach bird and band photos', icon: 'alert-octagon-outline', status: 'Loss', loss: true },
+  ];
+  const birdPhotoSource = bird.image
+    ? (typeof bird.image === 'string' ? { uri: bird.image } : bird.image)
+    : { uri: BIRDS.find((item) => item.filter === 'stag')?.image || BIRDS[0].image };
+  const pickLossPhoto = async (target) => {
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8 });
+    if (result.canceled) return;
+    const uri = result.assets[0].uri;
+    if (target === 'band') setLossBandPhoto(uri);
+    else setLossBirdPhoto(uri);
+  };
+  const saveLossReport = () => {
+    const report = {
+      birdPhoto: lossBirdPhoto,
+      bandPhoto: lossBandPhoto,
+      note: lossNote.trim(),
+      reportedAt: new Date().toISOString(),
+    };
+    onChangeStatus?.('Loss', { action: 'Fight Loss', lossReport: report, image: lossBirdPhoto || bird.image });
+    setLossVisible(false);
+    setLossBirdPhoto(null);
+    setLossBandPhoto(null);
+    setLossNote('');
+  };
+  const storyEvents = [
+    { icon: 'source-branch', title: 'Source batch', detail: sourceBatch },
+    { icon: 'home-variant-outline', title: 'Current area', detail: bird.location || 'Cordate Area' },
+    { icon: 'clipboard-check-outline', title: 'Current status', detail: bird.status || 'Conditioning' },
+  ];
+
+  return (
+    <View style={styles.cordateScreen}>
+      <StatusBar style="light" translucent backgroundColor="transparent" />
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.cordateScroll}>
+        <View style={styles.cordatePage}>
+          <View style={styles.cordateDetailBanner}>
+            <Image source={birdPhotoSource} style={StyleSheet.absoluteFill} contentFit="cover" contentPosition="center" />
+            <LinearGradient colors={['rgba(0,0,0,.1)', 'rgba(0,0,0,.58)', '#000000']} locations={[0, .55, 1]} style={StyleSheet.absoluteFill} />
+            <SafeAreaView edges={['top']} style={styles.cordateBannerSafe}>
+              <View style={styles.cordateHeader}>
+                <Pressable accessibilityRole="button" accessibilityLabel="Back to cordate bird list" onPress={onBack} style={styles.cordateBackButton}>
+                  <Ionicons name="arrow-back" size={22} color="#ffffff" />
+                </Pressable>
+                <Text style={styles.cordateHeaderTitle}>Bird Detail</Text>
+              </View>
+              <View style={styles.cordateHeroCopy}>
+                <Text style={styles.cordateOverline}>CORDATE BIRD</Text>
+                <Text style={styles.cordateFarmName}>{birdName}</Text>
+                <Text style={styles.cordateSubtitle}>{bird.farmBuzzId || 'Pending FarmBuzz ID'} · {bird.bloodline || 'Unassigned bloodline'}</Text>
+              </View>
+            </SafeAreaView>
+          </View>
+
+          <View style={styles.cordateStoryBody}>
+            <View style={styles.cordateStoryGrid}>
+              <View style={styles.cordateStoryFact}>
+                <Text style={styles.cordateStoryLabel}>TP NUMBER</Text>
+                <Text style={styles.cordateStoryValue}>{bird.physicalId || bird.name || 'Not recorded'}</Text>
+              </View>
+              <View style={styles.cordateStoryFact}>
+                <Text style={styles.cordateStoryLabel}>BAND</Text>
+                <Text style={styles.cordateStoryValue}>{band}</Text>
+              </View>
+            </View>
+
+            <View style={styles.cordateStoryActionGrid}>
+            <Pressable onPress={() => setParentsVisible(true)} style={({ pressed }) => [styles.cordateStoryBloodlineButton, pressed && styles.pressed]}>
+              <View style={styles.cordateStoryInlineIcon}>
+                <MaterialCommunityIcons name="dna" size={16} color={THEME_ORANGE} />
+              </View>
+              <View style={styles.cordateStoryButtonCopy}>
+                <Text style={styles.cordateStoryButtonTitle}>Bloodline & Parents</Text>
+                <Text numberOfLines={1} style={styles.cordateStoryButtonText}>{sireBloodline} sire · {damBloodline} dam</Text>
+              </View>
+            </Pressable>
+
+            <Pressable onPress={() => setStatusVisible(true)} style={({ pressed }) => [styles.cordateStoryStatusButton, pressed && styles.pressed]}>
+              <View style={styles.cordateStoryInlineStatusIcon}>
+                <MaterialCommunityIcons name="clipboard-edit-outline" size={16} color="#ffffff" />
+              </View>
+              <View style={styles.cordateStoryButtonCopy}>
+                <Text style={styles.cordateStoryStatusButtonTitle}>Bird Action</Text>
+                <Text numberOfLines={1} style={styles.cordateStoryStatusButtonText}>Current: {bird.status || 'Conditioning'}</Text>
+              </View>
+            </Pressable>
+            </View>
+
+            <Text style={styles.cordateStorySectionTitle}>Bird Story</Text>
+            <View style={styles.cordateStoryCard}>
+              {storyEvents.map((event, index) => (
+                <View key={event.title} style={[styles.cordateStoryRow, index < storyEvents.length - 1 && styles.cordateStoryDivider]}>
+                  <View style={styles.cordateStorySmallIcon}>
+                    <MaterialCommunityIcons name={event.icon} size={18} color={THEME_ORANGE} />
+                  </View>
+                  <View style={styles.cordateStoryRowCopy}>
+                    <Text style={styles.cordateStoryRowTitle}>{event.title}</Text>
+                    <Text style={styles.cordateStoryRowDetail}>{event.detail}</Text>
+                  </View>
+                </View>
+              ))}
+              <Text style={styles.cordateStoryNote}>{sourceNote}</Text>
+            </View>
+
+            <Text style={styles.cordateStorySectionTitle}>Vaccines & Care</Text>
+            <View style={styles.cordateStoryCard}>
+              {vaccines.length ? vaccines.map((vaccine, index) => (
+                <View key={`${vaccine.name}-${index}`} style={[styles.cordateStoryRow, index < vaccines.length - 1 && styles.cordateStoryDivider]}>
+                  <View style={styles.cordateStorySmallIcon}>
+                    <MaterialCommunityIcons name="needle" size={18} color={THEME_ORANGE} />
+                  </View>
+                  <View style={styles.cordateStoryRowCopy}>
+                    <Text style={styles.cordateStoryRowTitle}>{vaccine.name}</Text>
+                    <Text style={styles.cordateStoryRowDetail}>{vaccine.date || 'Date not recorded'}</Text>
+                  </View>
+                  <Text style={styles.cordateStoryStatus}>{vaccine.status || 'Done'}</Text>
+                </View>
+              )) : (
+                <View style={styles.cordateStoryEmpty}>
+                  <MaterialCommunityIcons name="needle-off" size={24} color="#68777c" />
+                  <Text style={styles.cordateStoryEmptyText}>No vaccine records added for this bird yet.</Text>
+                </View>
+              )}
+            </View>
+
+            {bird.lossReport && (
+              <>
+                <Text style={styles.cordateStorySectionTitle}>Loss Evidence</Text>
+                <View style={styles.cordateStoryCard}>
+                  <View style={styles.cordateEvidenceGrid}>
+                    <View style={styles.cordateEvidenceItem}>
+                      {bird.lossReport.birdPhoto ? <Image source={{ uri: bird.lossReport.birdPhoto }} style={styles.cordateEvidenceImage} contentFit="cover" /> : <MaterialCommunityIcons name="image-off-outline" size={22} color="#68777c" />}
+                      <Text style={styles.cordateEvidenceLabel}>Bird photo</Text>
+                    </View>
+                    <View style={styles.cordateEvidenceItem}>
+                      {bird.lossReport.bandPhoto ? <Image source={{ uri: bird.lossReport.bandPhoto }} style={styles.cordateEvidenceImage} contentFit="cover" /> : <MaterialCommunityIcons name="image-off-outline" size={22} color="#68777c" />}
+                      <Text style={styles.cordateEvidenceLabel}>Band photo</Text>
+                    </View>
+                  </View>
+                  {!!bird.lossReport.note && <Text style={styles.cordateStoryNote}>{bird.lossReport.note}</Text>}
+                </View>
+              </>
+            )}
+          </View>
+        </View>
+      </ScrollView>
+
+      <Modal visible={statusVisible} transparent animationType="fade" onRequestClose={() => setStatusVisible(false)}>
+        <View style={styles.modalBackdrop}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => { setPendingStatus(null); setPendingAction(null); setStatusVisible(false); }} />
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={styles.modalEyebrow}>CORDATE BIRD</Text>
+                <Text style={styles.modalTitle}>Bird Actions</Text>
+              </View>
+              <Pressable onPress={() => { setPendingStatus(null); setPendingAction(null); setStatusVisible(false); }} style={styles.modalClose}>
+                <Ionicons name="close" size={20} color="#fff" />
+              </Pressable>
+            </View>
+            <View style={styles.cordateStatusOptionList}>
+              <Text style={styles.cordateStatusGroupTitle}>STATUS</Text>
+              <View style={styles.cordateQuickStatusGrid}>
+                {directStatusOptions.map((status) => (
+                  <Pressable key={status} onPress={() => { setPendingAction(null); setPendingStatus(status); }} style={[styles.cordateQuickStatus, (pendingStatus || bird.status) === status && styles.cordateQuickStatusActive]}>
+                    <Text style={[styles.cordateQuickStatusText, (pendingStatus || bird.status) === status && styles.cordateQuickStatusTextActive]}>{status}</Text>
+                  </Pressable>
+                ))}
+              </View>
+              <Text style={styles.cordateStatusGroupTitle}>ACTIONS</Text>
+              {actionOptions.map((action) => (
+                <Pressable key={action.label} onPress={() => {
+                  setPendingStatus(null);
+                  setPendingAction(action);
+                }} style={[styles.cordateStatusOption, (pendingAction?.label === action.label || bird.status === action.status) && styles.cordateStatusOptionActive]}>
+                  <MaterialCommunityIcons name={action.icon} size={19} color={(pendingAction?.label === action.label || bird.status === action.status) ? THEME_ORANGE : '#6d7a7f'} />
+                  <View style={styles.cordateStatusOptionCopy}>
+                    <Text style={[styles.cordateStatusOptionText, (pendingAction?.label === action.label || bird.status === action.status) && styles.cordateStatusOptionTextActive]}>{action.label}</Text>
+                    <Text style={styles.cordateStatusOptionDetail}>{action.detail}</Text>
+                  </View>
+                </Pressable>
+              ))}
+              <View style={styles.cordateStatusSaveRow}>
+                <Pressable onPress={() => { setPendingStatus(null); setPendingAction(null); }} style={styles.cordateStatusClearButton}>
+                  <Text style={styles.cordateStatusClearText}>Clear</Text>
+                </Pressable>
+                <Pressable disabled={!pendingStatus && !pendingAction} onPress={() => {
+                  if (pendingStatus) {
+                    onChangeStatus?.(pendingStatus, { action: `Status set to ${pendingStatus}` });
+                    setPendingStatus(null);
+                    setStatusVisible(false);
+                    return;
+                  }
+                  if (!pendingAction) return;
+                  setStatusVisible(false);
+                  if (pendingAction.loss) setLossVisible(true);
+                  else onChangeStatus?.(pendingAction.status, { action: pendingAction.label });
+                  setPendingAction(null);
+                }} style={[styles.cordateStatusSaveButton, !pendingStatus && !pendingAction && styles.disabled]}>
+                  <Text style={styles.cordateStatusSaveText}>Save</Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={lossVisible} transparent animationType="fade" onRequestClose={() => setLossVisible(false)}>
+        <View style={styles.modalBackdrop}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setLossVisible(false)} />
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={styles.modalEyebrow}>FIGHT LOSS</Text>
+                <Text style={styles.modalTitle}>Loss Evidence</Text>
+              </View>
+              <Pressable onPress={() => setLossVisible(false)} style={styles.modalClose}>
+                <Ionicons name="close" size={20} color="#fff" />
+              </Pressable>
+            </View>
+            <View style={styles.cordateLossPhotoRow}>
+              <Pressable onPress={() => pickLossPhoto('bird')} style={styles.cordateLossPhotoPick}>
+                {lossBirdPhoto ? <Image source={{ uri: lossBirdPhoto }} style={styles.cordateLossPhotoImage} contentFit="cover" /> : <MaterialCommunityIcons name="camera-outline" size={23} color="#68777c" />}
+                <Text style={styles.cordateLossPhotoText}>Bird Photo</Text>
+              </Pressable>
+              <Pressable onPress={() => pickLossPhoto('band')} style={styles.cordateLossPhotoPick}>
+                {lossBandPhoto ? <Image source={{ uri: lossBandPhoto }} style={styles.cordateLossPhotoImage} contentFit="cover" /> : <MaterialCommunityIcons name="tag-outline" size={23} color="#68777c" />}
+                <Text style={styles.cordateLossPhotoText}>Band Photo</Text>
+              </Pressable>
+            </View>
+            <Text style={styles.fieldLabel}>Notes</Text>
+            <View style={styles.inputField}>
+              <TextInput value={lossNote} onChangeText={setLossNote} placeholder="Fight result, opponent, or remarks" placeholderTextColor="#68777c" selectionColor={THEME_ORANGE} multiline style={[styles.modalInput, { minHeight: 58, textAlignVertical: 'top', paddingTop: 8 }]} />
+            </View>
+            <View style={[styles.modalActions, { marginTop: 16 }]}>
+              <Pressable onPress={() => setLossVisible(false)} style={styles.cancelButton}>
+                <Text style={styles.cancelText}>Cancel</Text>
+              </Pressable>
+              <Pressable onPress={saveLossReport} style={styles.saveButton}>
+                <Text style={styles.saveText}>Mark Loss</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={parentsVisible} transparent animationType="fade" onRequestClose={() => setParentsVisible(false)}>
+        <View style={styles.modalBackdrop}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setParentsVisible(false)} />
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={styles.modalEyebrow}>BLOODLINE</Text>
+                <Text style={styles.modalTitle}>Parents</Text>
+              </View>
+              <Pressable onPress={() => setParentsVisible(false)} style={styles.modalClose}>
+                <Ionicons name="close" size={20} color="#fff" />
+              </Pressable>
+            </View>
+            <View style={styles.cordateParentGrid}>
+              <View style={styles.cordateParentCard}>
+                <MaterialCommunityIcons name="gender-male" size={22} color={THEME_ORANGE} />
+                <Text style={styles.cordateStoryLabel}>SIRE BLOODLINE</Text>
+                <Text style={styles.cordateParentValue}>{sireBloodline}</Text>
+              </View>
+              <View style={styles.cordateParentCard}>
+                <MaterialCommunityIcons name="gender-female" size={22} color={THEME_ORANGE} />
+                <Text style={styles.cordateStoryLabel}>DAM BLOODLINE</Text>
+                <Text style={styles.cordateParentValue}>{damBloodline}</Text>
+              </View>
+            </View>
+            <Text style={styles.cordateStoryNote}>Source: {sourceBatch}</Text>
           </View>
         </View>
       </Modal>
@@ -2177,6 +2480,8 @@ export default function App() {
   const [cordingBirds, setCordingBirds] = useState([]);
   const nextCordingBirdNumber = useRef(101);
   const [selectedCordateArea, setSelectedCordateArea] = useState('Cordate Area 1');
+  const [selectedCordateBird, setSelectedCordateBird] = useState(null);
+  const [cordateStatusOverrides, setCordateStatusOverrides] = useState({});
   const [cordateSettings, setCordateSettings] = useState(DEFAULT_CORDATE_SETTINGS);
   const [selectedRangingBatchId, setSelectedRangingBatchId] = useState('Range Area 2');
   const [rangingLossesByBatch, setRangingLossesByBatch] = useState({});
@@ -2431,7 +2736,13 @@ export default function App() {
           areaName={selectedCordateArea}
           birds={cordingBirds}
           nextCordingBirdNumber={nextCordingBirdNumber.current}
+          statusOverrides={cordateStatusOverrides}
           onBack={() => setScreen('cordate')}
+          onOpenBird={(bird) => {
+            const recordKey = bird._recordKey || bird.farmBuzzId || bird.physicalId || bird.name;
+            setSelectedCordateBird({ ...bird, status: cordateStatusOverrides[recordKey] || bird.status });
+            setScreen('cordate-bird-detail');
+          }}
           onAddBirdToCordate={(record) => {
             const bird = {
               farmBuzzId: `FB-${String(nextCordingBirdNumber.current).padStart(6, '0')}`,
@@ -2444,13 +2755,16 @@ export default function App() {
               location: record.location,
               identificationType: 'TP Number',
               physicalId: record.tpNumber,
-              wingBand: record.wingBand,
-              legBand: record.legBand,
-              image: record.image || CORDING_CARD_IMAGE,
+              band: record.band,
+              damBloodline: record.bloodline,
+              sireBloodline: 'Not recorded',
+              sourceBatch: 'Manual Cordate Intake',
+              storyNote: 'Added directly to the Cordate area for conditioning and record keeping.',
+              vaccinations: [],
+              image: record.image || BIRDS.find((item) => item.filter === 'stag')?.image || BIRDS[0].image,
               details: [
                 { icon: 'tag-outline', text: `TP: ${record.tpNumber}` },
-                ...(record.wingBand ? [{ icon: 'tag-multiple-outline', text: `WB: ${record.wingBand}` }] : []),
-                ...(record.legBand ? [{ icon: 'tag-multiple-outline', text: `LB: ${record.legBand}` }] : []),
+                ...(record.band ? [{ icon: 'tag-multiple-outline', text: `Band: ${record.band}` }] : []),
                 { icon: 'dna', text: record.bloodline },
                 { icon: 'map-marker-outline', text: record.location }
               ],
@@ -2458,6 +2772,28 @@ export default function App() {
             setCordingBirds((current) => [bird, ...current]);
             setAddedBirds((current) => [bird, ...current]);
             nextCordingBirdNumber.current += 1;
+          }}
+        />
+      ) : screen === 'cordate-bird-detail' ? (
+        <CordateBirdDetailScreen
+          bird={selectedCordateBird}
+          onBack={() => setScreen('cordate-detail')}
+          onChangeStatus={(status, details = {}) => {
+            const recordKey = selectedCordateBird?._recordKey || selectedCordateBird?.farmBuzzId || selectedCordateBird?.physicalId || selectedCordateBird?.name;
+            if (!recordKey) return;
+            const nextPatch = {
+              status,
+              ...(details.image ? { image: details.image } : {}),
+              ...(details.lossReport ? { lossReport: details.lossReport } : {}),
+              actionHistory: [
+                { action: details.action || status, status, date: new Date().toISOString() },
+                ...(selectedCordateBird?.actionHistory || []),
+              ],
+            };
+            setCordateStatusOverrides((current) => ({ ...current, [recordKey]: status }));
+            setSelectedCordateBird((current) => current ? { ...current, ...nextPatch } : current);
+            setCordingBirds((current) => current.map((bird) => ((bird._recordKey || bird.farmBuzzId || bird.physicalId || bird.name) === recordKey ? { ...bird, ...nextPatch } : bird)));
+            setAddedBirds((current) => current.map((bird) => ((bird._recordKey || bird.farmBuzzId || bird.physicalId || bird.name) === recordKey ? { ...bird, ...nextPatch } : bird)));
           }}
         />
       ) : screen === 'cordate-task-settings' ? (
@@ -2512,7 +2848,7 @@ export default function App() {
               bloodline: 'Not individually assigned',
               status: 'Cording',
               location: record.destination,
-              image: CORDING_CARD_IMAGE,
+              image: BIRDS.find((item) => item.filter === 'stag')?.image || BIRDS[0].image,
               details: [{ icon: 'tag-outline', text: `${bird.identificationType}: ${bird.physicalId}` }, { icon: 'map-marker-outline', text: record.destination }],
               cordingEntry: { fromArea: selectedStagArea, destination: record.destination, movedAt: record.moveDate },
             }));
@@ -2655,8 +2991,13 @@ export default function App() {
               location: destination,
               identificationType: 'TP Number',
               physicalId: record.tpNumber,
-              image: CORDING_CARD_IMAGE,
+              image: BIRDS.find((item) => item.filter === 'stag')?.image || BIRDS[0].image,
               details: [{ icon: 'tag-outline', text: `TP Number: ${record.tpNumber}` }, { icon: 'dna', text: record.bloodline }, { icon: 'map-marker-outline', text: destination }],
+              damBloodline: record.bloodline,
+              sireBloodline: 'Not recorded',
+              sourceBatch: record.location,
+              storyNote: record.notes || 'Moved from Ranging into Cordate for conditioning and final monitoring.',
+              vaccinations: [],
               cordingEntry: { fromArea: record.location, destination, notes: record.notes, movedAt: new Date().toISOString() },
             };
             setCordingBirds((current) => [bird, ...current]);
@@ -4101,6 +4442,129 @@ const styles = StyleSheet.create({
   cordateEmptyBirds: {
     minHeight: 120, borderRadius: 8, borderWidth: 1, borderColor: '#213239', backgroundColor: '#071014',
     color: '#77868b', fontSize: 10, lineHeight: 14, padding: 24, textAlign: 'center', textAlignVertical: 'center',
+  },
+  cordateMissingBird: { flex: 1, minHeight: 520, alignItems: 'center', justifyContent: 'center', padding: 20, gap: 12 },
+  cordateStoryBody: { paddingHorizontal: 10, paddingBottom: 30 },
+  cordateStoryPhotoCard: {
+    minHeight: 120, marginBottom: 9, borderRadius: 8, borderWidth: 1, borderColor: '#213239',
+    backgroundColor: '#071014', padding: 10, flexDirection: 'row', alignItems: 'center', gap: 12,
+  },
+  cordateStoryPhoto: { width: 96, height: 96, borderRadius: 8, backgroundColor: '#10191d' },
+  cordateStoryPhotoCopy: { flex: 1, minWidth: 0 },
+  cordateStoryGrid: { flexDirection: 'row', gap: 8 },
+  cordateStoryFact: {
+    flex: 1, minHeight: 72, borderRadius: 8, borderWidth: 1, borderColor: '#213239',
+    backgroundColor: '#071014', padding: 12, justifyContent: 'center',
+  },
+  cordateStoryLabel: { color: '#78868b', fontSize: 8, lineHeight: 11, fontWeight: '900' },
+  cordateStoryValue: { marginTop: 6, color: '#edf2f3', fontSize: 14, lineHeight: 18, fontWeight: '900' },
+  cordateStoryActionGrid: { marginTop: 9, flexDirection: 'row', gap: 8 },
+  cordateStoryBloodlineButton: {
+    flex: 1, minHeight: 52, borderRadius: 8, borderWidth: 1, borderColor: '#74410e',
+    backgroundColor: 'rgba(255,122,0,.07)', paddingHorizontal: 9, paddingVertical: 7,
+    flexDirection: 'row', alignItems: 'center', gap: 7,
+  },
+  cordateStoryStatusButton: {
+    flex: 1, minHeight: 52, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,.22)',
+    backgroundColor: THEME_ORANGE, paddingHorizontal: 9, paddingVertical: 7,
+    flexDirection: 'row', alignItems: 'center', gap: 7,
+  },
+  cordateStoryInlineIcon: { width: 18, alignItems: 'center', justifyContent: 'center' },
+  cordateStoryInlineStatusIcon: { width: 18, alignItems: 'center', justifyContent: 'center' },
+  cordateStoryStatusIcon: {
+    width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(2,7,9,.22)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  cordateStoryStatusButtonTitle: { color: '#ffffff', fontSize: 11, lineHeight: 14, fontWeight: '900' },
+  cordateStoryStatusButtonText: { marginTop: 3, color: 'rgba(255,255,255,.82)', fontSize: 8, lineHeight: 11, fontWeight: '800' },
+  cordateStoryIcon: {
+    width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(255,122,0,.1)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  cordateStoryButtonCopy: { flex: 1, minWidth: 0 },
+  cordateStoryButtonTitle: { color: '#ffffff', fontSize: 11, lineHeight: 14, fontWeight: '900' },
+  cordateStoryButtonText: { marginTop: 3, color: '#b8c2c5', fontSize: 8, lineHeight: 11, fontWeight: '700' },
+  cordateStorySectionTitle: { marginTop: 18, marginBottom: 8, color: '#edf1f2', fontSize: 15, lineHeight: 19, fontWeight: '900' },
+  cordateStoryCard: {
+    borderRadius: 8, borderWidth: 1, borderColor: '#213239', backgroundColor: '#071014',
+    paddingHorizontal: 12, paddingVertical: 4,
+  },
+  cordateStoryRow: { minHeight: 58, flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 9 },
+  cordateStoryDivider: { borderBottomWidth: 1, borderBottomColor: '#17272d' },
+  cordateStorySmallIcon: {
+    width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,122,0,.08)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  cordateStoryRowCopy: { flex: 1, minWidth: 0 },
+  cordateStoryRowTitle: { color: '#edf2f3', fontSize: 11, lineHeight: 15, fontWeight: '900' },
+  cordateStoryRowDetail: { marginTop: 3, color: '#879397', fontSize: 9, lineHeight: 12, fontWeight: '700' },
+  cordateStoryNote: { paddingVertical: 10, color: '#9ca8ab', fontSize: 10, lineHeight: 15 },
+  cordateStoryStatus: {
+    minWidth: 48, minHeight: 22, borderRadius: 11, backgroundColor: 'rgba(93,220,129,.12)',
+    color: '#6ee58c', fontSize: 8, lineHeight: 21, fontWeight: '900', textAlign: 'center',
+    paddingHorizontal: 8,
+  },
+  cordateStoryEmpty: { minHeight: 86, alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 14 },
+  cordateStoryEmptyText: { color: '#77868b', fontSize: 10, lineHeight: 14, textAlign: 'center' },
+  cordateStoryTitle: { color: '#edf2f3', fontSize: 16, lineHeight: 20, fontWeight: '900' },
+  cordateStoryPrimaryButton: {
+    minHeight: 42, borderRadius: 7, backgroundColor: THEME_ORANGE,
+    alignItems: 'center', justifyContent: 'center', paddingHorizontal: 14,
+  },
+  cordateStoryPrimaryText: { color: '#ffffff', fontSize: 10, lineHeight: 13, fontWeight: '900' },
+  cordateParentGrid: { marginTop: 16, flexDirection: 'row', gap: 8 },
+  cordateParentCard: {
+    flex: 1, minHeight: 108, borderRadius: 8, borderWidth: 1, borderColor: '#26373e',
+    backgroundColor: '#071014', padding: 12, justifyContent: 'center', gap: 7,
+  },
+  cordateParentValue: { color: '#ffffff', fontSize: 15, lineHeight: 19, fontWeight: '900' },
+  cordateStatusOptionList: { marginTop: 14, gap: 8 },
+  cordateStatusGroupTitle: { marginTop: 4, color: '#7f8b8f', fontSize: 8, lineHeight: 11, fontWeight: '900' },
+  cordateQuickStatusGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
+  cordateQuickStatus: {
+    minHeight: 32, borderRadius: 16, borderWidth: 1, borderColor: '#26373e',
+    backgroundColor: '#071014', paddingHorizontal: 11, alignItems: 'center', justifyContent: 'center',
+  },
+  cordateQuickStatusActive: { borderColor: THEME_ORANGE, backgroundColor: 'rgba(255,122,0,.12)' },
+  cordateQuickStatusText: { color: '#aeb8bb', fontSize: 9, lineHeight: 12, fontWeight: '800' },
+  cordateQuickStatusTextActive: { color: '#ffffff' },
+  cordateStatusSaveRow: { flexDirection: 'row', gap: 8, marginTop: 2 },
+  cordateStatusClearButton: {
+    flex: 1, minHeight: 38, borderRadius: 7, borderWidth: 1, borderColor: '#26373e',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  cordateStatusClearText: { color: '#aeb8bb', fontSize: 9, lineHeight: 12, fontWeight: '800' },
+  cordateStatusSaveButton: {
+    flex: 1, minHeight: 38, borderRadius: 7, backgroundColor: THEME_ORANGE,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  cordateStatusSaveText: { color: '#ffffff', fontSize: 9, lineHeight: 12, fontWeight: '900' },
+  cordateStatusOption: {
+    minHeight: 46, borderRadius: 7, borderWidth: 1, borderColor: '#26373e',
+    backgroundColor: '#071014', paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 9,
+  },
+  cordateStatusOptionActive: { borderColor: THEME_ORANGE, backgroundColor: 'rgba(255,122,0,.08)' },
+  cordateStatusOptionCopy: { flex: 1, minWidth: 0 },
+  cordateStatusOptionText: { color: '#dfe6e8', fontSize: 11, lineHeight: 14, fontWeight: '800' },
+  cordateStatusOptionDetail: { marginTop: 2, color: '#7f8b8f', fontSize: 8, lineHeight: 11, fontWeight: '700' },
+  cordateStatusOptionTextActive: { color: '#ffffff' },
+  cordateEvidenceGrid: { flexDirection: 'row', gap: 8, paddingVertical: 8 },
+  cordateEvidenceItem: {
+    flex: 1, minHeight: 96, borderRadius: 7, borderWidth: 1, borderColor: '#26373e',
+    backgroundColor: '#081216', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+  },
+  cordateEvidenceImage: { width: '100%', height: 78 },
+  cordateEvidenceLabel: { paddingVertical: 6, color: '#b8c2c5', fontSize: 8, lineHeight: 11, fontWeight: '800' },
+  cordateLossPhotoRow: { marginTop: 14, flexDirection: 'row', gap: 8 },
+  cordateLossPhotoPick: {
+    flex: 1, height: 112, borderRadius: 8, borderWidth: 1, borderStyle: 'dashed',
+    borderColor: '#30434a', backgroundColor: '#071014', alignItems: 'center', justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  cordateLossPhotoImage: { width: '100%', height: '100%' },
+  cordateLossPhotoText: {
+    position: 'absolute', left: 8, bottom: 8, borderRadius: 9, backgroundColor: 'rgba(2,7,9,.72)',
+    paddingHorizontal: 8, paddingVertical: 3, color: '#ffffff', fontSize: 8, lineHeight: 11, fontWeight: '900',
   },
   overdue: { color: '#ff3d4d' },
   setupPanel: {
