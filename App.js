@@ -79,6 +79,8 @@ import { DASHBOARD_HERO_IMAGE } from './constants';
 
 const THEME_ORANGE = '#ff7a00';
 const THEME_ORANGE_TINT = 'rgba(255, 122, 0, 0.14)';
+const KENNEL_PURPLE = '#8b5cf6';
+const KENNEL_PURPLE_TINT = 'rgba(139, 92, 246, 0.16)';
 const FLOCK_BADGE_IMAGE = require('./assets/flock-badge-illustration.png');
 const TASKS_BADGE_IMAGE = require('./assets/badge-tasks.png');
 const ATTENTION_BADGE_IMAGE = require('./assets/badge-attention.png');
@@ -93,17 +95,51 @@ const HARDENING_CARD_IMAGE = require('./assets/hardening-card.png');
 const CORDING_CARD_IMAGE = require('./assets/cording-card.png');
 const GROWING_HERO_IMAGE = require('./assets/growing-card.png');
 const EGGS_INCUBATION_HERO_IMAGE = require('./assets/eggs-incubation-hero.png');
+const INCUBATION_EGG_IMAGE = require('./assets/incubation-egg.png');
+const HATCHED_CHICK_IMAGE = require('./assets/incubation-stage-hatched.png');
+const RANGING_BADGE_IMAGE = require('./assets/ranging-badge.png');
 const HEALTH_CARE_HERO_IMAGE = require('./assets/health-care-hero.png');
 const SALES_DASHBOARD_HERO_IMAGE = require('./assets/sales-dashboard-hero.png');
 const COLLECTIONS_DASHBOARD_HERO_IMAGE = require('./assets/sales-hero.png');
 const SHOWCASE_IMAGE = require('./assets/Showcase.png');
 const BROODING_CARD_IMAGE = require('./assets/brooding-card.png');
 const RANGING_CARD_IMAGE = require('./assets/ranging-card.png');
+const DOBERMAN_KENNEL_BANNER_IMAGE = require('./assets/doberman-kennel-banner.png');
+const DOBERMAN_KENNEL_THUMBNAIL_IMAGE = require('./assets/doberman-kennel-thumbnail.png');
+const KENNEL_MAIN_THUMBNAIL_IMAGE = require('./assets/kennel-main-thumbnail.png');
+const KENNEL_TRAINING_THUMBNAIL_IMAGE = require('./assets/kennel-training-thumbnail.png');
+const KENNEL_BREEDING_THUMBNAIL_IMAGE = require('./assets/kennel-breeding-thumbnail.png');
 
 const ACTIVE_CHICKEN_BATCHES = [
   { id: 'CB-001', incubationBatchId: 'INC-024', name: 'North House Batch', count: 100, sire: 'Sweater', dams: ['Kelso', 'Hatch', 'Roundhead'], nextTask: { month: 'SEP', day: '13', title: 'Candling', timing: '4 days overdue', action: 'candling' } },
 ];
 const BATCH_BLOODLINES = ['Sweater', 'Kelso', 'Roundhead', 'Hatch', 'Claret', 'Albany'];
+const ACTIVE_KENNEL_BREEDING_PAIRS = [
+  { id: 'KP-001', title: 'Bruno x Bella', startDate: 'Sept 1, 2026', sire: 'Bruno', dam: 'Bella', breedLine: 'Working Line', status: 'Planning' },
+];
+const KENNEL_DOGS = [
+  { id: 'KD-001', name: 'Bruno', sex: 'Male', bloodline: 'Working Line', status: 'Active Sire', image: KENNEL_MAIN_THUMBNAIL_IMAGE },
+  { id: 'KD-002', name: 'Max', sex: 'Male', bloodline: 'Protection Line', status: 'Training', image: KENNEL_TRAINING_THUMBNAIL_IMAGE },
+  { id: 'KD-003', name: 'Bella', sex: 'Female', bloodline: 'Working Line', status: 'Breeding Dam', image: KENNEL_BREEDING_THUMBNAIL_IMAGE },
+  { id: 'KD-004', name: 'Luna', sex: 'Female', bloodline: 'Doberman', status: 'Resting', image: DOBERMAN_KENNEL_THUMBNAIL_IMAGE },
+  { id: 'KD-005', name: '', sex: 'Female', bloodline: 'Working Line', status: 'Health Check', image: KENNEL_BREEDING_THUMBNAIL_IMAGE },
+];
+
+function incubationStatusColor(status) {
+  if (status === 'Candling Due' || status === 'Due Today') return '#ffba56';
+  if (status === 'Hatching Soon') return '#74d9ff';
+  if (status === 'Candled') return '#7de596';
+  return '#aab6ba';
+}
+
+function cordateStatusColor(status) {
+  if (status === 'Conditioning') return THEME_ORANGE;
+  if (status === 'Standby') return '#7de596';
+  if (status === 'Ready') return '#74d9ff';
+  if (status === 'Sold' || status === 'Sale') return '#d4b2ff';
+  if (status === 'Loss') return '#ff8b7f';
+  return '#aab6ba';
+}
 
 const MODULES = [
   {
@@ -305,14 +341,14 @@ function IconButton({ icon, label, onPress, compact }) {
   );
 }
 
-function AnimatedBadge({ source, icon, color, size }) {
+function AnimatedBadge({ source, icon, color, size, fit = 'contain' }) {
   if (!source) {
     return <MaterialCommunityIcons name={icon} size={size} color={color} />;
   }
 
   return (
     <View style={styles.badgeMotion}>
-      <Image source={source} contentFit="contain" style={styles.badgeImage} />
+      <Image source={source} contentFit={fit} style={styles.badgeImage} />
     </View>
   );
 }
@@ -326,6 +362,7 @@ function Stat({ item, isLast, compact, onPress }) {
           icon={item.icon}
           size={compact ? 23 : 27}
           color={item.color}
+          fit={item.badgeFit}
         />
       </View>
       <View style={[styles.statCopy, compact && styles.statCopyCompact]}>
@@ -395,6 +432,7 @@ function ModuleCard({ item, compact, onPress }) {
             icon={item.icon}
             size={compact ? 24 : 28}
             color={item.color}
+            fit={item.badgeFit}
           />
         </View>
       )}
@@ -581,10 +619,32 @@ function ShowcaseScreen({ farmName, location, establishedYear, onOpenShowcase, o
   );
 }
 
-function LandingScreen({ onSetup, onExisting, onFarms }) {
+function LandingScreen({ onOpenFarm, onOpenKennel }) {
   const { width } = useWindowDimensions();
   const compact = width < 480;
   const narrow = width < 390;
+  const categories = [
+    {
+      id: 'farm',
+      title: 'Farm',
+      subtitle: 'Chicken farm management',
+      action: 'Open farm management',
+      icon: 'barn',
+      image: DASHBOARD_HERO_IMAGE,
+      color: THEME_ORANGE,
+      onPress: onOpenFarm,
+    },
+    {
+      id: 'kennel',
+      title: 'Kennel',
+      subtitle: 'Dog kennel management',
+      action: 'Open kennel management',
+      icon: 'dog',
+      image: DOBERMAN_KENNEL_THUMBNAIL_IMAGE,
+      color: KENNEL_PURPLE,
+      onPress: onOpenKennel,
+    },
+  ];
 
   return (
     <View style={styles.screen}>
@@ -606,42 +666,496 @@ function LandingScreen({ onSetup, onExisting, onFarms }) {
         <View style={[styles.landingContent, compact && styles.landingContentCompact]}>
           <Text style={styles.heroEyebrow}>FARMBUZZ</Text>
           <Text style={[styles.landingTitle, compact && styles.landingTitleCompact, narrow && styles.landingTitleNarrow]}>
-            Management Tools
+            Choose Management
           </Text>
           <Text style={[styles.landingSubtitle, narrow && styles.landingSubtitleNarrow]}>
-            Start a new farm setup, open an existing workspace, or browse your farms.
+            Select Farm for chickens or Kennel for dogs.
           </Text>
-          <View style={styles.landingActions}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Setup new farm"
-              onPress={onSetup}
-              style={({ pressed }) => [styles.landingPrimaryButton, pressed && styles.pressed]}
-            >
-              <Ionicons name="construct-outline" size={18} color="#ffffff" />
-              <Text style={styles.landingPrimaryText}>Setup</Text>
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Open existing farm"
-              onPress={onExisting}
-              style={({ pressed }) => [styles.landingSecondaryButton, pressed && styles.pressed]}
-            >
-              <Ionicons name="folder-open-outline" size={18} color={THEME_ORANGE} />
-              <Text style={styles.landingSecondaryText}>Existing</Text>
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="View farms"
-              onPress={onFarms}
-              style={({ pressed }) => [styles.landingSecondaryButton, pressed && styles.pressed]}
-            >
-              <MaterialCommunityIcons name="barn" size={18} color={THEME_ORANGE} />
-              <Text style={styles.landingSecondaryText}>Farms</Text>
-            </Pressable>
+          <View style={[styles.categoryGrid, compact && styles.categoryGridCompact]}>
+            {categories.map((category) => (
+              <Pressable
+                key={category.id}
+                accessibilityRole="button"
+                accessibilityLabel={category.action}
+                onPress={category.onPress}
+                style={({ pressed }) => [styles.categoryCard, { borderColor: `${category.color}6b` }, compact && styles.categoryCardCompact, pressed && styles.cardPressed]}
+              >
+                <Image source={category.image} style={StyleSheet.absoluteFill} contentFit="cover" contentPosition="center" cachePolicy="memory-disk" />
+                <LinearGradient
+                  colors={['rgba(2,7,9,0.08)', 'rgba(2,7,9,0.34)', 'rgba(2,7,9,0.94)']}
+                  locations={[0, 0.45, 1]}
+                  style={StyleSheet.absoluteFill}
+                />
+                <View style={[styles.categoryIcon, { borderColor: `${category.color}88`, backgroundColor: `${category.color}33` }]}>
+                  <MaterialCommunityIcons name={category.icon} size={26} color="#ffffff" />
+                </View>
+                <View style={styles.categoryCopy}>
+                  <Text style={styles.categoryTitle}>{category.title}</Text>
+                  <Text style={styles.categorySubtitle}>{category.subtitle}</Text>
+                </View>
+                <View style={[styles.categoryAction, { backgroundColor: category.color }]}>
+                  <Text style={styles.categoryActionText}>{category.action}</Text>
+                  <Ionicons name="arrow-forward" size={14} color="#ffffff" />
+                </View>
+              </Pressable>
+            ))}
           </View>
         </View>
       </SafeAreaView>
+    </View>
+  );
+}
+
+function KennelsScreen({ onBack, onOpenKennel, onAddKennel }) {
+  const { width } = useWindowDimensions();
+  const compact = width < 480;
+  const narrow = width < 390;
+  const [query, setQuery] = useState('');
+  const kennelCards = [
+    { id: 'main', name: 'Main Kennel', location: 'Pampanga, Philippines', role: 'Main Kennel', established: '2020', members: 3, dogs: 0, litters: 0, tasks: 0, image: KENNEL_MAIN_THUMBNAIL_IMAGE, bannerImage: DOBERMAN_KENNEL_BANNER_IMAGE, color: KENNEL_PURPLE },
+    { id: 'training', name: 'Training Kennel', location: 'Tarlac, Philippines', role: 'Training Kennel', established: '2022', members: 2, dogs: 0, litters: 0, tasks: 0, image: KENNEL_TRAINING_THUMBNAIL_IMAGE, bannerImage: DOBERMAN_KENNEL_BANNER_IMAGE, color: KENNEL_PURPLE },
+    { id: 'breeding', name: 'Breeding Kennel', location: 'Bulacan, Philippines', role: 'Breeding Kennel', established: '2024', members: 1, dogs: 0, litters: 0, tasks: 0, image: KENNEL_BREEDING_THUMBNAIL_IMAGE, bannerImage: DOBERMAN_KENNEL_BANNER_IMAGE, color: KENNEL_PURPLE },
+  ];
+  const mainKennelCount = kennelCards.filter((kennel) => kennel.role === 'Main Kennel').length;
+  const branchKennelCount = kennelCards.length - mainKennelCount;
+  const visibleKennels = kennelCards.filter((kennel) => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return true;
+    return `${kennel.name} ${kennel.location} ${kennel.role}`.toLowerCase().includes(needle);
+  });
+  const kennelsSummary = [
+    { label: 'Kennel Workspaces', compactLabel: 'Kennels', value: kennelCards.length, detail: 'managed kennels', icon: 'dog', color: KENNEL_PURPLE },
+    { label: 'Main Kennels', compactLabel: 'Main', value: mainKennelCount, detail: 'primary kennel', icon: 'star-circle-outline', color: KENNEL_PURPLE },
+    { label: 'Other Kennels', compactLabel: 'Other', value: branchKennelCount, detail: 'branch kennels', icon: 'source-branch', color: KENNEL_PURPLE },
+  ];
+
+  return (
+    <View style={styles.screen}>
+      <StatusBar style="light" translucent backgroundColor="transparent" />
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        <View style={styles.farmsPage}>
+          <View style={[styles.farmsHero, compact && styles.farmsHeroCompact]}>
+            <Image source={DOBERMAN_KENNEL_BANNER_IMAGE} style={StyleSheet.absoluteFill} contentFit="cover" contentPosition="center" cachePolicy="memory-disk" />
+            <LinearGradient
+              colors={['rgba(2, 7, 9, 0.14)', 'rgba(2, 7, 9, 0.48)', '#020709']}
+              locations={[0, 0.52, 1]}
+              style={StyleSheet.absoluteFill}
+            />
+            <SafeAreaView edges={['top']} style={styles.heroSafeArea}>
+              <View style={[styles.topBar, narrow && styles.topBarNarrow]}>
+                <IconButton icon="arrow-back" label="Back" compact={narrow} onPress={onBack} />
+                <View style={styles.topBarSpacer} />
+              </View>
+              <View style={[styles.farmsHeroCopy, narrow && styles.farmsHeroCopyNarrow]}>
+                <Text style={[styles.farmsTitle, narrow && styles.farmsTitleNarrow]}>Manage Kennels</Text>
+                <Text style={[styles.farmsSubtitle, narrow && styles.farmsSubtitleNarrow]}>Oversee every kennel workspace, team, and kennel role.</Text>
+              </View>
+            </SafeAreaView>
+          </View>
+
+          <View style={[styles.farmsContent, narrow && styles.contentNarrow]}>
+            <View style={[styles.farmsActionRow, compact && styles.farmsActionRowCompact]}>
+              <View style={styles.farmsSearchBox}>
+                <Ionicons name="search" size={22} color="#9aa4a8" />
+                <TextInput
+                  value={query}
+                  onChangeText={setQuery}
+                  placeholder="Search by kennel or location"
+                  placeholderTextColor="#879195"
+                  selectionColor={THEME_ORANGE}
+                  style={styles.farmsSearchInput}
+                />
+                {!!query && (
+                  <Pressable accessibilityLabel="Clear search" onPress={() => setQuery('')} hitSlop={8}>
+                    <Ionicons name="close-circle" size={18} color="#6c777b" />
+                  </Pressable>
+                )}
+              </View>
+              <Pressable
+                onPress={onAddKennel}
+                accessibilityLabel="Add kennel"
+                style={({ pressed }) => [styles.farmsAddPrimary, styles.kennelPrimaryButton, compact && styles.farmsAddPrimaryCompact, pressed && styles.pressed]}
+              >
+                <Ionicons name="add" size={27} color="#ffffff" />
+                {!compact && <Text style={styles.farmsAddPrimaryText}>Add Kennel</Text>}
+              </Pressable>
+            </View>
+
+            <Text style={[styles.farmsEyebrow, styles.farmsSummaryHeading]}>KENNELS SUMMARY</Text>
+            <View style={styles.farmsSummaryPanel}>
+              <View style={styles.farmsSummaryMetrics}>
+                {kennelsSummary.map((item) => (
+                  <FarmSummaryMetric key={item.label} item={item} />
+                ))}
+              </View>
+            </View>
+
+            <View style={styles.farmsListHeader}>
+              <Text style={styles.farmsEyebrow}>ACTIVE KENNELS</Text>
+              <View style={styles.farmsCountPill}>
+                <Text style={styles.farmsCountText}>{visibleKennels.length} shown</Text>
+              </View>
+            </View>
+
+            <View style={styles.farmCardGrid}>
+              {visibleKennels.map((kennel) => (
+                <FarmWorkspaceCard key={kennel.id} farm={kennel} onPress={() => onOpenKennel(kennel)} />
+              ))}
+            </View>
+          </View>
+        </View>
+      </ScrollView>
+    </View>
+  );
+}
+
+function KennelManagementScreen({ kennel, onBack, onOpenBreedingBatch, onOpenDogs }) {
+  const { width } = useWindowDimensions();
+  const compact = width < 480;
+  const narrow = width < 390;
+  const kennelName = kennel?.name || 'Main Kennel';
+  const location = kennel?.location || 'Pampanga, Philippines';
+  const establishedYear = kennel?.established || '2020';
+  const heroImage = kennel?.bannerImage || DOBERMAN_KENNEL_BANNER_IMAGE;
+  const kennelModules = [
+    { title: 'Breeding Plans', subtitle: 'Pairing, heat cycles and sire / dam records', icon: 'gender-male-female', image: KENNEL_BREEDING_THUMBNAIL_IMAGE },
+    { title: 'Pregnancy & Whelping', subtitle: 'Due dates, prenatal care and birth records', icon: 'heart-pulse', image: DOBERMAN_KENNEL_THUMBNAIL_IMAGE },
+    { title: 'Puppy Nursery', subtitle: 'Newborn care, litter notes and early vaccines', icon: 'baby-face-outline', image: KENNEL_BREEDING_THUMBNAIL_IMAGE },
+    { title: 'Growing & Training', subtitle: 'Weaning, socialization and training progress', icon: 'run-fast', image: KENNEL_TRAINING_THUMBNAIL_IMAGE },
+    { title: 'Adult Kennel', subtitle: 'Adult dogs, health, housing and daily care', icon: 'dog', image: KENNEL_MAIN_THUMBNAIL_IMAGE, wide: true },
+  ];
+
+  return (
+    <View style={styles.screen}>
+      <StatusBar style="light" translucent backgroundColor="transparent" />
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        <View style={styles.page}>
+          <View style={[styles.farmDetailHero, compact && styles.farmDetailHeroCompact, narrow && styles.farmDetailHeroNarrow]}>
+            <Image source={heroImage} style={StyleSheet.absoluteFill} contentFit="cover" contentPosition="center" cachePolicy="memory-disk" />
+            <LinearGradient
+              colors={['rgba(2, 7, 9, 0.16)', 'rgba(2, 7, 9, 0.5)', '#040a0d']}
+              locations={[0, 0.48, 1]}
+              style={StyleSheet.absoluteFill}
+            />
+            <SafeAreaView edges={['top']} style={styles.heroSafeArea}>
+              <View style={[styles.topBar, narrow && styles.topBarNarrow]}>
+                <IconButton icon="arrow-back" label="Back" compact={narrow} onPress={onBack} />
+                <View style={styles.topBarSpacer} />
+              </View>
+              <View style={[styles.heroCopy, compact && styles.heroCopyCompact, narrow && styles.heroCopyNarrow]}>
+                <Text style={styles.heroEyebrow}>KENNEL MANAGEMENT</Text>
+                <Text style={[styles.brand, compact && styles.brandCompact, narrow && styles.brandNarrow]}>
+                  {kennelName}
+                </Text>
+                <Text style={[styles.tagline, narrow && styles.taglineNarrow]}>
+                  Manage the Doberman lifecycle from breeding plans to adult kennel care.
+                </Text>
+                <View style={[styles.farmMeta, narrow && styles.farmMetaNarrow]}>
+                  <View style={styles.farmMetaItem}>
+                    <Ionicons name="location-outline" size={narrow ? 13 : 15} color="#c4cbcd" />
+                    <Text numberOfLines={1} style={styles.farmMetaText}>{location}</Text>
+                  </View>
+                  <View style={styles.farmMetaDivider} />
+                  <View style={styles.farmMetaItem}>
+                    <Ionicons name="calendar-outline" size={narrow ? 13 : 15} color="#c4cbcd" />
+                    <Text style={styles.farmMetaText}>Est. {establishedYear}</Text>
+                  </View>
+                </View>
+              </View>
+            </SafeAreaView>
+          </View>
+
+          <View style={[styles.content, narrow && styles.contentNarrow]}>
+            <View style={[styles.statsPanel, compact && styles.statsPanelCompact]}>
+              <Stat item={{ label: 'Pairings', value: '0', icon: 'gender-male-female', color: KENNEL_PURPLE }} compact={compact} />
+              <Stat item={{ label: 'Pregnant', value: '0', icon: 'heart-pulse', color: KENNEL_PURPLE }} compact={compact} />
+              <Stat item={{ label: 'Puppies', value: String(kennel?.litters || 0), icon: 'baby-face-outline', color: KENNEL_PURPLE }} compact={compact} />
+              <Stat item={{ label: 'Adults', value: String(kennel?.dogs || 0), icon: 'dog', color: KENNEL_PURPLE }} compact={compact} isLast />
+            </View>
+
+            <View style={styles.sectionHeading}>
+              <Text style={[styles.sectionTitle, narrow && styles.sectionTitleNarrow]}>Kennel Management</Text>
+              <Text style={styles.sectionMeta}>5 modules</Text>
+            </View>
+            <View style={[styles.moduleGrid, compact && styles.moduleGridCompact]}>
+              {kennelModules.map((item) => (
+                <ModuleCard
+                  key={item.title}
+                  item={{ ...item, color: KENNEL_PURPLE, tint: KENNEL_PURPLE_TINT }}
+                  compact={compact}
+                  onPress={() => {
+                    if (item.title === 'Breeding Plans') {
+                      onOpenBreedingBatch?.();
+                      return;
+                    }
+                    if (item.title === 'Adult Kennel') {
+                      onOpenDogs?.();
+                      return;
+                    }
+                    Alert.alert(item.title, 'Kennel management module will be connected next.');
+                  }}
+                />
+              ))}
+            </View>
+          </View>
+        </View>
+      </ScrollView>
+    </View>
+  );
+}
+
+function KennelDogsListScreen({ kennel, onBack }) {
+  const { width } = useWindowDimensions();
+  const compact = width < 480;
+  const narrow = width < 390;
+  const [query, setQuery] = useState('');
+  const normalizedQuery = query.trim().toLowerCase();
+  const visibleDogs = KENNEL_DOGS.filter((dog) => (
+    !normalizedQuery || `${dog.id} ${dog.name} ${dog.sex} ${dog.bloodline} ${dog.status}`.toLowerCase().includes(normalizedQuery)
+  ));
+
+  return (
+    <View style={styles.screen}>
+      <StatusBar style="light" translucent backgroundColor="transparent" />
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        <View style={styles.page}>
+          <View style={[styles.hero, compact && styles.heroCompact, narrow && styles.heroNarrow]}>
+            <Image source={KENNEL_MAIN_THUMBNAIL_IMAGE} style={StyleSheet.absoluteFill} contentFit="cover" contentPosition="center" cachePolicy="memory-disk" />
+            <LinearGradient
+              colors={['rgba(8, 5, 18, 0.14)', 'rgba(8, 5, 18, 0.34)', '#020709']}
+              locations={[0, 0.46, 1]}
+              style={StyleSheet.absoluteFill}
+            />
+            <SafeAreaView edges={['top']} style={styles.heroSafeArea}>
+              <View style={[styles.blankIncubationHeader, styles.blankIncubationHeaderBetween]}>
+                <View style={styles.blankIncubationHeaderLeft}>
+                  <IconButton icon="arrow-back" label="Back to kennel" onPress={onBack} />
+                  <Text style={styles.blankIncubationScreenTitle}>Dogs List</Text>
+                </View>
+                <IconButton icon="settings-outline" label="Dog settings" onPress={() => Alert.alert('Dog settings', 'Dog settings will be connected next.')} />
+              </View>
+              <View style={[styles.blankIncubationHeroCopy, narrow && styles.blankIncubationHeroCopyNarrow]}>
+                <Text style={[styles.blankIncubationFarmName, narrow && styles.blankIncubationFarmNameNarrow]}>
+                  {kennel?.name || 'Main Kennel'}
+                </Text>
+                <Text style={styles.blankIncubationTagline}>View adult dogs by name, sex, bloodline, status, and location.</Text>
+                <View style={styles.blankIncubationMeta}>
+                  <View style={styles.blankIncubationMetaItem}>
+                    <Ionicons name="location-outline" size={16} color="#c0c7c9" />
+                    <Text style={styles.blankIncubationMetaText}>{kennel?.location || 'Pampanga, Philippines'}</Text>
+                  </View>
+                  <View style={styles.blankIncubationMetaDivider} />
+                  <View style={styles.blankIncubationMetaItem}>
+                    <MaterialCommunityIcons name="dog" size={16} color="#c0c7c9" />
+                    <Text style={styles.blankIncubationMetaText}>{visibleDogs.length} dogs shown</Text>
+                  </View>
+                </View>
+              </View>
+            </SafeAreaView>
+          </View>
+
+          <View style={[styles.blankIncubationContent, narrow && styles.blankIncubationContentNarrow]}>
+            <View style={[styles.blankIncubationActionRow, compact && styles.blankIncubationActionRowCompact]}>
+              <View style={styles.blankIncubationSearchBox}>
+                <Ionicons name="search" size={22} color="#9aa4a8" />
+                <TextInput
+                  value={query}
+                  onChangeText={setQuery}
+                  placeholder="Search dogs"
+                  placeholderTextColor="#879195"
+                  selectionColor={KENNEL_PURPLE}
+                  style={styles.blankIncubationSearchInput}
+                />
+                {!!query && (
+                  <Pressable accessibilityLabel="Clear search" onPress={() => setQuery('')} hitSlop={8}>
+                    <Ionicons name="close-circle" size={18} color="#6c777b" />
+                  </Pressable>
+                )}
+              </View>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Add dog"
+                onPress={() => Alert.alert('Add dog', 'Dog profile setup will be connected next.')}
+                style={({ pressed }) => [styles.blankIncubationAddButton, styles.kennelBatchSaveButton, compact && styles.blankIncubationAddButtonCompact, pressed && styles.pressed]}
+              >
+                <Ionicons name="add" size={24} color="#ffffff" />
+                <Text style={styles.blankIncubationAddButtonText}>Add Dog</Text>
+              </Pressable>
+            </View>
+
+            <View style={styles.blankIncubationListHeading}>
+              <View>
+                <Text style={[styles.blankIncubationEyebrow, { color: KENNEL_PURPLE }]}>DOGS</Text>
+                <Text style={styles.blankIncubationListTitle}>Adult kennel list</Text>
+              </View>
+              <Text style={styles.blankIncubationBatchCount}>{visibleDogs.length} shown</Text>
+            </View>
+
+            <View style={styles.kennelDogList}>
+              {visibleDogs.map((dog) => (
+                <View key={dog.id} style={styles.kennelDogSimpleRow}>
+                  <Image source={dog.image} style={styles.kennelDogPhoto} contentFit="cover" contentPosition="center" cachePolicy="memory-disk" />
+                  <View style={styles.kennelDogSimpleCopy}>
+                    <View style={styles.kennelDogSimpleTop}>
+                      <View style={styles.kennelDogSimpleTitleWrap}>
+                        <Text numberOfLines={1} style={styles.kennelDogName}>{dog.name || dog.id}</Text>
+                        {!!dog.name && <Text style={styles.kennelDogId}>{dog.id}</Text>}
+                      </View>
+                      <Text style={styles.kennelDogStatus}>{dog.status}</Text>
+                    </View>
+                    <View style={styles.kennelDogMetaRow}>
+                      <View style={styles.kennelDogMetaItem}>
+                        <MaterialCommunityIcons name="dna" size={13} color={KENNEL_PURPLE} />
+                        <Text numberOfLines={1} style={styles.kennelDogCellText}>{dog.bloodline}</Text>
+                      </View>
+                      <View style={styles.kennelDogMetaItem}>
+                        <MaterialCommunityIcons name={dog.sex === 'Male' ? 'gender-male' : 'gender-female'} size={13} color={KENNEL_PURPLE} />
+                        <Text style={styles.kennelDogCellText}>{dog.sex}</Text>
+                      </View>
+                    </View>
+                  </View>
+                </View>
+              ))}
+              {!visibleDogs.length && <Text style={styles.blankIncubationEmptyText}>No dogs found</Text>}
+            </View>
+          </View>
+        </View>
+      </ScrollView>
+    </View>
+  );
+}
+
+function KennelBreedingPlansScreen({ kennel, onBack, onAddPair }) {
+  const { width } = useWindowDimensions();
+  const compact = width < 480;
+  const narrow = width < 390;
+  const [query, setQuery] = useState('');
+  const normalizedQuery = query.trim().toLowerCase();
+  const visiblePairs = ACTIVE_KENNEL_BREEDING_PAIRS.filter((pair) => (
+    !normalizedQuery || `${pair.id} ${pair.title} ${pair.startDate} ${pair.sire} ${pair.dam} ${pair.breedLine}`.toLowerCase().includes(normalizedQuery)
+  ));
+
+  return (
+    <View style={styles.screen}>
+      <StatusBar style="light" translucent backgroundColor="transparent" />
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        <View style={styles.page}>
+          <View style={[styles.hero, compact && styles.heroCompact, narrow && styles.heroNarrow]}>
+            <Image source={DOBERMAN_KENNEL_BANNER_IMAGE} style={StyleSheet.absoluteFill} contentFit="cover" contentPosition="center" cachePolicy="memory-disk" />
+            <LinearGradient
+              colors={['rgba(8, 5, 18, 0.18)', 'rgba(8, 5, 18, 0.24)', '#020709']}
+              locations={[0, 0.46, 1]}
+              style={StyleSheet.absoluteFill}
+            />
+            <SafeAreaView edges={['top']} style={styles.heroSafeArea}>
+              <View style={[styles.blankIncubationHeader, styles.blankIncubationHeaderBetween]}>
+                <View style={styles.blankIncubationHeaderLeft}>
+                  <IconButton icon="arrow-back" label="Back to kennel" onPress={onBack} />
+                  <Text style={styles.blankIncubationScreenTitle}>Breeding Plans</Text>
+                </View>
+                <IconButton icon="settings-outline" label="Breeding settings" onPress={() => Alert.alert('Breeding settings', 'Breeding settings will be connected next.')} />
+              </View>
+              <View style={[styles.blankIncubationHeroCopy, narrow && styles.blankIncubationHeroCopyNarrow]}>
+                <Text style={[styles.blankIncubationFarmName, narrow && styles.blankIncubationFarmNameNarrow]}>
+                  {kennel?.name || 'Main Kennel'}
+                </Text>
+                <Text style={styles.blankIncubationTagline}>Plan breeding pairs by sire, dam, start date, and bloodline.</Text>
+                <View style={styles.blankIncubationMeta}>
+                  <View style={styles.blankIncubationMetaItem}>
+                    <Ionicons name="location-outline" size={16} color="#c0c7c9" />
+                    <Text style={styles.blankIncubationMetaText}>{kennel?.location || 'Pampanga, Philippines'}</Text>
+                  </View>
+                  <View style={styles.blankIncubationMetaDivider} />
+                  <View style={styles.blankIncubationMetaItem}>
+                    <MaterialCommunityIcons name="dog" size={16} color="#c0c7c9" />
+                    <Text style={styles.blankIncubationMetaText}>{kennel?.role || 'Kennel'}</Text>
+                  </View>
+                </View>
+              </View>
+            </SafeAreaView>
+          </View>
+
+          <View style={[styles.blankIncubationContent, narrow && styles.blankIncubationContentNarrow]}>
+            <View style={[styles.blankIncubationActionRow, compact && styles.blankIncubationActionRowCompact]}>
+              <View style={styles.blankIncubationSearchBox}>
+                <Ionicons name="search" size={22} color="#9aa4a8" />
+                <TextInput
+                  value={query}
+                  onChangeText={setQuery}
+                  placeholder="Search pairs or dogs"
+                  placeholderTextColor="#879195"
+                  selectionColor={KENNEL_PURPLE}
+                  style={styles.blankIncubationSearchInput}
+                />
+                {!!query && (
+                  <Pressable accessibilityLabel="Clear search" onPress={() => setQuery('')} hitSlop={8}>
+                    <Ionicons name="close-circle" size={18} color="#6c777b" />
+                  </Pressable>
+                )}
+              </View>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Add breeding pair"
+                onPress={onAddPair}
+                style={({ pressed }) => [styles.blankIncubationAddButton, styles.kennelBatchSaveButton, compact && styles.blankIncubationAddButtonCompact, pressed && styles.pressed]}
+              >
+                <Ionicons name="add" size={24} color="#ffffff" />
+                <Text style={styles.blankIncubationAddButtonText}>Add Pair</Text>
+              </Pressable>
+            </View>
+
+            <View style={styles.blankIncubationListHeading}>
+              <View>
+                <Text style={[styles.blankIncubationEyebrow, { color: KENNEL_PURPLE }]}>ACTIVE PAIRS</Text>
+                <Text style={styles.blankIncubationListTitle}>Breeding pairs</Text>
+              </View>
+              <Text style={styles.blankIncubationBatchCount}>{visiblePairs.length} active</Text>
+            </View>
+
+            <View style={styles.blankIncubationBatchList}>
+              {visiblePairs.map((pair) => (
+                <View key={pair.id} style={styles.blankIncubationBatchCard}>
+                  <View style={styles.blankIncubationBatchHeader}>
+                    <View style={styles.blankIncubationBatchIdentity}>
+                      <View style={[styles.blankIncubationBatchIcon, { borderColor: 'rgba(139, 92, 246, 0.42)', backgroundColor: KENNEL_PURPLE_TINT }]}>
+                        <MaterialCommunityIcons name="calendar-heart" size={22} color={KENNEL_PURPLE} />
+                      </View>
+                      <View>
+                        <Text style={styles.blankIncubationBatchName}>{pair.title}</Text>
+                        <Text style={[styles.blankIncubationBatchId, { color: KENNEL_PURPLE }]}>{pair.status}</Text>
+                      </View>
+                    </View>
+                    <View style={styles.blankIncubationChickenCount}>
+                      <Text style={styles.blankIncubationChickenCountValue}>1</Text>
+                      <Text style={styles.blankIncubationChickenCountLabel}>pair</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.kennelBatchSummary}>
+                    <View style={styles.kennelBatchSummaryRow}>
+                      <Ionicons name="calendar-outline" size={14} color="#9aa5a8" />
+                      <Text style={styles.kennelBatchSummaryText}>Start: {pair.startDate}</Text>
+                    </View>
+                    <View style={styles.kennelBatchSummaryRow}>
+                      <MaterialCommunityIcons name="gender-male" size={14} color={KENNEL_PURPLE} />
+                      <Text style={styles.kennelBatchSummaryText}>Sire: {pair.sire}</Text>
+                    </View>
+                    <View style={styles.kennelBatchSummaryRow}>
+                      <MaterialCommunityIcons name="gender-female" size={14} color={KENNEL_PURPLE} />
+                      <Text style={styles.kennelBatchSummaryText}>Dam: {pair.dam}</Text>
+                    </View>
+                    <View style={styles.kennelBatchSummaryRow}>
+                      <MaterialCommunityIcons name="dna" size={14} color={KENNEL_PURPLE} />
+                      <Text style={styles.kennelBatchSummaryText}>{pair.breedLine}</Text>
+                    </View>
+                  </View>
+                </View>
+              ))}
+              {!visiblePairs.length && <Text style={styles.blankIncubationEmptyText}>No breeding pairs found</Text>}
+            </View>
+          </View>
+        </View>
+      </ScrollView>
     </View>
   );
 }
@@ -652,22 +1166,22 @@ function FarmsScreen({ onBack, onOpenFarm, onAddFarm }) {
   const narrow = width < 390;
   const [query, setQuery] = useState('');
   const farmCards = [
-    { id: 'fb', name: 'FB Farm', location: 'Pampanga, Philippines', status: 'Published', established: '2020', members: 3, image: DASHBOARD_HERO_IMAGE },
-    { id: 'ju', name: 'JU Gamefarm', location: 'Tarlac, Philippines', status: 'Published', established: '2022', members: 2, image: FLOCK_HERO_IMAGE },
-    { id: 'golden', name: 'Golden Rooster Yard', location: 'Angeles City, Philippines', status: 'Draft', established: '2024', members: 1, image: HEALTH_CARE_HERO_IMAGE },
-    { id: 'north', name: 'North Ridge Farm', location: 'Bulacan, Philippines', status: 'Published', established: '2021', members: 4, image: BREEDING_HERO_IMAGE },
+    { id: 'fb', name: 'FB Farm', location: 'Pampanga, Philippines', role: 'Main Farm', established: '2020', members: 3, image: DASHBOARD_HERO_IMAGE },
+    { id: 'ju', name: 'JU Gamefarm', location: 'Tarlac, Philippines', role: 'Branch Farm', established: '2022', members: 2, image: FLOCK_HERO_IMAGE },
+    { id: 'golden', name: 'Golden Rooster Yard', location: 'Angeles City, Philippines', role: 'Training Farm', established: '2024', members: 1, image: HEALTH_CARE_HERO_IMAGE },
+    { id: 'north', name: 'North Ridge Farm', location: 'Bulacan, Philippines', role: 'Breeding Farm', established: '2021', members: 4, image: BREEDING_HERO_IMAGE },
   ];
-  const publishedCount = farmCards.filter((farm) => farm.status === 'Published').length;
-  const draftCount = farmCards.filter((farm) => farm.status === 'Draft').length;
+  const mainFarmCount = farmCards.filter((farm) => farm.role === 'Main Farm').length;
+  const branchFarmCount = farmCards.length - mainFarmCount;
   const visibleFarms = farmCards.filter((farm) => {
     const needle = query.trim().toLowerCase();
     if (!needle) return true;
-    return `${farm.name} ${farm.location} ${farm.status}`.toLowerCase().includes(needle);
+    return `${farm.name} ${farm.location} ${farm.role}`.toLowerCase().includes(needle);
   });
   const farmsSummary = [
     { label: 'Farm Workspaces', compactLabel: 'Farms', value: farmCards.length, detail: 'managed farms', icon: 'barn' },
-    { label: 'Published', compactLabel: 'Published', value: publishedCount, detail: 'visible farms', icon: 'check-circle-outline' },
-    { label: 'Draft', compactLabel: 'Draft', value: draftCount, detail: 'setup drafts', icon: 'file-document-outline' },
+    { label: 'Main Farms', compactLabel: 'Main', value: mainFarmCount, detail: 'primary farm', icon: 'star-circle-outline' },
+    { label: 'Other Farms', compactLabel: 'Other', value: branchFarmCount, detail: 'branch farms', icon: 'source-branch' },
   ];
 
   return (
@@ -689,7 +1203,7 @@ function FarmsScreen({ onBack, onOpenFarm, onAddFarm }) {
               </View>
               <View style={[styles.farmsHeroCopy, narrow && styles.farmsHeroCopyNarrow]}>
                 <Text style={[styles.farmsTitle, narrow && styles.farmsTitleNarrow]}>Manage Farms</Text>
-                <Text style={[styles.farmsSubtitle, narrow && styles.farmsSubtitleNarrow]}>Oversee every farm workspace, team, and publishing status.</Text>
+                <Text style={[styles.farmsSubtitle, narrow && styles.farmsSubtitleNarrow]}>Oversee every farm workspace, team, and farm role.</Text>
               </View>
             </SafeAreaView>
           </View>
@@ -751,10 +1265,11 @@ function FarmsScreen({ onBack, onOpenFarm, onAddFarm }) {
 }
 
 function FarmSummaryMetric({ item }) {
+  const color = item.color || THEME_ORANGE;
   return (
     <View style={styles.farmsSummaryMetric}>
       <View style={styles.farmsSummaryValueRow}>
-        <MaterialCommunityIcons name={item.icon} size={26} color={THEME_ORANGE} />
+        <MaterialCommunityIcons name={item.icon} size={26} color={color} />
         <Text style={styles.farmsSummaryValue}>{item.value}</Text>
       </View>
       <Text numberOfLines={2} style={styles.farmsSummaryLabel}>{item.compactLabel}</Text>
@@ -764,7 +1279,8 @@ function FarmSummaryMetric({ item }) {
 }
 
 function FarmWorkspaceCard({ farm, onPress }) {
-  const published = farm.status === 'Published';
+  const mainFarm = farm.role === 'Main Farm' || farm.role === 'Main Kennel';
+  const color = farm.color || THEME_ORANGE;
   return (
     <Pressable
       accessibilityRole="button"
@@ -778,9 +1294,9 @@ function FarmWorkspaceCard({ farm, onPress }) {
         locations={[0, 0.45, 1]}
         style={StyleSheet.absoluteFill}
       />
-      <View style={[styles.farmCardStatus, !published && styles.farmCardStatusDraft]}>
-        <View style={[styles.farmStatusDot, !published && styles.farmStatusDotDraft]} />
-        <Text style={styles.farmCardStatusText}>{farm.status}</Text>
+      <View style={[styles.farmCardRole, !mainFarm && styles.farmCardRoleSecondary, { backgroundColor: mainFarm ? `${color}eb` : `${color}b8` }]}>
+        <View style={[styles.farmRoleDot, !mainFarm && styles.farmRoleDotSecondary]} />
+        <Text style={styles.farmCardRoleText}>{farm.role}</Text>
       </View>
       <View style={styles.farmCardBody}>
         <View style={styles.farmCardTitleRow}>
@@ -821,6 +1337,7 @@ function FarmDetailScreen({ farm, metrics, onBack, onOpenBreeding, onOpenIncubat
     color: THEME_ORANGE,
     tint: THEME_ORANGE_TINT,
     image: EGGS_INCUBATION_HERO_IMAGE,
+    badgeImage: INCUBATION_EGG_IMAGE,
   };
   const broodingModule = {
     title: 'Brooding',
@@ -829,6 +1346,7 @@ function FarmDetailScreen({ farm, metrics, onBack, onOpenBreeding, onOpenIncubat
     color: THEME_ORANGE,
     tint: THEME_ORANGE_TINT,
     image: BROODING_CARD_IMAGE,
+    badgeImage: HATCHED_CHICK_IMAGE,
   };
   const maturingModule = {
     title: 'Range',
@@ -837,6 +1355,7 @@ function FarmDetailScreen({ farm, metrics, onBack, onOpenBreeding, onOpenIncubat
     color: THEME_ORANGE,
     tint: THEME_ORANGE_TINT,
     image: RANGING_CARD_IMAGE,
+    badgeImage: RANGING_BADGE_IMAGE,
   };
   const cordateModule = {
     title: 'Cordate',
@@ -845,13 +1364,14 @@ function FarmDetailScreen({ farm, metrics, onBack, onOpenBreeding, onOpenIncubat
     color: THEME_ORANGE,
     tint: THEME_ORANGE_TINT,
     image: CORDING_CARD_IMAGE,
+    badgeImage: FLOCK_BADGE_IMAGE,
   };
 
   const defaultMetrics = [
-    { label: 'Incubating', value: '2', icon: 'egg-outline', color: THEME_ORANGE },
-    { label: 'Brooding', value: '1', icon: 'bird', color: THEME_ORANGE },
-    { label: 'Ranging', value: '3', icon: 'leaf', color: THEME_ORANGE },
-    { label: 'Cordate', value: '14', icon: 'home-variant', color: THEME_ORANGE },
+    { label: 'Incubating', value: '2', icon: 'egg-outline', badgeImage: INCUBATION_EGG_IMAGE, color: THEME_ORANGE },
+    { label: 'Brooding', value: '1', icon: 'bird', badgeImage: HATCHED_CHICK_IMAGE, color: THEME_ORANGE },
+    { label: 'Ranging', value: '3', icon: 'leaf', badgeImage: RANGING_BADGE_IMAGE, color: THEME_ORANGE },
+    { label: 'Cordate', value: '14', icon: 'home-variant', badgeImage: FLOCK_BADGE_IMAGE, color: THEME_ORANGE },
   ];
   const stats = metrics || defaultMetrics;
 
@@ -1025,13 +1545,30 @@ function CordateBatchDetailScreen({ areaName, birds = [], nextCordingBirdNumber,
   const [bloodlineOpen, setBloodlineOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState('All');
   const [statusOpen, setStatusOpen] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [bulkSelect, setBulkSelect] = useState(false);
-  const [bulkTargetStatus, setBulkTargetStatus] = useState('Conditioning');
-  const [selectedBirds, setSelectedBirds] = useState({});
+  const [selectedLayoutBird, setSelectedLayoutBird] = useState(null);
+  const [draggingLayoutBird, setDraggingLayoutBird] = useState(null);
+  const [layoutByBird, setLayoutByBird] = useState({});
+  const [layoutMoveHistoryByBird, setLayoutMoveHistoryByBird] = useState({});
   const [statusByBird, setStatusByBird] = useState({});
-  
+  const [removedLayoutBirds, setRemovedLayoutBirds] = useState({});
+  const [layoutActionBird, setLayoutActionBird] = useState(null);
+  const [pendingLayoutStatus, setPendingLayoutStatus] = useState(null);
+  const [pendingLayoutAction, setPendingLayoutAction] = useState(null);
+  const [layoutLossVisible, setLayoutLossVisible] = useState(false);
+  const [layoutLossBird, setLayoutLossBird] = useState(null);
+  const [layoutLossBirdPhoto, setLayoutLossBirdPhoto] = useState(null);
+  const [layoutLossBandPhoto, setLayoutLossBandPhoto] = useState(null);
+  const [layoutLossNote, setLayoutLossNote] = useState('');
+  const [layoutLossReportsByBird, setLayoutLossReportsByBird] = useState({});
+  const [layoutImageByBird, setLayoutImageByBird] = useState({});
+  const layoutDragActiveRef = useRef(false);
+
   const [addModalVisible, setAddModalVisible] = useState(false);
+  const [pendingLayoutSlots, setPendingLayoutSlots] = useState(0);
+  const [addModalCreatedSlot, setAddModalCreatedSlot] = useState(false);
+  const [addModalFillingEmptyTp, setAddModalFillingEmptyTp] = useState(false);
+  const [addModalEmptySlot, setAddModalEmptySlot] = useState(null);
+  const [selectedEmptyTpNumber, setSelectedEmptyTpNumber] = useState('');
   const [newImage, setNewImage] = useState(null);
   const [newTpNumber, setNewTpNumber] = useState('');
   const [newBand, setNewBand] = useState('');
@@ -1042,8 +1579,59 @@ function CordateBatchDetailScreen({ areaName, birds = [], nextCordingBirdNumber,
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8 });
     if (!result.canceled) setNewImage(result.assets[0].uri);
   };
+  const resetAddTpForm = () => {
+    setNewImage(null);
+    setNewTpNumber('');
+    setNewBand('');
+    setNewBloodline('');
+    setNewBloodlineOpen(false);
+  };
+  const addEmptyTpSlot = () => {
+    setBloodlineOpen(false);
+    setStatusOpen(false);
+    setPendingLayoutSlots((current) => current + 1);
+  };
+  const getEmptyTpNumber = (slot) => `TP-${slot}`;
+  const openAddTpModal = (createSlot = false, fillEmptyTp = false, slot = null) => {
+    setBloodlineOpen(false);
+    setStatusOpen(false);
+    const emptyTpNumber = fillEmptyTp && slot ? getEmptyTpNumber(slot) : '';
+    if (createSlot) {
+      setPendingLayoutSlots((current) => current + 1);
+      setAddModalCreatedSlot(true);
+    } else {
+      setAddModalCreatedSlot(false);
+    }
+    setAddModalFillingEmptyTp(fillEmptyTp);
+    setAddModalEmptySlot(fillEmptyTp ? slot : null);
+    setSelectedEmptyTpNumber(emptyTpNumber);
+    setNewTpNumber(emptyTpNumber);
+    setAddModalVisible(true);
+  };
+  const closeAddTpModal = () => {
+    if (addModalCreatedSlot) setPendingLayoutSlots((current) => Math.max(0, current - 1));
+    setAddModalCreatedSlot(false);
+    setAddModalFillingEmptyTp(false);
+    setAddModalEmptySlot(null);
+    setSelectedEmptyTpNumber('');
+    resetAddTpForm();
+    setAddModalVisible(false);
+  };
+  const finishAddTpModal = () => {
+    if (addModalCreatedSlot || addModalFillingEmptyTp) setPendingLayoutSlots((current) => Math.max(0, current - 1));
+    setAddModalCreatedSlot(false);
+    setAddModalFillingEmptyTp(false);
+    setAddModalEmptySlot(null);
+    setSelectedEmptyTpNumber('');
+    resetAddTpForm();
+    setAddModalVisible(false);
+  };
 
-  const bulkStatusOptions = ['Conditioning', 'Standby', 'Ready', 'Sold', 'Loss'];
+  useEffect(() => {
+    setSelectedLayoutBird(null);
+    setDraggingLayoutBird(null);
+  }, [query, bloodlineFilter, statusFilter]);
+
   const damBloodlines = ['Kelso', 'Hatch', 'Roundhead', 'Sweater', 'Grey'];
   const mockBirds = [
     { farmBuzzId: 'FB-000101', physicalId: 'TP-101', band: 'C-101', bloodline: 'Kelso', sireBloodline: 'Sweater', damBloodline: 'Kelso', sourceBatch: 'RG-024 North Range', status: 'Conditioning', location: areaName, image: BIRDS[0].image, vaccinations: [{ name: 'Newcastle B1', date: 'Aug 18, 2026', status: 'Done' }, { name: 'Fowl Pox', date: 'Sep 2, 2026', status: 'Done' }] },
@@ -1055,43 +1643,200 @@ function CordateBatchDetailScreen({ areaName, birds = [], nextCordingBirdNumber,
   const sourceBirds = birds.filter((bird) => bird.location === areaName);
   const areaBirds = sourceBirds.length ? sourceBirds : mockBirds;
   const getBirdKey = (bird) => bird._recordKey || bird.farmBuzzId || bird.physicalId || bird.name;
-  const displayBirds = areaBirds.map((bird) => ({ ...bird, status: statusByBird[getBirdKey(bird)] || statusOverrides[getBirdKey(bird)] || bird.status }));
-  const selectedCount = Object.values(selectedBirds).filter(Boolean).length;
+  const displayBirds = areaBirds
+    .filter((bird) => !removedLayoutBirds[getBirdKey(bird)])
+    .map((bird) => {
+      const key = getBirdKey(bird);
+      return {
+        ...bird,
+        image: layoutImageByBird[key] || bird.image,
+        lossReport: layoutLossReportsByBird[key] || bird.lossReport,
+        status: statusByBird[key] || statusOverrides[key] || bird.status,
+      };
+    });
+  const layoutSlots = Array.from({ length: Math.max(displayBirds.length + pendingLayoutSlots, 1) }, (_, index) => String(index + 1));
+  const positionedLayoutBirds = displayBirds;
   const bloodlines = ['All', ...new Set(displayBirds.map((bird) => bird.bloodline).filter(Boolean))];
   const statusOptions = ['All', ...new Set(displayBirds.map((bird) => bird.status).filter(Boolean))];
-  const visibleBirds = displayBirds.filter((bird) => {
+  const layoutStatusActions = ['Conditioning', 'Standby', 'Ready', 'Sale', 'Loss'];
+  const layoutBirdActions = [
+    { label: 'Move Bird', icon: 'swap-horizontal-circle-outline', move: true },
+    { label: 'Remove TP', icon: 'tag-remove-outline', remove: true, danger: true },
+  ];
+  const getDefaultLayoutSlot = (bird) => layoutSlots[Math.max(0, positionedLayoutBirds.findIndex((item) => getBirdKey(item) === getBirdKey(bird)))] || layoutSlots[0];
+  const getBirdLayoutSlot = (bird) => layoutByBird[getBirdKey(bird)] || getDefaultLayoutSlot(bird);
+  const getLayoutBirdTpNumber = (bird) => `TP-${getBirdLayoutSlot(bird)}`;
+  const getLayoutBirdLabel = (bird) => getBirdLayoutSlot(bird) || 'Bird';
+  const getLayoutBirdDetailPayload = (bird) => {
+    const key = getBirdKey(bird);
+    const currentTp = getLayoutBirdTpNumber(bird);
+    return {
+      ...bird,
+      name: currentTp,
+      physicalId: currentTp,
+      originalPhysicalId: bird.originalPhysicalId || bird.physicalId,
+      actionHistory: [
+        ...(layoutMoveHistoryByBird[key] || []),
+        ...(bird.actionHistory || []),
+      ],
+    };
+  };
+  const layoutBirds = positionedLayoutBirds.filter((bird) => {
     const search = query.trim().toLowerCase();
-    const matchesSearch = !search || [bird.physicalId, bird.name, bird.farmBuzzId, bird.bloodline].some((value) => String(value || '').toLowerCase().includes(search));
+    const currentSlot = getBirdLayoutSlot(bird);
+    const matchesSearch = !search || [currentSlot, `TP-${currentSlot}`, bird.physicalId, bird.name, bird.farmBuzzId, bird.band, bird.bloodline].some((value) => String(value || '').toLowerCase().includes(search));
     const matchesBloodline = bloodlineFilter === 'All' || bird.bloodline === bloodlineFilter;
     const matchesStatus = statusFilter === 'All' || bird.status === statusFilter;
     return matchesSearch && matchesBloodline && matchesStatus;
   });
-  const startBulkSelect = (status) => { setBulkTargetStatus(status); setBulkSelect(true); setSelectedBirds({}); setMenuOpen(false); };
-  const cancelBulkSelect = () => { setBulkSelect(false); setSelectedBirds({}); };
-  const toggleBirdSelection = (bird) => {
-    if (!bulkSelect) return;
+  const getLayoutSlotBird = (slot) => layoutBirds.find((bird) => getBirdLayoutSlot(bird) === slot);
+  const getAnyLayoutSlotBird = (slot) => positionedLayoutBirds.find((bird) => getBirdLayoutSlot(bird) === slot);
+  const getLayoutDragEvent = (event) => (event?.dataTransfer || event?.preventDefault ? event : event?.nativeEvent || event);
+  const addLayoutMoveHistory = (bird, fromSlot, toSlot) => {
     const key = getBirdKey(bird);
-    setSelectedBirds((current) => ({ ...current, [key]: !current[key] }));
+    if (!key || fromSlot === toSlot) return;
+    setLayoutMoveHistoryByBird((current) => ({
+      ...current,
+      [key]: [
+        {
+          action: 'Moved TP',
+          status: `TP-${fromSlot} to TP-${toSlot}`,
+          date: new Date().toISOString(),
+        },
+        ...(current[key] || []),
+      ],
+    }));
   };
-  const selectVisibleBirds = () => {
-    setSelectedBirds((current) => {
-      const next = { ...current };
-      visibleBirds.forEach((bird) => { next[getBirdKey(bird)] = true; });
-      return next;
-    });
+  const finishLayoutDrag = () => {
+    setDraggingLayoutBird(null);
+    setTimeout(() => {
+      layoutDragActiveRef.current = false;
+    }, 0);
   };
-  const applyBulkStatus = (status) => {
-    if (!selectedCount) return Alert.alert('Select birds', 'Choose one or more birds before changing status.');
-    setStatusByBird((current) => {
-      const next = { ...current };
-      Object.entries(selectedBirds).forEach(([key, selected]) => {
-        if (selected) next[key] = status;
-      });
-      return next;
-    });
-    cancelBulkSelect();
-  };
+  const placeLayoutBird = (birdKey, slot) => {
+    const selectedBird = positionedLayoutBirds.find((bird) => getBirdKey(bird) === birdKey);
+    if (!selectedBird) return;
 
+    const slotBird = getAnyLayoutSlotBird(slot);
+    const selectedSlot = getBirdLayoutSlot(selectedBird);
+    if (selectedSlot === slot) return;
+
+    addLayoutMoveHistory(selectedBird, selectedSlot, slot);
+    if (slotBird) addLayoutMoveHistory(slotBird, slot, selectedSlot);
+
+    setLayoutByBird((current) => ({
+      ...current,
+      [birdKey]: slot,
+      ...(slotBird ? { [getBirdKey(slotBird)]: selectedSlot } : {}),
+    }));
+  };
+  const moveLayoutBird = (slot) => {
+    if (layoutDragActiveRef.current) return;
+    const slotBird = getLayoutSlotBird(slot);
+    if (!selectedLayoutBird) {
+      if (slotBird) setSelectedLayoutBird(getBirdKey(slotBird));
+      return;
+    }
+
+    const selectedBird = positionedLayoutBirds.find((bird) => getBirdKey(bird) === selectedLayoutBird);
+    if (!selectedBird) {
+      setSelectedLayoutBird(null);
+      return;
+    }
+
+    const selectedSlot = getBirdLayoutSlot(selectedBird);
+    if (selectedSlot === slot) {
+      setSelectedLayoutBird(null);
+      return;
+    }
+
+    placeLayoutBird(selectedLayoutBird, slot);
+    setSelectedLayoutBird(null);
+  };
+  const openLayoutSlotMenu = (bird, slot = null) => {
+    setBloodlineOpen(false);
+    setStatusOpen(false);
+    setSelectedLayoutBird(null);
+    setPendingLayoutStatus(null);
+    setPendingLayoutAction(null);
+    if (bird) setLayoutActionBird(bird);
+    else openAddTpModal(false, true, slot);
+  };
+  const closeLayoutActionMenu = () => {
+    setLayoutActionBird(null);
+    setPendingLayoutStatus(null);
+    setPendingLayoutAction(null);
+  };
+  const applyLayoutStatus = (bird, status) => {
+    const key = getBirdKey(bird);
+    setStatusByBird((current) => ({ ...current, [key]: status }));
+    closeLayoutActionMenu();
+  };
+  const removeLayoutBird = (bird) => {
+    const key = getBirdKey(bird);
+    setRemovedLayoutBirds((current) => ({ ...current, [key]: true }));
+    setLayoutByBird((current) => {
+      const next = { ...current };
+      delete next[key];
+      return next;
+    });
+    closeLayoutActionMenu();
+  };
+  const startLayoutMove = (bird) => {
+    setSelectedLayoutBird(getBirdKey(bird));
+    closeLayoutActionMenu();
+  };
+  const openLayoutLossReport = (bird) => {
+    setLayoutLossBird(bird);
+    setLayoutLossBirdPhoto(null);
+    setLayoutLossBandPhoto(null);
+    setLayoutLossNote('');
+    closeLayoutActionMenu();
+    setLayoutLossVisible(true);
+  };
+  const pickLayoutLossPhoto = async (target, source = 'library') => {
+    const permission = source === 'camera'
+      ? await ImagePicker.requestCameraPermissionsAsync()
+      : await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert(source === 'camera' ? 'Camera access needed' : 'Photo access needed', `Allow access to ${source === 'camera' ? 'the camera' : 'photos'} to attach loss evidence.`);
+      return;
+    }
+    const result = source === 'camera'
+      ? await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.8 })
+      : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8 });
+    if (result.canceled) return;
+    const uri = result.assets[0].uri;
+    if (target === 'band') setLayoutLossBandPhoto(uri);
+    else setLayoutLossBirdPhoto(uri);
+  };
+  const saveLayoutLossReport = () => {
+    if (!layoutLossBird) return;
+    const key = getBirdKey(layoutLossBird);
+    const report = {
+      birdPhoto: layoutLossBirdPhoto,
+      bandPhoto: layoutLossBandPhoto,
+      note: layoutLossNote.trim(),
+      reportedAt: new Date().toISOString(),
+    };
+    setStatusByBird((current) => ({ ...current, [key]: 'Loss' }));
+    setLayoutLossReportsByBird((current) => ({ ...current, [key]: report }));
+    if (layoutLossBirdPhoto) setLayoutImageByBird((current) => ({ ...current, [key]: layoutLossBirdPhoto }));
+    setLayoutLossVisible(false);
+    setLayoutLossBird(null);
+    setLayoutLossBirdPhoto(null);
+    setLayoutLossBandPhoto(null);
+    setLayoutLossNote('');
+  };
+  const saveLayoutAction = () => {
+    if (!layoutActionBird) return;
+    if (pendingLayoutAction?.sell) removeLayoutBird(layoutActionBird);
+    else if (pendingLayoutAction?.status) applyLayoutStatus(layoutActionBird, pendingLayoutAction.status);
+    else if (pendingLayoutAction?.move) startLayoutMove(layoutActionBird);
+    else if (pendingLayoutAction?.remove) removeLayoutBird(layoutActionBird);
+    else if (pendingLayoutStatus === 'Loss') openLayoutLossReport(layoutActionBird);
+    else if (pendingLayoutStatus) applyLayoutStatus(layoutActionBird, pendingLayoutStatus);
+  };
   return (
     <View style={styles.cordateScreen}>
       <StatusBar style="light" translucent backgroundColor="transparent" />
@@ -1108,19 +1853,6 @@ function CordateBatchDetailScreen({ areaName, birds = [], nextCordingBirdNumber,
                   </Pressable>
                   <Text style={styles.cordateHeaderTitle}>Cordate</Text>
                 </View>
-                <Pressable accessibilityRole="button" accessibilityLabel="Cordate actions" onPress={() => setMenuOpen((open) => !open)} style={styles.cordateBackButton}>
-                  <Ionicons name="ellipsis-horizontal" size={22} color="#ffffff" />
-                </Pressable>
-                {menuOpen && (
-                  <View style={styles.cordateActionMenu}>
-                    {bulkStatusOptions.map((status) => (
-                      <Pressable key={status} onPress={() => startBulkSelect(status)} style={styles.cordateActionMenuItem}>
-                        <Ionicons name="albums-outline" size={16} color={THEME_ORANGE} />
-                        <Text style={styles.cordateActionMenuText}>{status}</Text>
-                      </Pressable>
-                    ))}
-                  </View>
-                )}
               </View>
               <View style={styles.cordateHeroCopy}>
                 <Text style={styles.cordateOverline}>BIRD LIST</Text>
@@ -1130,15 +1862,15 @@ function CordateBatchDetailScreen({ areaName, birds = [], nextCordingBirdNumber,
             </SafeAreaView>
           </View>
           <View style={styles.cordateDetailBody}>
-            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 20 }}>
+            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12, zIndex: 6 }}>
               <View style={{ flex: 1, height: 48, borderRadius: 7, borderWidth: 1, borderColor: '#26373e', backgroundColor: '#081216', paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <Ionicons name="search" size={20} color="#8d999d" />
-                <TextInput value={query} onChangeText={setQuery} placeholder="Search birds or bloodline" placeholderTextColor="#879195" selectionColor={THEME_ORANGE} style={{ flex: 1, height: 46, padding: 0, color: '#e7ebec', fontSize: 12, outlineStyle: 'none' }} />
+                <TextInput value={query} onChangeText={setQuery} placeholder="Search TP, band, or bloodline" placeholderTextColor="#879195" selectionColor={THEME_ORANGE} style={{ flex: 1, height: 46, padding: 0, color: '#e7ebec', fontSize: 12, outlineStyle: 'none' }} />
                 {!!query && <Pressable onPress={() => setQuery('')}><Ionicons name="close-circle" size={18} color="#6c777b" /></Pressable>}
               </View>
-              <Pressable onPress={() => setAddModalVisible(true)} style={({ pressed }) => [{ minWidth: 100, height: 48, borderRadius: 7, backgroundColor: THEME_ORANGE, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }, pressed && styles.pressed]}>
+              <Pressable onPress={addEmptyTpSlot} style={({ pressed }) => [{ minWidth: 100, height: 48, borderRadius: 7, backgroundColor: THEME_ORANGE, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }, pressed && styles.pressed]}>
                 <Ionicons name="add" size={20} color="#fff" />
-                <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>Add Bird</Text>
+                <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>Add TP</Text>
               </Pressable>
             </View>
             <View style={styles.cordateDropdownRow}>
@@ -1175,64 +1907,122 @@ function CordateBatchDetailScreen({ areaName, birds = [], nextCordingBirdNumber,
                 )}
               </View>
             </View>
-            {bulkSelect && (
-              <View style={styles.cordateBulkPanel}>
-                <View style={styles.cordateBulkHeader}>
-                  <View>
-                    <Text style={styles.cordateBulkLabel}>CHANGE TO</Text>
-                    <Text style={styles.cordateBulkTitle}>{bulkTargetStatus}</Text>
-                  </View>
-                  <Text style={styles.cordateBulkCount}>{selectedCount} selected</Text>
-                  <View style={styles.cordateBulkHeaderActions}>
-                    <Pressable onPress={selectVisibleBirds} style={styles.cordateBulkSmallButton}>
-                      <Text style={styles.cordateBulkSmallText}>Select All</Text>
-                    </Pressable>
-                    <Pressable onPress={cancelBulkSelect} style={styles.cordateBulkSmallButton}>
-                      <Text style={styles.cordateBulkSmallText}>Cancel</Text>
-                    </Pressable>
-                  </View>
-                </View>
-                <Pressable onPress={() => applyBulkStatus(bulkTargetStatus)} style={styles.cordateBulkApplyButton}>
-                  <Text style={styles.cordateBulkApplyText}>Apply to selected birds</Text>
-                </Pressable>
-              </View>
-            )}
-            <View style={styles.cordateBirdListScreen}>
-              {visibleBirds.length ? visibleBirds.map((bird, index) => (
-                <Pressable key={getBirdKey(bird)} onPress={() => (bulkSelect ? toggleBirdSelection(bird) : onOpenBird?.(bird))} style={[styles.cordateBirdRow, selectedBirds[getBirdKey(bird)] && styles.cordateBirdRowSelected]}>
-                  <View style={[styles.cordateBirdMarker, selectedBirds[getBirdKey(bird)] && styles.cordateBirdMarkerSelected, !bulkSelect && { borderWidth: 0 }]}>
-                    {bulkSelect && selectedBirds[getBirdKey(bird)] ? (
-                      <Ionicons name="checkmark" size={24} color="#ffffff" />
-                    ) : bird.image ? (
-                      <Image source={typeof bird.image === 'string' ? { uri: bird.image } : bird.image} style={{ width: '100%', height: '100%', borderRadius: 8 }} contentFit="cover" />
-                    ) : (
-                      <Image source={{ uri: BIRDS[index % BIRDS.length]?.image || BIRDS[0].image }} style={{ width: '100%', height: '100%', borderRadius: 8 }} contentFit="cover" />
-                    )}
-                  </View>
-                  <View style={styles.cordateBirdCopy}>
-                    <View style={styles.cordateBirdTitleRow}>
-                      <Text numberOfLines={1} style={styles.cordateBirdName}>{bird.physicalId || bird.name || bird.farmBuzzId}</Text>
-                      {bird.status === 'Conditioning' && <Text numberOfLines={1} style={styles.cordateBirdStatus}>Conditioning</Text>}
+            <View style={styles.cordateLayoutPlan}>
+              {layoutSlots.map((slot) => {
+                const bird = getLayoutSlotBird(slot);
+                const birdKey = bird ? getBirdKey(bird) : null;
+                const isSelected = birdKey && selectedLayoutBird === birdKey;
+                const isDragging = birdKey && draggingLayoutBird === birdKey;
+                const dragProps = Platform.OS === 'web' ? {
+                  draggable: !!birdKey,
+                  onDragStart: (event) => {
+                    if (!birdKey) return;
+                    const dragEvent = getLayoutDragEvent(event);
+                    layoutDragActiveRef.current = true;
+                    setDraggingLayoutBird(birdKey);
+                    setSelectedLayoutBird(birdKey);
+                    dragEvent?.dataTransfer?.setData('text/plain', birdKey);
+                    if (dragEvent?.dataTransfer) dragEvent.dataTransfer.effectAllowed = 'move';
+                  },
+                  onDragOver: (event) => {
+                    const dragEvent = getLayoutDragEvent(event);
+                    dragEvent?.preventDefault?.();
+                    if (dragEvent?.dataTransfer) dragEvent.dataTransfer.dropEffect = 'move';
+                  },
+                  onDrop: (event) => {
+                    const dragEvent = getLayoutDragEvent(event);
+                    dragEvent?.preventDefault?.();
+                    dragEvent?.stopPropagation?.();
+                    const droppedBird = dragEvent?.dataTransfer?.getData('text/plain') || draggingLayoutBird;
+                    if (droppedBird) placeLayoutBird(droppedBird, slot);
+                    setSelectedLayoutBird(null);
+                    finishLayoutDrag();
+                  },
+                  onDragEnd: finishLayoutDrag,
+                } : {};
+                return (
+                  <Pressable
+                    key={slot}
+                    {...dragProps}
+                    onPress={() => moveLayoutBird(slot)}
+                    style={({ pressed }) => [
+                      styles.cordateLayoutSlot,
+                      isSelected && styles.cordateLayoutSlotSelected,
+                      draggingLayoutBird && !isDragging && styles.cordateLayoutSlotDropReady,
+                      isDragging && styles.cordateLayoutSlotDragging,
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    <View style={styles.cordateLayoutSlotTop}>
+                      <Text style={styles.cordateLayoutSlotLabel}>{slot}</Text>
+                      <Pressable
+                        onPressIn={(event) => {
+                          event?.stopPropagation?.();
+                          event?.nativeEvent?.stopPropagation?.();
+                          openLayoutSlotMenu(bird, slot);
+                        }}
+                        onPress={(event) => {
+                          event?.stopPropagation?.();
+                          event?.nativeEvent?.stopPropagation?.();
+                        }}
+                        style={({ pressed }) => [styles.cordateLayoutSlotMenu, pressed && styles.pressed]}
+                      >
+                        <Ionicons name="ellipsis-horizontal" size={14} color="#8d999d" />
+                      </Pressable>
                     </View>
-                    <Text numberOfLines={1} style={styles.cordateBirdMeta}>{bird.farmBuzzId || 'Pending'}</Text>
-                    <Text numberOfLines={1} style={styles.cordateBirdBloodline}>{bird.bloodline || 'Unassigned bloodline'}</Text>
-                  </View>
-                </Pressable>
-              )) : <Text style={styles.cordateEmptyBirds}>No birds match this view</Text>}
+                    {bird ? (
+                      <View style={[styles.cordateLayoutBirdTile, isSelected && styles.cordateLayoutBirdTileSelected, isDragging && styles.cordateLayoutBirdTileDragging]}>
+                        {bird.image ? (
+                          <Image source={typeof bird.image === 'string' ? { uri: bird.image } : bird.image} style={styles.cordateLayoutBirdPhoto} contentFit="cover" />
+                        ) : (
+                          <View style={styles.cordateLayoutBirdPhotoFallback}>
+                            <MaterialCommunityIcons name="bird" size={12} color={isSelected ? '#ffffff' : THEME_ORANGE} />
+                          </View>
+                        )}
+                        <View style={styles.cordateLayoutBirdCopy}>
+                          <Text numberOfLines={1} style={[styles.cordateLayoutBirdStatus, { color: isSelected ? '#ffffff' : cordateStatusColor(bird.status) }]}>{bird.status || 'Assigned'}</Text>
+                          <Text numberOfLines={1} style={[styles.cordateLayoutBirdMeta, isSelected && styles.cordateLayoutBirdTextSelected]}>{bird.bloodline || bird.band || 'Assigned'}</Text>
+                        </View>
+                        <Pressable
+                          onPress={(event) => {
+                            event?.stopPropagation?.();
+                            event?.nativeEvent?.stopPropagation?.();
+                            onOpenBird?.(getLayoutBirdDetailPayload(bird));
+                          }}
+                          style={({ pressed }) => [styles.cordateLayoutOpenButton, pressed && styles.pressed]}
+                        >
+                          <Ionicons name="open-outline" size={12} color={isSelected ? '#ffffff' : '#d7e0e3'} />
+                        </Pressable>
+                      </View>
+                    ) : (
+                      <Pressable
+                        onPress={(event) => {
+                          event?.stopPropagation?.();
+                          event?.nativeEvent?.stopPropagation?.();
+                          openAddTpModal(false, true, slot);
+                        }}
+                        style={({ pressed }) => [styles.cordateLayoutEmptyTpTile, pressed && styles.pressed]}
+                      >
+                        <Ionicons name="add" size={18} color={THEME_ORANGE} />
+                      </Pressable>
+                    )}
+                  </Pressable>
+                );
+              })}
             </View>
           </View>
         </View>
       </ScrollView>
-      <Modal visible={addModalVisible} transparent animationType="fade" onRequestClose={() => setAddModalVisible(false)}>
+      <Modal visible={addModalVisible} transparent animationType="fade" onRequestClose={closeAddTpModal}>
         <View style={styles.modalBackdrop}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={() => { setNewBloodlineOpen(false); setAddModalVisible(false); }} />
+          <Pressable style={StyleSheet.absoluteFill} onPress={closeAddTpModal} />
           <View style={styles.modalCard}>
             <View style={styles.modalHeader}>
               <View>
                 <Text style={styles.modalEyebrow}>CORDATE AREA</Text>
-                <Text style={styles.modalTitle}>Add Bird</Text>
+                <Text style={styles.modalTitle}>Add TP</Text>
               </View>
-              <Pressable onPress={() => { setNewBloodlineOpen(false); setAddModalVisible(false); }} style={styles.modalClose}>
+              <Pressable onPress={closeAddTpModal} style={styles.modalClose}>
                 <Ionicons name="close" size={20} color="#fff" />
               </Pressable>
             </View>
@@ -1252,11 +2042,15 @@ function CordateBatchDetailScreen({ areaName, birds = [], nextCordingBirdNumber,
                 </View>
               </View>
             </View>
-            <Text style={styles.fieldLabel}>TP Number</Text>
-            <View style={styles.inputField}>
-              <MaterialCommunityIcons name="tag-outline" size={18} color={THEME_ORANGE} />
-              <TextInput value={newTpNumber} onChangeText={setNewTpNumber} placeholder="Enter TP number" placeholderTextColor="#68777c" selectionColor={THEME_ORANGE} autoCapitalize="characters" style={styles.modalInput} />
-            </View>
+            {!addModalFillingEmptyTp && (
+              <>
+                <Text style={styles.fieldLabel}>TP Number</Text>
+                <View style={styles.inputField}>
+                  <MaterialCommunityIcons name="tag-outline" size={18} color={THEME_ORANGE} />
+                  <TextInput value={newTpNumber} onChangeText={setNewTpNumber} placeholder="Enter TP number" placeholderTextColor="#68777c" selectionColor={THEME_ORANGE} autoCapitalize="characters" style={styles.modalInput} />
+                </View>
+              </>
+            )}
             <Text style={styles.fieldLabel}>Band</Text>
             <View style={styles.inputField}>
               <MaterialCommunityIcons name="tag-multiple-outline" size={18} color={THEME_ORANGE} />
@@ -1281,15 +2075,160 @@ function CordateBatchDetailScreen({ areaName, birds = [], nextCordingBirdNumber,
               )}
             </View>
             <View style={[styles.modalActions, { marginTop: 20 }]}>
-              <Pressable onPress={() => { setNewBloodlineOpen(false); setAddModalVisible(false); }} style={styles.cancelButton}>
+              <Pressable onPress={closeAddTpModal} style={styles.cancelButton}>
                 <Text style={styles.cancelText}>Cancel</Text>
               </Pressable>
               <Pressable onPress={() => {
-                if (!newTpNumber.trim() || !newBloodline) return Alert.alert('Complete record', 'Please enter TP number and select a bloodline.');
-                onAddBirdToCordate?.({ image: newImage, tpNumber: newTpNumber.trim(), band: newBand.trim(), bloodline: newBloodline, location: areaName });
-                setNewImage(null); setNewTpNumber(''); setNewBand(''); setNewBloodline(''); setNewBloodlineOpen(false); setAddModalVisible(false);
+                const tpNumber = (addModalFillingEmptyTp ? selectedEmptyTpNumber : newTpNumber).trim();
+                if (!tpNumber || !newBloodline) return Alert.alert('Complete record', addModalFillingEmptyTp ? 'Please select a bloodline.' : 'Please enter TP number and select a bloodline.');
+                if (addModalEmptySlot) {
+                  const nextBirdKey = `FB-${String(nextCordingBirdNumber).padStart(6, '0')}`;
+                  setLayoutByBird((current) => ({ ...current, [nextBirdKey]: addModalEmptySlot }));
+                }
+                onAddBirdToCordate?.({ image: newImage, tpNumber, band: newBand.trim(), bloodline: newBloodline, location: areaName });
+                finishAddTpModal();
               }} style={styles.saveButton}>
                 <Text style={styles.saveText}>Save Bird</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+      <Modal visible={!!layoutActionBird} transparent animationType="fade" onRequestClose={closeLayoutActionMenu}>
+        <View style={styles.modalBackdrop}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={closeLayoutActionMenu} />
+          <View style={styles.cordateLayoutActionSheet}>
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={styles.modalEyebrow}>TP ACTIONS</Text>
+                <Text style={styles.modalTitle}>{layoutActionBird ? getLayoutBirdLabel(layoutActionBird) : 'Bird'}</Text>
+              </View>
+              <Pressable onPress={closeLayoutActionMenu} style={styles.modalClose}>
+                <Ionicons name="close" size={20} color="#fff" />
+              </Pressable>
+            </View>
+            <Text style={styles.cordateLayoutActionGroup}>STATUS</Text>
+            <View style={styles.cordateLayoutActionGrid}>
+              {layoutStatusActions.map((status) => (
+                <Pressable
+                  key={status}
+                  onPress={() => { setPendingLayoutStatus(status); setPendingLayoutAction(null); }}
+                  style={({ pressed }) => [
+                    styles.cordateLayoutActionButton,
+                    (pendingLayoutStatus || layoutActionBird?.status) === status && styles.cordateLayoutActionButtonActive,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <Text style={[styles.cordateLayoutActionText, (pendingLayoutStatus || layoutActionBird?.status) === status && styles.cordateLayoutActionTextActive]}>{status}</Text>
+                </Pressable>
+              ))}
+            </View>
+            <Text style={styles.cordateLayoutActionGroup}>ACTIONS</Text>
+            <View style={styles.cordateLayoutActionList}>
+              {layoutBirdActions.map((action) => (
+                <Pressable
+                  key={action.label}
+                  onPress={() => {
+                    setPendingLayoutAction(action);
+                    setPendingLayoutStatus(null);
+                  }}
+                  style={({ pressed }) => [
+                    styles.cordateLayoutActionRow,
+                    pendingLayoutAction?.label === action.label && styles.cordateLayoutActionRowActive,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <MaterialCommunityIcons name={action.icon} size={18} color={action.danger ? '#ff756b' : THEME_ORANGE} />
+                  <Text style={[styles.cordateLayoutActionRowText, pendingLayoutAction?.label === action.label && styles.cordateLayoutActionRowTextActive, action.danger && styles.cordateLayoutActionDangerText]}>{action.label}</Text>
+                </Pressable>
+              ))}
+              <Pressable
+                onPress={() => {
+                  if (layoutActionBird) onOpenBird?.(getLayoutBirdDetailPayload(layoutActionBird));
+                  closeLayoutActionMenu();
+                }}
+                style={({ pressed }) => [styles.cordateLayoutActionRow, pressed && styles.pressed]}
+              >
+                <Ionicons name="open-outline" size={18} color={THEME_ORANGE} />
+                <Text style={styles.cordateLayoutActionRowText}>View Detail</Text>
+              </Pressable>
+            </View>
+            <View style={styles.cordateLayoutActionSaveRow}>
+              <Pressable onPress={closeLayoutActionMenu} style={({ pressed }) => [styles.cordateLayoutActionCancel, pressed && styles.pressed]}>
+                <Text style={styles.cordateLayoutActionCancelText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                disabled={!pendingLayoutStatus && !pendingLayoutAction}
+                onPress={saveLayoutAction}
+                style={({ pressed }) => [
+                  styles.cordateLayoutActionSave,
+                  !pendingLayoutStatus && !pendingLayoutAction && styles.disabled,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <Text style={styles.cordateLayoutActionSaveText}>{pendingLayoutStatus === 'Loss' ? 'Add Evidence' : 'Save'}</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+      <Modal visible={layoutLossVisible} transparent animationType="fade" onRequestClose={() => setLayoutLossVisible(false)}>
+        <View style={styles.modalBackdrop}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setLayoutLossVisible(false)} />
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={styles.modalEyebrow}>TP LOSS</Text>
+                <Text style={styles.modalTitle}>Loss Evidence</Text>
+              </View>
+              <Pressable onPress={() => setLayoutLossVisible(false)} style={styles.modalClose}>
+                <Ionicons name="close" size={20} color="#fff" />
+              </Pressable>
+            </View>
+            <View style={styles.cordateLossPhotoRow}>
+              <View style={styles.cordateLossPhotoPick}>
+                <View style={styles.cordateLossPhotoPreview}>
+                  {layoutLossBirdPhoto ? <Image source={{ uri: layoutLossBirdPhoto }} style={styles.cordateLossPhotoImage} contentFit="cover" /> : <MaterialCommunityIcons name="camera-outline" size={23} color="#68777c" />}
+                  <Text style={styles.cordateLossPhotoText}>Bird Photo</Text>
+                </View>
+                <View style={styles.cordateLossPhotoActions}>
+                  <Pressable accessibilityLabel="Take bird loss photo" onPress={() => pickLayoutLossPhoto('bird', 'camera')} style={({ pressed }) => [styles.cordateLossPhotoButton, styles.cordateLossPhotoButtonPrimary, pressed && styles.pressed]}>
+                    <MaterialCommunityIcons name="camera-outline" size={13} color="#ffffff" />
+                    <Text style={styles.cordateLossPhotoButtonTextPrimary}>Take</Text>
+                  </Pressable>
+                  <Pressable accessibilityLabel="Upload bird loss photo" onPress={() => pickLayoutLossPhoto('bird', 'library')} style={({ pressed }) => [styles.cordateLossPhotoButton, pressed && styles.pressed]}>
+                    <MaterialCommunityIcons name="image-plus" size={13} color={THEME_ORANGE} />
+                    <Text style={styles.cordateLossPhotoButtonText}>Upload</Text>
+                  </Pressable>
+                </View>
+              </View>
+              <View style={styles.cordateLossPhotoPick}>
+                <View style={styles.cordateLossPhotoPreview}>
+                  {layoutLossBandPhoto ? <Image source={{ uri: layoutLossBandPhoto }} style={styles.cordateLossPhotoImage} contentFit="cover" /> : <MaterialCommunityIcons name="tag-outline" size={23} color="#68777c" />}
+                  <Text style={styles.cordateLossPhotoText}>Band Photo</Text>
+                </View>
+                <View style={styles.cordateLossPhotoActions}>
+                  <Pressable accessibilityLabel="Take band loss photo" onPress={() => pickLayoutLossPhoto('band', 'camera')} style={({ pressed }) => [styles.cordateLossPhotoButton, styles.cordateLossPhotoButtonPrimary, pressed && styles.pressed]}>
+                    <MaterialCommunityIcons name="camera-outline" size={13} color="#ffffff" />
+                    <Text style={styles.cordateLossPhotoButtonTextPrimary}>Take</Text>
+                  </Pressable>
+                  <Pressable accessibilityLabel="Upload band loss photo" onPress={() => pickLayoutLossPhoto('band', 'library')} style={({ pressed }) => [styles.cordateLossPhotoButton, pressed && styles.pressed]}>
+                    <MaterialCommunityIcons name="image-plus" size={13} color={THEME_ORANGE} />
+                    <Text style={styles.cordateLossPhotoButtonText}>Upload</Text>
+                  </Pressable>
+                </View>
+              </View>
+            </View>
+            <Text style={styles.fieldLabel}>Notes</Text>
+            <View style={styles.inputField}>
+              <TextInput value={layoutLossNote} onChangeText={setLayoutLossNote} placeholder="Fight result, opponent, or remarks" placeholderTextColor="#68777c" selectionColor={THEME_ORANGE} multiline style={[styles.modalInput, { minHeight: 58, textAlignVertical: 'top', paddingTop: 8 }]} />
+            </View>
+            <View style={[styles.modalActions, { marginTop: 16 }]}>
+              <Pressable onPress={() => setLayoutLossVisible(false)} style={styles.cancelButton}>
+                <Text style={styles.cancelText}>Cancel</Text>
+              </Pressable>
+              <Pressable onPress={saveLayoutLossReport} style={styles.saveButton}>
+                <Text style={styles.saveText}>Mark Loss</Text>
               </Pressable>
             </View>
           </View>
@@ -1305,6 +2244,7 @@ function CordateBirdDetailScreen({ bird, onBack, onChangeStatus }) {
   const [pendingStatus, setPendingStatus] = useState(null);
   const [pendingAction, setPendingAction] = useState(null);
   const [lossVisible, setLossVisible] = useState(false);
+  const [lossActionLabel, setLossActionLabel] = useState('Loss Evidence');
   const [lossBirdPhoto, setLossBirdPhoto] = useState(null);
   const [lossBandPhoto, setLossBandPhoto] = useState(null);
   const [lossNote, setLossNote] = useState('');
@@ -1340,8 +2280,22 @@ function CordateBirdDetailScreen({ bird, onBack, onChangeStatus }) {
   const birdPhotoSource = bird.image
     ? (typeof bird.image === 'string' ? { uri: bird.image } : bird.image)
     : { uri: BIRDS.find((item) => item.filter === 'stag')?.image || BIRDS[0].image };
-  const pickLossPhoto = async (target) => {
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8 });
+  const openLossReport = (actionLabel = 'Loss Evidence') => {
+    setLossActionLabel(actionLabel);
+    setStatusVisible(false);
+    setLossVisible(true);
+  };
+  const pickLossPhoto = async (target, source = 'library') => {
+    const permission = source === 'camera'
+      ? await ImagePicker.requestCameraPermissionsAsync()
+      : await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert(source === 'camera' ? 'Camera access needed' : 'Photo access needed', `Allow access to ${source === 'camera' ? 'the camera' : 'photos'} to attach loss evidence.`);
+      return;
+    }
+    const result = source === 'camera'
+      ? await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.8 })
+      : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8 });
     if (result.canceled) return;
     const uri = result.assets[0].uri;
     if (target === 'band') setLossBandPhoto(uri);
@@ -1354,17 +2308,49 @@ function CordateBirdDetailScreen({ bird, onBack, onChangeStatus }) {
       note: lossNote.trim(),
       reportedAt: new Date().toISOString(),
     };
-    onChangeStatus?.('Loss', { action: 'Fight Loss', lossReport: report, image: lossBirdPhoto || bird.image });
+    onChangeStatus?.('Loss', { action: lossActionLabel, lossReport: report, image: lossBirdPhoto || bird.image });
     setLossVisible(false);
+    setLossActionLabel('Loss Evidence');
     setLossBirdPhoto(null);
     setLossBandPhoto(null);
     setLossNote('');
   };
-  const storyEvents = [
-    { icon: 'source-branch', title: 'Source batch', detail: sourceBatch },
-    { icon: 'home-variant-outline', title: 'Current area', detail: bird.location || 'Cordate Area' },
-    { icon: 'clipboard-check-outline', title: 'Current status', detail: bird.status || 'Conditioning' },
+  const lifecycleEvents = [
+    { icon: 'egg-outline', title: 'Egg / Parents', detail: `${sireBloodline} sire - ${damBloodline} dam`, meta: bird.eggBatch || 'Egg source' },
+    { icon: 'source-branch', title: 'Source Batch', detail: sourceBatch, meta: 'Batch origin' },
+    { icon: 'heat-wave', title: 'Brooding', detail: bird.broodingBatch || bird.incubationBatch || 'Brooding record not linked yet', meta: bird.hatchDate || 'After hatch' },
+    { icon: 'leaf', title: 'Ranging', detail: bird.rangingBatch || bird.cordingEntry?.fromArea || 'Ranging source not recorded yet', meta: bird.rangingStartDate || 'Development stage' },
+    { icon: 'home-variant-outline', title: 'Cordate', detail: bird.location || 'Cordate Area', meta: bird.cordingEntry?.movedAt ? 'Moved to Cordate' : 'Current area' },
   ];
+  const vaccineEvents = vaccines.map((vaccine) => ({
+    icon: 'needle',
+    title: vaccine.name,
+    detail: vaccine.status || 'Vaccine recorded',
+    meta: vaccine.date || 'Date not recorded',
+    tag: 'Care',
+  }));
+  const actionEvents = (bird.actionHistory || []).map((event) => ({
+    icon: 'clipboard-edit-outline',
+    title: event.action || event.status || 'Bird action',
+    detail: event.status || 'Action recorded',
+    meta: event.date ? new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(event.date)) : 'Date not recorded',
+    tag: 'Action',
+  }));
+  const evidenceEvents = bird.lossReport ? [{
+    icon: 'alert-octagon-outline',
+    title: 'Loss Evidence',
+    detail: bird.lossReport.note || 'Bird and band photos recorded',
+    meta: bird.lossReport.reportedAt ? new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(bird.lossReport.reportedAt)) : 'Date not recorded',
+    tag: 'Evidence',
+  }] : [];
+  const historyEvents = [
+    ...lifecycleEvents,
+    ...vaccineEvents,
+    ...actionEvents,
+    ...evidenceEvents,
+    { icon: 'clipboard-check-outline', title: 'Current Status', detail: bird.status || 'Conditioning', meta: 'Now' },
+  ];
+  const visibleHistoryEvents = [...historyEvents].reverse();
 
   return (
     <View style={styles.cordateScreen}>
@@ -1423,41 +2409,32 @@ function CordateBirdDetailScreen({ bird, onBack, onChangeStatus }) {
             </Pressable>
             </View>
 
-            <Text style={styles.cordateStorySectionTitle}>Bird Story</Text>
-            <View style={styles.cordateStoryCard}>
-              {storyEvents.map((event, index) => (
-                <View key={event.title} style={[styles.cordateStoryRow, index < storyEvents.length - 1 && styles.cordateStoryDivider]}>
-                  <View style={styles.cordateStorySmallIcon}>
-                    <MaterialCommunityIcons name={event.icon} size={18} color={THEME_ORANGE} />
+            <View style={styles.cordateStoryHeader}>
+              <View>
+                <Text style={[styles.cordateStorySectionTitle, styles.cordateStoryToggleTitle]}>Bird History</Text>
+                <Text style={styles.cordateStoryToggleHint}>Lifecycle, vaccines, actions, and evidence</Text>
+              </View>
+            </View>
+            <View style={styles.cordateTimelineCard}>
+              {visibleHistoryEvents.map((event, index) => (
+                <View key={`${event.title}-${index}`} style={styles.cordateTimelineItem}>
+                  <View style={styles.cordateTimelineRail}>
+                    {index < visibleHistoryEvents.length - 1 && <View style={styles.cordateTimelineLine} />}
+                    <View style={[styles.cordateTimelineDot, event.tag && styles.cordateTimelineDotTagged]}>
+                      <MaterialCommunityIcons name={event.icon} size={15} color={event.tag ? '#ffffff' : THEME_ORANGE} />
+                    </View>
                   </View>
-                  <View style={styles.cordateStoryRowCopy}>
-                    <Text style={styles.cordateStoryRowTitle}>{event.title}</Text>
-                    <Text style={styles.cordateStoryRowDetail}>{event.detail}</Text>
+                  <View style={styles.cordateTimelineEvent}>
+                    <View style={styles.cordateHistoryTitleRow}>
+                      <Text style={styles.cordateTimelineTitle}>{event.title}</Text>
+                      {!!event.tag && <Text style={styles.cordateHistoryTag}>{event.tag}</Text>}
+                    </View>
+                    <Text style={styles.cordateTimelineDetail}>{event.detail}</Text>
+                    <Text style={styles.cordateHistoryMeta}>{event.meta}</Text>
                   </View>
                 </View>
               ))}
               <Text style={styles.cordateStoryNote}>{sourceNote}</Text>
-            </View>
-
-            <Text style={styles.cordateStorySectionTitle}>Vaccines & Care</Text>
-            <View style={styles.cordateStoryCard}>
-              {vaccines.length ? vaccines.map((vaccine, index) => (
-                <View key={`${vaccine.name}-${index}`} style={[styles.cordateStoryRow, index < vaccines.length - 1 && styles.cordateStoryDivider]}>
-                  <View style={styles.cordateStorySmallIcon}>
-                    <MaterialCommunityIcons name="needle" size={18} color={THEME_ORANGE} />
-                  </View>
-                  <View style={styles.cordateStoryRowCopy}>
-                    <Text style={styles.cordateStoryRowTitle}>{vaccine.name}</Text>
-                    <Text style={styles.cordateStoryRowDetail}>{vaccine.date || 'Date not recorded'}</Text>
-                  </View>
-                  <Text style={styles.cordateStoryStatus}>{vaccine.status || 'Done'}</Text>
-                </View>
-              )) : (
-                <View style={styles.cordateStoryEmpty}>
-                  <MaterialCommunityIcons name="needle-off" size={24} color="#68777c" />
-                  <Text style={styles.cordateStoryEmptyText}>No vaccine records added for this bird yet.</Text>
-                </View>
-              )}
             </View>
 
             {bird.lossReport && (
@@ -1523,14 +2500,18 @@ function CordateBirdDetailScreen({ bird, onBack, onChangeStatus }) {
                 </Pressable>
                 <Pressable disabled={!pendingStatus && !pendingAction} onPress={() => {
                   if (pendingStatus) {
+                    if (pendingStatus === 'Loss') {
+                      setPendingStatus(null);
+                      openLossReport('Loss Evidence');
+                      return;
+                    }
                     onChangeStatus?.(pendingStatus, { action: `Status set to ${pendingStatus}` });
                     setPendingStatus(null);
                     setStatusVisible(false);
                     return;
                   }
                   if (!pendingAction) return;
-                  setStatusVisible(false);
-                  if (pendingAction.loss) setLossVisible(true);
+                  if (pendingAction.loss) openLossReport(pendingAction.label);
                   else onChangeStatus?.(pendingAction.status, { action: pendingAction.label });
                   setPendingAction(null);
                 }} style={[styles.cordateStatusSaveButton, !pendingStatus && !pendingAction && styles.disabled]}>
@@ -1556,14 +2537,38 @@ function CordateBirdDetailScreen({ bird, onBack, onChangeStatus }) {
               </Pressable>
             </View>
             <View style={styles.cordateLossPhotoRow}>
-              <Pressable onPress={() => pickLossPhoto('bird')} style={styles.cordateLossPhotoPick}>
-                {lossBirdPhoto ? <Image source={{ uri: lossBirdPhoto }} style={styles.cordateLossPhotoImage} contentFit="cover" /> : <MaterialCommunityIcons name="camera-outline" size={23} color="#68777c" />}
-                <Text style={styles.cordateLossPhotoText}>Bird Photo</Text>
-              </Pressable>
-              <Pressable onPress={() => pickLossPhoto('band')} style={styles.cordateLossPhotoPick}>
-                {lossBandPhoto ? <Image source={{ uri: lossBandPhoto }} style={styles.cordateLossPhotoImage} contentFit="cover" /> : <MaterialCommunityIcons name="tag-outline" size={23} color="#68777c" />}
-                <Text style={styles.cordateLossPhotoText}>Band Photo</Text>
-              </Pressable>
+              <View style={styles.cordateLossPhotoPick}>
+                <View style={styles.cordateLossPhotoPreview}>
+                  {lossBirdPhoto ? <Image source={{ uri: lossBirdPhoto }} style={styles.cordateLossPhotoImage} contentFit="cover" /> : <MaterialCommunityIcons name="camera-outline" size={23} color="#68777c" />}
+                  <Text style={styles.cordateLossPhotoText}>Bird Photo</Text>
+                </View>
+                <View style={styles.cordateLossPhotoActions}>
+                  <Pressable accessibilityLabel="Take bird photo" onPress={() => pickLossPhoto('bird', 'camera')} style={({ pressed }) => [styles.cordateLossPhotoButton, styles.cordateLossPhotoButtonPrimary, pressed && styles.pressed]}>
+                    <MaterialCommunityIcons name="camera-outline" size={13} color="#ffffff" />
+                    <Text style={styles.cordateLossPhotoButtonTextPrimary}>Take</Text>
+                  </Pressable>
+                  <Pressable accessibilityLabel="Upload bird photo" onPress={() => pickLossPhoto('bird', 'library')} style={({ pressed }) => [styles.cordateLossPhotoButton, pressed && styles.pressed]}>
+                    <MaterialCommunityIcons name="image-plus" size={13} color={THEME_ORANGE} />
+                    <Text style={styles.cordateLossPhotoButtonText}>Upload</Text>
+                  </Pressable>
+                </View>
+              </View>
+              <View style={styles.cordateLossPhotoPick}>
+                <View style={styles.cordateLossPhotoPreview}>
+                  {lossBandPhoto ? <Image source={{ uri: lossBandPhoto }} style={styles.cordateLossPhotoImage} contentFit="cover" /> : <MaterialCommunityIcons name="tag-outline" size={23} color="#68777c" />}
+                  <Text style={styles.cordateLossPhotoText}>Band Photo</Text>
+                </View>
+                <View style={styles.cordateLossPhotoActions}>
+                  <Pressable accessibilityLabel="Take band photo" onPress={() => pickLossPhoto('band', 'camera')} style={({ pressed }) => [styles.cordateLossPhotoButton, styles.cordateLossPhotoButtonPrimary, pressed && styles.pressed]}>
+                    <MaterialCommunityIcons name="camera-outline" size={13} color="#ffffff" />
+                    <Text style={styles.cordateLossPhotoButtonTextPrimary}>Take</Text>
+                  </Pressable>
+                  <Pressable accessibilityLabel="Upload band photo" onPress={() => pickLossPhoto('band', 'library')} style={({ pressed }) => [styles.cordateLossPhotoButton, pressed && styles.pressed]}>
+                    <MaterialCommunityIcons name="image-plus" size={13} color={THEME_ORANGE} />
+                    <Text style={styles.cordateLossPhotoButtonText}>Upload</Text>
+                  </Pressable>
+                </View>
+              </View>
             </View>
             <Text style={styles.fieldLabel}>Notes</Text>
             <View style={styles.inputField}>
@@ -1610,7 +2615,7 @@ function CordateBirdDetailScreen({ bird, onBack, onChangeStatus }) {
           </View>
         </View>
       </Modal>
-    </View>
+      </View>
   );
 }
 
@@ -1709,17 +2714,24 @@ function AddFamilyBatchScreen({ farm, onBack }) {
               </View>
               <View style={styles.batchSetupHeroCopy}>
                 <Text style={[styles.blankIncubationFarmName, compact && styles.blankIncubationFarmNameNarrow]}>{farm?.name || 'FB Farm'}</Text>
-                <Text style={styles.blankIncubationTagline}>Set the family structure and bloodlines for this egg batch.</Text>
+                <Text style={styles.blankIncubationTagline}>Create a new incubation batch and assign its egg details.</Text>
+                <View style={styles.blankIncubationMeta}>
+                  <View style={styles.blankIncubationMetaItem}>
+                    <Ionicons name="location-outline" size={16} color="#c0c7c9" />
+                    <Text style={styles.blankIncubationMetaText}>{farm?.location || 'Pampanga, Philippines'}</Text>
+                  </View>
+                  <View style={styles.blankIncubationMetaDivider} />
+                  <View style={styles.blankIncubationMetaItem}>
+                    <Ionicons name="calendar-outline" size={16} color="#c0c7c9" />
+                    <Text style={styles.blankIncubationMetaText}>Est. {farm?.established || '2020'}</Text>
+                  </View>
+                </View>
               </View>
             </SafeAreaView>
           </View>
 
           <View style={[styles.batchSetupForm, compact && styles.batchSetupFormCompact]}>
-            <Text style={styles.blankIncubationEyebrow}>BATCH FAMILY</Text>
-            <Text style={styles.batchSetupTitle}>Parents in this batch</Text>
-            <Text style={styles.batchSetupDescription}>Choose how many sires and dams are included, then assign each bird's bloodline.</Text>
-
-            <View style={styles.batchSetupDetailsSection}>
+            <View style={[styles.batchSetupDetailsSection, styles.batchSetupDetailsSectionFirst]}>
               <Text style={styles.batchSetupSectionTitle}>Batch details</Text>
               <View style={styles.batchSetupDetailsRow}>
                 <View style={styles.batchSetupTextField}>
@@ -1813,6 +2825,221 @@ function AddFamilyBatchScreen({ farm, onBack }) {
             <Pressable accessibilityRole="button" accessibilityLabel="Save egg batch" onPress={saveBatch} style={({ pressed }) => [styles.batchSetupSaveButton, pressed && styles.pressed]}>
               <MaterialCommunityIcons name="content-save-outline" size={20} color="#ffffff" />
               <Text style={styles.batchSetupSaveText}>Save Batch</Text>
+            </Pressable>
+          </View>
+        </View>
+      </ScrollView>
+    </View>
+  );
+}
+
+function KennelDogPairChoice({ dog, role, selected, onPress }) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`Select ${dog.name || dog.id} as ${role}`}
+      onPress={onPress}
+      style={({ pressed }) => [styles.kennelPairChoice, selected && styles.kennelPairChoiceActive, pressed && styles.pressed]}
+    >
+      <Image source={dog.image} style={styles.kennelPairChoiceImage} contentFit="cover" contentPosition="center" cachePolicy="memory-disk" />
+      <View style={styles.kennelPairChoiceCopy}>
+        <Text numberOfLines={1} style={styles.kennelPairChoiceName}>{dog.name || dog.id}</Text>
+        <Text numberOfLines={1} style={styles.kennelPairChoiceMeta}>{dog.bloodline}</Text>
+      </View>
+      <View style={[styles.kennelPairChoiceCheck, selected && styles.kennelPairChoiceCheckActive]}>
+        {selected && <Ionicons name="checkmark" size={14} color="#ffffff" />}
+      </View>
+    </Pressable>
+  );
+}
+
+function KennelDogSearchPanel({ title, icon, placeholder, dogs, query, onChangeQuery, selectedId, onSelect, compact }) {
+  const normalizedQuery = query.trim().toLowerCase();
+  const hasQuery = normalizedQuery.length > 0;
+  const selectedDog = dogs.find((dog) => dog.id === selectedId);
+  const suggestions = hasQuery
+    ? dogs.filter((dog) => `${dog.id} ${dog.name} ${dog.sex} ${dog.bloodline} ${dog.status}`.toLowerCase().includes(normalizedQuery))
+    : selectedDog ? [selectedDog] : [];
+  const chooseDog = (dogId) => {
+    onSelect(dogId);
+    onChangeQuery('');
+  };
+
+  return (
+    <View style={[styles.kennelPairSearchPanel, compact && styles.kennelPairSearchPanelCompact]}>
+      <View style={styles.kennelPairSearchHeader}>
+        <View style={styles.kennelPairSearchTitleRow}>
+          <MaterialCommunityIcons name={icon} size={18} color={KENNEL_PURPLE} />
+          <Text style={styles.kennelPairSearchTitle}>{title}</Text>
+        </View>
+        <Text style={styles.kennelPairSearchCount}>{hasQuery ? `${suggestions.length} found` : selectedDog ? 'Selected' : 'Search'}</Text>
+      </View>
+      <View style={[styles.batchSetupInputShell, styles.kennelBatchInputShell, styles.kennelPairSearchShell]}>
+        <Ionicons name="search" size={18} color="#8aa0a8" />
+        <TextInput
+          value={query}
+          onChangeText={onChangeQuery}
+          placeholder={placeholder}
+          placeholderTextColor="#69777c"
+          selectionColor={KENNEL_PURPLE}
+          style={styles.batchSetupTextInput}
+        />
+      </View>
+      <View style={styles.kennelPairSuggestionList}>
+        {suggestions.map((dog) => (
+          <KennelDogPairChoice key={dog.id} dog={dog} role={title.toLowerCase()} selected={selectedId === dog.id} onPress={() => chooseDog(dog.id)} />
+        ))}
+        {hasQuery && !suggestions.length && (
+          <View style={styles.kennelPairEmptySuggestion}>
+            <MaterialCommunityIcons name="dog-side" size={22} color="#6f7d82" />
+            <Text style={styles.kennelPairEmptyText}>No dog found</Text>
+          </View>
+        )}
+      </View>
+    </View>
+  );
+}
+
+function formatKennelToday() {
+  return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date());
+}
+
+function KennelAddPairScreen({ kennel, onBack }) {
+  const { width } = useWindowDimensions();
+  const compact = width < 480;
+  const sires = KENNEL_DOGS.filter((dog) => dog.sex === 'Male');
+  const dams = KENNEL_DOGS.filter((dog) => dog.sex === 'Female');
+  const [selectedSireId, setSelectedSireId] = useState(sires[0]?.id || '');
+  const [selectedDamId, setSelectedDamId] = useState(dams[0]?.id || '');
+  const selectedSire = sires.find((dog) => dog.id === selectedSireId) || sires[0];
+  const selectedDam = dams.find((dog) => dog.id === selectedDamId) || dams[0];
+  const defaultTitle = selectedSire && selectedDam ? `${selectedSire.name || selectedSire.id} x ${selectedDam.name || selectedDam.id}` : '';
+  const [pairTitle, setPairTitle] = useState('');
+  const [startDate, setStartDate] = useState(formatKennelToday());
+  const [sireQuery, setSireQuery] = useState('');
+  const [damQuery, setDamQuery] = useState('');
+
+  const savePair = () => {
+    if (!startDate.trim()) {
+      Alert.alert('Start date required', 'Enter the start date for this pair.');
+      return;
+    }
+    if (!selectedSire || !selectedDam) {
+      Alert.alert('Parents required', 'Select at least one sire and one dam.');
+      return;
+    }
+
+    Alert.alert(
+      'Pair created',
+      `${pairTitle.trim() || defaultTitle} starts on ${startDate}.`,
+      [{ text: 'OK', onPress: onBack }],
+    );
+  };
+
+  return (
+    <View style={styles.screen}>
+      <StatusBar style="light" translucent backgroundColor="transparent" />
+      <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        <View style={styles.page}>
+          <View style={[styles.batchSetupHero, compact && styles.batchSetupHeroCompact]}>
+            <Image source={DOBERMAN_KENNEL_BANNER_IMAGE} style={StyleSheet.absoluteFill} contentFit="cover" contentPosition="center" cachePolicy="memory-disk" />
+            <LinearGradient colors={['rgba(8,5,18,0.14)', 'rgba(8,5,18,0.42)', '#020709']} locations={[0, 0.52, 1]} style={StyleSheet.absoluteFill} />
+            <SafeAreaView edges={['top']} style={styles.heroSafeArea}>
+              <View style={styles.blankIncubationHeader}>
+                <IconButton icon="arrow-back" label="Back to breeding plans" onPress={onBack} />
+                <Text style={styles.blankIncubationScreenTitle}>Add Pair</Text>
+              </View>
+              <View style={styles.batchSetupHeroCopy}>
+                <Text style={[styles.blankIncubationFarmName, compact && styles.blankIncubationFarmNameNarrow]}>{kennel?.name || 'Main Kennel'}</Text>
+                <Text style={styles.blankIncubationTagline}>Create a breeding pair by choosing one sire and one dam.</Text>
+                <View style={styles.blankIncubationMeta}>
+                  <View style={styles.blankIncubationMetaItem}>
+                    <Ionicons name="location-outline" size={16} color="#c0c7c9" />
+                    <Text style={styles.blankIncubationMetaText}>{kennel?.location || 'Pampanga, Philippines'}</Text>
+                  </View>
+                  <View style={styles.blankIncubationMetaDivider} />
+                  <View style={styles.blankIncubationMetaItem}>
+                    <MaterialCommunityIcons name="dog" size={16} color="#c0c7c9" />
+                    <Text style={styles.blankIncubationMetaText}>Kennel pair</Text>
+                  </View>
+                </View>
+              </View>
+            </SafeAreaView>
+          </View>
+
+          <View style={[styles.batchSetupForm, compact && styles.batchSetupFormCompact]}>
+            <View style={[styles.batchSetupDetailsSection, styles.batchSetupDetailsSectionFirst]}>
+              <Text style={styles.batchSetupSectionTitle}>Pair details</Text>
+              <View style={styles.batchSetupDetailsRow}>
+                <View style={styles.batchSetupTextField}>
+                  <Text style={styles.batchSetupFieldLabel}>PAIR NAME / TITLE</Text>
+                  <View style={[styles.batchSetupInputShell, styles.kennelBatchInputShell]}>
+                    <MaterialCommunityIcons name="tag-outline" size={18} color={KENNEL_PURPLE} />
+                    <TextInput value={pairTitle} onChangeText={setPairTitle} placeholder={defaultTitle || 'e.g. Bruno x Bella'} placeholderTextColor="#69777c" selectionColor={KENNEL_PURPLE} style={styles.batchSetupTextInput} />
+                  </View>
+                </View>
+                <View style={styles.batchSetupTextField}>
+                  <Text style={styles.batchSetupFieldLabel}>START DATE</Text>
+                  <View style={[styles.batchSetupInputShell, styles.kennelBatchInputShell]}>
+                    <Ionicons name="calendar-outline" size={18} color={KENNEL_PURPLE} />
+                    <TextInput value={startDate} onChangeText={setStartDate} placeholder={formatKennelToday()} placeholderTextColor="#69777c" selectionColor={KENNEL_PURPLE} style={styles.batchSetupTextInput} />
+                  </View>
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.batchSetupDetailsSection}>
+              <Text style={styles.batchSetupSectionTitle}>Pair preview</Text>
+              <View style={styles.kennelPairPreview}>
+                <View style={styles.kennelPairPreviewDog}>
+                  <Image source={selectedSire?.image || KENNEL_MAIN_THUMBNAIL_IMAGE} style={styles.kennelPairPreviewImage} contentFit="cover" contentPosition="center" cachePolicy="memory-disk" />
+                  <Text style={styles.kennelPairPreviewRole}>SIRE</Text>
+                  <Text numberOfLines={1} style={styles.kennelPairPreviewName}>{selectedSire?.name || selectedSire?.id || 'Select sire'}</Text>
+                  <Text numberOfLines={1} style={styles.kennelPairPreviewMeta}>{selectedSire?.bloodline || 'Bloodline'}</Text>
+                </View>
+                <View style={styles.kennelPairLink}>
+                  <MaterialCommunityIcons name="heart-pulse" size={24} color={KENNEL_PURPLE} />
+                </View>
+                <View style={styles.kennelPairPreviewDog}>
+                  <Image source={selectedDam?.image || KENNEL_BREEDING_THUMBNAIL_IMAGE} style={styles.kennelPairPreviewImage} contentFit="cover" contentPosition="center" cachePolicy="memory-disk" />
+                  <Text style={styles.kennelPairPreviewRole}>DAM</Text>
+                  <Text numberOfLines={1} style={styles.kennelPairPreviewName}>{selectedDam?.name || selectedDam?.id || 'Select dam'}</Text>
+                  <Text numberOfLines={1} style={styles.kennelPairPreviewMeta}>{selectedDam?.bloodline || 'Bloodline'}</Text>
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.batchSetupDetailsSection}>
+              <Text style={styles.batchSetupSectionTitle}>Select parents</Text>
+              <View style={[styles.kennelPairSearchColumns, compact && styles.kennelPairSearchColumnsCompact]}>
+                <KennelDogSearchPanel
+                  title="Sire"
+                  icon="gender-male"
+                  placeholder="Search sire by name, ID, or bloodline"
+                  dogs={sires}
+                  query={sireQuery}
+                  onChangeQuery={setSireQuery}
+                  selectedId={selectedSireId}
+                  onSelect={setSelectedSireId}
+                  compact={compact}
+                />
+                <KennelDogSearchPanel
+                  title="Dam"
+                  icon="gender-female"
+                  placeholder="Search dam by name, ID, or bloodline"
+                  dogs={dams}
+                  query={damQuery}
+                  onChangeQuery={setDamQuery}
+                  selectedId={selectedDamId}
+                  onSelect={setSelectedDamId}
+                  compact={compact}
+                />
+              </View>
+            </View>
+
+            <Pressable accessibilityRole="button" accessibilityLabel="Create kennel breeding pair" onPress={savePair} style={({ pressed }) => [styles.batchSetupSaveButton, styles.kennelBatchSaveButton, pressed && styles.pressed]}>
+              <MaterialCommunityIcons name="content-save-outline" size={20} color="#ffffff" />
+              <Text style={styles.batchSetupSaveText}>Create Pair</Text>
             </Pressable>
           </View>
         </View>
@@ -1925,60 +3152,67 @@ function BlankIncubationScreen({ farm, onBack, onAddBatch, onOpenBatch, onAddTas
             </View>
 
             <View style={styles.blankIncubationBatchList}>
-              {visibleBatches.map((batch) => (
-                <Pressable
-                  key={batch.id}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Open ${batch.name}`}
-                  onPress={() => onOpenBatch(batch.id)}
-                  style={({ pressed }) => [styles.blankIncubationBatchCard, pressed && styles.pressed]}
-                >
-                  <View style={styles.blankIncubationBatchHeader}>
-                    <View style={styles.blankIncubationBatchIdentity}>
-                      <View style={styles.blankIncubationBatchIcon}>
-                        <MaterialCommunityIcons name="egg-outline" size={21} color={THEME_ORANGE} />
-                      </View>
-                      <View>
-                        <Text style={styles.blankIncubationBatchName}>{batch.name}</Text>
-                        <Text style={styles.blankIncubationBatchId}>{batch.id}</Text>
-                      </View>
-                    </View>
-                    <View style={styles.blankIncubationChickenCount}>
-                      <Text style={styles.blankIncubationChickenCountValue}>{batch.count}</Text>
-                      <Text style={styles.blankIncubationChickenCountLabel}>eggs</Text>
-                    </View>
-                  </View>
+              {visibleBatches.map((batch) => {
+                const incubationBatch = INCUBATION_BATCHES.find((item) => item.id === batch.incubationBatchId);
+                const dayNumber = incubationBatch?.dayNumber ?? batch.dayNumber ?? 0;
+                const batchStatus = batch.status || incubationBatch?.status || 'Incubating';
 
-                  <View style={styles.blankIncubationFamilyTree}>
-                    <View style={[styles.blankIncubationFamilyNode, styles.blankIncubationSireNode]}>
-                      <View style={styles.blankIncubationLineageLabelRow}>
-                        <MaterialCommunityIcons name="gender-male" size={15} color={THEME_ORANGE} />
-                        <Text style={styles.blankIncubationLineageLabel}>SIRE</Text>
-                      </View>
-                      <Text style={styles.blankIncubationLineageValue}>{batch.sire}</Text>
-                    </View>
-                    <View style={styles.blankIncubationTreeConnector}>
-                      <View style={styles.blankIncubationTreeStem} />
-                      <View style={styles.blankIncubationTreeTrunk} />
-                    </View>
-                    <View style={styles.blankIncubationDamList}>
-                      {batch.dams.map((dam, index) => (
-                        <View key={`${batch.id}-${dam}`} style={styles.blankIncubationDamBranch}>
-                          <View style={styles.blankIncubationDamBranchLine} />
-                          <View style={styles.blankIncubationFamilyNode}>
-                            <View style={styles.blankIncubationLineageLabelRow}>
-                              <MaterialCommunityIcons name="gender-female" size={14} color={THEME_ORANGE} />
-                              <Text style={styles.blankIncubationLineageLabel}>DAM {index + 1}</Text>
-                            </View>
-                            <Text style={styles.blankIncubationLineageValue}>{dam}</Text>
-                          </View>
+                return (
+                  <Pressable
+                    key={batch.id}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Open ${batch.name}, ${batchStatus}`}
+                    onPress={() => onOpenBatch(batch.id)}
+                    style={({ pressed }) => [styles.blankIncubationBatchCard, pressed && styles.pressed]}
+                  >
+                    <View style={styles.blankIncubationBatchHeader}>
+                      <View style={styles.blankIncubationBatchIdentity}>
+                        <View style={styles.blankIncubationBatchIcon}>
+                          <Text style={styles.blankIncubationBatchIconLabel}>DAY</Text>
+                          <Text style={styles.blankIncubationBatchIconValue}>{dayNumber}</Text>
                         </View>
-                      ))}
+                        <View>
+                          <Text style={styles.blankIncubationBatchName}>{batch.name}</Text>
+                          <Text style={[styles.blankIncubationBatchId, { color: incubationStatusColor(batchStatus) }]}>{batchStatus}</Text>
+                        </View>
+                      </View>
+                      <View style={styles.blankIncubationChickenCount}>
+                        <Text style={styles.blankIncubationChickenCountValue}>{batch.count}</Text>
+                        <Text style={styles.blankIncubationChickenCountLabel}>eggs</Text>
+                      </View>
                     </View>
-                  </View>
 
-                </Pressable>
-              ))}
+                    <View style={styles.blankIncubationFamilyTree}>
+                      <View style={[styles.blankIncubationFamilyNode, styles.blankIncubationSireNode]}>
+                        <View style={styles.blankIncubationLineageLabelRow}>
+                          <MaterialCommunityIcons name="gender-male" size={15} color={THEME_ORANGE} />
+                          <Text style={styles.blankIncubationLineageLabel}>SIRE</Text>
+                        </View>
+                        <Text style={styles.blankIncubationLineageValue}>{batch.sire}</Text>
+                      </View>
+                      <View style={styles.blankIncubationTreeConnector}>
+                        <View style={styles.blankIncubationTreeStem} />
+                        <View style={styles.blankIncubationTreeTrunk} />
+                      </View>
+                      <View style={styles.blankIncubationDamList}>
+                        {batch.dams.map((dam, index) => (
+                          <View key={`${batch.id}-${dam}`} style={styles.blankIncubationDamBranch}>
+                            <View style={styles.blankIncubationDamBranchLine} />
+                            <View style={styles.blankIncubationFamilyNode}>
+                              <View style={styles.blankIncubationLineageLabelRow}>
+                                <MaterialCommunityIcons name="gender-female" size={14} color={THEME_ORANGE} />
+                                <Text style={styles.blankIncubationLineageLabel}>DAM {index + 1}</Text>
+                              </View>
+                              <Text style={styles.blankIncubationLineageValue}>{dam}</Text>
+                            </View>
+                          </View>
+                        ))}
+                      </View>
+                    </View>
+
+                  </Pressable>
+                );
+              })}
               {!visibleBatches.length && <Text style={styles.blankIncubationEmptyText}>No batches found</Text>}
             </View>
           </View>
@@ -2029,13 +3263,13 @@ function BlankIncubationScreen({ farm, onBack, onAddBatch, onOpenBatch, onAddTas
   );
 }
 
-function SetupField({ icon, label, value, onChangeText, placeholder, keyboardType, trailingIcon, wide }) {
+function SetupField({ icon, label, value, onChangeText, placeholder, keyboardType, trailingIcon, wide, accentColor = THEME_ORANGE }) {
   const [focused, setFocused] = useState(false);
   return (
     <View style={[styles.setupField, wide && styles.setupFieldWide]}>
-      <Text style={styles.setupFieldLabel}>{label}</Text>
-      <View style={[styles.setupFieldCopy, focused && styles.setupFieldFocused]}>
-        <MaterialCommunityIcons name={icon} size={19} color={focused ? THEME_ORANGE : '#ff8a16'} />
+      {!!label && <Text style={styles.setupFieldLabel}>{label}</Text>}
+      <View style={[styles.setupFieldCopy, focused && styles.setupFieldFocused, focused && { borderColor: accentColor }]}>
+        <MaterialCommunityIcons name={icon} size={19} color={accentColor} />
         <TextInput
           accessibilityLabel={label}
           onFocus={() => setFocused(true)}
@@ -2045,33 +3279,12 @@ function SetupField({ icon, label, value, onChangeText, placeholder, keyboardTyp
           placeholder={placeholder}
           placeholderTextColor="#6f7b7f"
           keyboardType={keyboardType}
-          selectionColor={THEME_ORANGE}
+          selectionColor={accentColor}
           style={styles.setupInput}
         />
         {!!trailingIcon && <Ionicons name={trailingIcon} size={16} color="#7f8a8d" />}
       </View>
     </View>
-  );
-}
-
-function VisibilityOption({ icon, title, description, selected, onPress }) {
-  return (
-    <Pressable
-      accessibilityRole="radio"
-      accessibilityState={{ checked: selected }}
-      accessibilityLabel={`${title} farm visibility`}
-      onPress={onPress}
-      style={({ pressed }) => [styles.visibilityOption, selected && styles.visibilityOptionActive, pressed && styles.pressed]}
-    >
-      <View style={[styles.visibilityRadio, selected && styles.visibilityRadioActive]} />
-      <View style={styles.visibilityIcon}>
-        <MaterialCommunityIcons name={icon} size={20} color={selected ? THEME_ORANGE : '#b9c1c4'} />
-      </View>
-      <View style={styles.visibilityCopy}>
-        <Text style={styles.visibilityTitle}>{title}</Text>
-        <Text numberOfLines={2} style={styles.visibilityDescription}>{description}</Text>
-      </View>
-    </Pressable>
   );
 }
 
@@ -2082,9 +3295,9 @@ function FarmSetupScreen({ onBack }) {
   const [farmName, setFarmName] = useState('');
   const [location, setLocation] = useState('');
   const [establishedYear, setEstablishedYear] = useState('');
+  const [farmRole, setFarmRole] = useState('');
   const [bannerUri, setBannerUri] = useState(null);
   const [bannerError, setBannerError] = useState('');
-  const [visibility, setVisibility] = useState('published');
   const assignedMembers = [MEMBERS[2], MEMBERS[0]];
 
   const chooseBanner = async () => {
@@ -2099,8 +3312,7 @@ function FarmSetupScreen({ onBack }) {
     }
   };
 
-  const saveDraft = () => Alert.alert('Draft saved', 'Your farm setup draft is ready to continue later.');
-  const createFarm = () => Alert.alert('Create farm', 'We will connect this farm setup flow later.');
+  const createFarm = () => Alert.alert('Create farm', `${farmName || 'New farm'} will be created${farmRole.trim() ? ` as ${farmRole.trim()}` : ''}.`);
 
   return (
     <View style={[styles.screen, styles.setupScreen]}>
@@ -2122,7 +3334,7 @@ function FarmSetupScreen({ onBack }) {
               <View style={[styles.setupIntro, narrow && styles.setupIntroNarrow]}>
                 <Text style={styles.heroEyebrow}>FARM SETUP</Text>
                 <Text style={[styles.setupIntroTitle, compact && styles.setupIntroTitleCompact, narrow && styles.setupIntroTitleNarrow]}>Set Up Your Farm</Text>
-                <Text style={[styles.setupIntroText, narrow && styles.setupIntroTextNarrow]}>Create your farm profile. You can save it as a draft and finish it later.</Text>
+                <Text style={[styles.setupIntroText, narrow && styles.setupIntroTextNarrow]}>Create your farm profile and invite your team to manage it.</Text>
               </View>
             </SafeAreaView>
           </View>
@@ -2187,6 +3399,17 @@ function FarmSetupScreen({ onBack }) {
             <View style={styles.setupPanel}>
               <View style={styles.setupSectionHeader}>
                 <View>
+                  <Text style={styles.setupSectionTitle}>Farm Type</Text>
+                </View>
+              </View>
+              <View style={styles.setupFieldGrid}>
+                <SetupField icon="tag-outline" label="" value={farmRole} onChangeText={setFarmRole} placeholder="Main farm, branch, breeding, etc." wide />
+              </View>
+            </View>
+
+            <View style={styles.setupPanel}>
+              <View style={styles.setupSectionHeader}>
+                <View>
                   <Text style={styles.setupSectionKicker}>Access</Text>
                   <Text style={styles.setupSectionTitle}>Assign Team</Text>
                 </View>
@@ -2214,37 +3437,170 @@ function FarmSetupScreen({ onBack }) {
               </Pressable>
             </View>
 
+            <View style={styles.setupActions}>
+              <Pressable accessibilityRole="button" accessibilityLabel="Create farm" onPress={createFarm} style={({ pressed }) => [styles.setupPrimaryButton, pressed && styles.pressed]}>
+                <Text style={styles.setupPrimaryText}>Create Farm</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </ScrollView>
+    </View>
+  );
+}
+
+function KennelSetupScreen({ onBack }) {
+  const { width } = useWindowDimensions();
+  const compact = width < 480;
+  const narrow = width < 390;
+  const [kennelName, setKennelName] = useState('');
+  const [location, setLocation] = useState('');
+  const [establishedYear, setEstablishedYear] = useState('');
+  const [kennelRole, setKennelRole] = useState('');
+  const [bannerUri, setBannerUri] = useState(null);
+  const [bannerError, setBannerError] = useState('');
+  const assignedMembers = [MEMBERS[2], MEMBERS[0]];
+
+  const chooseBanner = async () => {
+    setBannerError('');
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.9 });
+      if (!result.canceled && result.assets?.[0]?.uri) {
+        setBannerUri(result.assets[0].uri);
+      }
+    } catch {
+      setBannerError('Unable to open this photo. Please try again.');
+    }
+  };
+
+  const createKennel = () => Alert.alert('Create kennel', `${kennelName || 'New kennel'} will be created${kennelRole.trim() ? ` as ${kennelRole.trim()}` : ''}.`);
+
+  return (
+    <View style={[styles.screen, styles.setupScreen]}>
+      <StatusBar style="light" translucent backgroundColor="transparent" />
+      <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        <View style={styles.setupPage}>
+          <View style={[styles.setupHeroShell, compact && styles.setupHeroCompact]}>
+            <Image source={DOBERMAN_KENNEL_BANNER_IMAGE} style={StyleSheet.absoluteFill} contentFit="cover" contentPosition="center" cachePolicy="memory-disk" />
+            <LinearGradient
+              colors={['rgba(8,5,18,0.14)', 'rgba(8,5,18,0.46)', 'rgba(2,7,9,0.96)']}
+              locations={[0, 0.42, 1]}
+              style={StyleSheet.absoluteFill}
+            />
+            <SafeAreaView edges={['top']} style={styles.setupHeroContent}>
+              <View style={[styles.setupHeroHeader, narrow && styles.setupHeroHeaderNarrow]}>
+                <IconButton icon="arrow-back" label="Back" compact={narrow} onPress={onBack} />
+                <View style={styles.topBarSpacer} />
+              </View>
+              <View style={[styles.setupIntro, narrow && styles.setupIntroNarrow]}>
+                <Text style={[styles.heroEyebrow, { color: KENNEL_PURPLE }]}>KENNEL SETUP</Text>
+                <Text style={[styles.setupIntroTitle, compact && styles.setupIntroTitleCompact, narrow && styles.setupIntroTitleNarrow]}>Set Up Your Kennel</Text>
+                <Text style={[styles.setupIntroText, narrow && styles.setupIntroTextNarrow]}>Create your kennel profile and invite your team to manage it.</Text>
+              </View>
+            </SafeAreaView>
+          </View>
+
+          <View style={[styles.setupBody, narrow && styles.contentNarrow]}>
             <View style={styles.setupPanel}>
               <View style={styles.setupSectionHeader}>
                 <View>
-                  <Text style={styles.setupSectionKicker}>Publishing</Text>
-                  <Text style={styles.setupSectionTitle}>Farm Visibility</Text>
+                  <Text style={[styles.setupSectionKicker, { color: KENNEL_PURPLE }]}>Identity</Text>
+                  <Text style={styles.setupSectionTitle}>Kennel Banner</Text>
+                </View>
+                <Text style={styles.setupOptional}>1280 x 720 recommended</Text>
+              </View>
+
+              <View style={styles.setupBannerPreview}>
+                <Image
+                  source={bannerUri ? { uri: bannerUri } : DOBERMAN_KENNEL_BANNER_IMAGE}
+                  style={StyleSheet.absoluteFill}
+                  contentFit="cover"
+                  contentPosition="center"
+                  transition={300}
+                  cachePolicy="memory-disk"
+                  onError={() => {
+                    setBannerUri(null);
+                    setBannerError('This photo could not be displayed. Please choose another.');
+                  }}
+                />
+                <LinearGradient
+                  colors={['rgba(8, 5, 18, 0.18)', 'rgba(2,7,9,0.86)']}
+                  style={StyleSheet.absoluteFill}
+                />
+                <Pressable accessibilityRole="button" accessibilityLabel={bannerUri ? 'Change kennel banner' : 'Upload kennel banner'} onPress={chooseBanner} style={({ pressed }) => [styles.setupBannerUpload, pressed && styles.pressed]}>
+                  <View style={[styles.setupBannerUploadIcon, { backgroundColor: KENNEL_PURPLE_TINT }]}>
+                    <MaterialCommunityIcons name="image-plus" size={26} color={KENNEL_PURPLE} />
+                  </View>
+                  <Text style={styles.setupBannerUploadTitle}>{bannerUri ? 'Change kennel banner' : 'Upload kennel banner'}</Text>
+                  <Text style={styles.setupBannerUploadMeta}>JPG, PNG up to 5MB</Text>
+                </Pressable>
+                {bannerUri && (
+                  <Pressable accessibilityRole="button" accessibilityLabel="Remove banner" onPress={() => { setBannerUri(null); setBannerError(''); }} style={({ pressed }) => [styles.setupRemoveBanner, pressed && styles.pressed]}>
+                    <Ionicons name="close" size={17} color="#ffffff" />
+                  </Pressable>
+                )}
+              </View>
+              {!!bannerError && <Text accessibilityRole="alert" style={styles.setupBannerError}>{bannerError}</Text>}
+            </View>
+
+            <View style={styles.setupPanel}>
+              <View style={styles.setupSectionHeader}>
+                <View>
+                  <Text style={[styles.setupSectionKicker, { color: KENNEL_PURPLE }]}>Basics</Text>
+                  <Text style={styles.setupSectionTitle}>Kennel Details</Text>
                 </View>
               </View>
-              <View style={styles.visibilityGrid}>
-                <VisibilityOption
-                  icon="lock"
-                  title="Draft"
-                  description="Only you and your team can access it"
-                  selected={visibility === 'draft'}
-                  onPress={() => setVisibility('draft')}
-                />
-                <VisibilityOption
-                  icon="account-group"
-                  title="Published"
-                  description="Showcase is visible to FarmBuzz users"
-                  selected={visibility === 'published'}
-                  onPress={() => setVisibility('published')}
-                />
+              <View style={styles.setupFieldGrid}>
+                <SetupField icon="dog" label="Kennel Name" value={kennelName} onChangeText={setKennelName} placeholder="Enter kennel name" accentColor={KENNEL_PURPLE} wide />
+                <SetupField icon="map-marker-outline" label="Location" value={location} onChangeText={setLocation} placeholder="City / Province / Country" accentColor={KENNEL_PURPLE} wide />
+                <SetupField icon="calendar-blank-outline" label="Established" value={establishedYear} onChangeText={setEstablishedYear} placeholder="Select year" keyboardType="number-pad" trailingIcon="chevron-down" accentColor={KENNEL_PURPLE} wide />
               </View>
             </View>
 
-            <View style={styles.setupActions}>
-              <Pressable accessibilityRole="button" accessibilityLabel="Save as draft" onPress={saveDraft} style={({ pressed }) => [styles.setupSecondaryButton, pressed && styles.pressed]}>
-                <Text style={styles.setupSecondaryText}>Save as Draft</Text>
+            <View style={styles.setupPanel}>
+              <View style={styles.setupSectionHeader}>
+                <View>
+                  <Text style={styles.setupSectionTitle}>Kennel Type</Text>
+                </View>
+              </View>
+              <View style={styles.setupFieldGrid}>
+                <SetupField icon="tag-outline" label="" value={kennelRole} onChangeText={setKennelRole} placeholder="Main kennel, training, breeding, etc." accentColor={KENNEL_PURPLE} wide />
+              </View>
+            </View>
+
+            <View style={styles.setupPanel}>
+              <View style={styles.setupSectionHeader}>
+                <View>
+                  <Text style={[styles.setupSectionKicker, { color: KENNEL_PURPLE }]}>Access</Text>
+                  <Text style={styles.setupSectionTitle}>Assign Team</Text>
+                </View>
+              </View>
+              <Pressable accessibilityRole="button" accessibilityLabel="Assign kennel team members" onPress={() => Alert.alert('Assign team', 'Kennel team member assignment will be connected later.')} style={({ pressed }) => [styles.assignTeamBox, pressed && styles.pressed]}>
+                <View style={styles.assignTeamTop}>
+                  <View style={[styles.assignTeamIcon, { backgroundColor: KENNEL_PURPLE_TINT }]}>
+                    <MaterialCommunityIcons name="account-group" size={20} color={KENNEL_PURPLE} />
+                  </View>
+                  <View style={styles.assignTeamCopy}>
+                    <Text style={styles.assignTeamTitle}>Assign team members</Text>
+                    <Text style={styles.assignTeamSubtitle}>Choose people who can manage this kennel</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color="#8a9699" />
+                </View>
+                <View style={styles.assignedPills}>
+                  {assignedMembers.map((member) => (
+                    <View key={member.id} style={styles.memberPill}>
+                      <Image source={member.image} style={styles.memberPillImage} contentFit="cover" cachePolicy="memory-disk" />
+                      <Text numberOfLines={1} style={styles.memberPillText}>{member.name.split(' ')[0]}</Text>
+                      <Ionicons name="close" size={12} color="#aeb8bb" />
+                    </View>
+                  ))}
+                </View>
               </Pressable>
-              <Pressable accessibilityRole="button" accessibilityLabel="Create farm" onPress={createFarm} style={({ pressed }) => [styles.setupPrimaryButton, pressed && styles.pressed]}>
-                <Text style={styles.setupPrimaryText}>Create Farm</Text>
+            </View>
+
+            <View style={styles.setupActions}>
+              <Pressable accessibilityRole="button" accessibilityLabel="Create kennel" onPress={createKennel} style={({ pressed }) => [styles.setupPrimaryButton, { backgroundColor: KENNEL_PURPLE }, pressed && styles.pressed]}>
+                <Text style={styles.setupPrimaryText}>Create Kennel</Text>
               </Pressable>
             </View>
           </View>
@@ -2455,6 +3811,7 @@ function Dashboard({ farmName, location, establishedYear, totalWins, onOpenShowc
 export default function App() {
   const [screen, setScreen] = useState('landing');
   const [selectedFarm, setSelectedFarm] = useState(null);
+  const [selectedKennel, setSelectedKennel] = useState(null);
   const [settingsReturn, setSettingsReturn] = useState('dashboard');
   const [createBatchReturn, setCreateBatchReturn] = useState('eggs-incubation');
   const [selectedBatchId, setSelectedBatchId] = useState('INC-024');
@@ -2548,6 +3905,7 @@ export default function App() {
     farmName: 'FB Farm',
     location: 'Pampanga, Philippines',
     establishedYear: '2020',
+    farmManagers: [{ id: 'maria-santos', name: 'Maria Santos', role: 'Farm Manager', farm: 'All Farms' }],
     incubationDays: 21,
     candlingDay: 7,
     notifications: { health: true, tasks: true, incubation: true, vaccinations: true },
@@ -2585,16 +3943,48 @@ export default function App() {
     <SafeAreaProvider>
       {screen === 'landing' ? (
         <LandingScreen
-          onSetup={() => setScreen('farm-setup')}
-          onExisting={() => {
-            setSelectedFarm(null);
-            setScreen('dashboard');
+          onOpenFarm={() => setScreen('farms')}
+          onOpenKennel={() => setScreen('kennel')}
+        />
+      ) : screen === 'kennel' ? (
+        <KennelsScreen
+          onBack={() => setScreen('landing')}
+          onOpenKennel={(kennel) => {
+            setSelectedKennel(kennel);
+            setScreen('kennel-detail');
           }}
-          onFarms={() => setScreen('farms')}
+          onAddKennel={() => setScreen('kennel-setup')}
+        />
+      ) : screen === 'kennel-detail' ? (
+        <KennelManagementScreen
+          kennel={selectedKennel}
+          onBack={() => setScreen('kennel')}
+          onOpenBreedingBatch={() => setScreen('kennel-breeding-plans')}
+          onOpenDogs={() => setScreen('kennel-dogs')}
+        />
+      ) : screen === 'kennel-dogs' ? (
+        <KennelDogsListScreen
+          kennel={selectedKennel}
+          onBack={() => setScreen('kennel-detail')}
+        />
+      ) : screen === 'kennel-breeding-plans' ? (
+        <KennelBreedingPlansScreen
+          kennel={selectedKennel}
+          onBack={() => setScreen('kennel-detail')}
+          onAddPair={() => setScreen('kennel-add-pair')}
+        />
+      ) : screen === 'kennel-add-pair' ? (
+        <KennelAddPairScreen
+          kennel={selectedKennel}
+          onBack={() => setScreen('kennel-breeding-plans')}
+        />
+      ) : screen === 'kennel-setup' ? (
+        <KennelSetupScreen
+          onBack={() => setScreen('kennel')}
         />
       ) : screen === 'farm-setup' ? (
         <FarmSetupScreen
-          onBack={() => setScreen('landing')}
+          onBack={() => setScreen('farms')}
         />
       ) : screen === 'farms' ? (
         <FarmsScreen
@@ -2609,10 +3999,10 @@ export default function App() {
         <FarmDetailScreen
           farm={selectedFarm}
           metrics={[
-            { label: 'Incubating', detail: 'active batches', value: String(ACTIVE_CHICKEN_BATCHES.length), icon: 'egg-outline', color: THEME_ORANGE },
-            { label: 'Brooding', detail: 'active chicks', value: String(addedBroodingBatches.length + 1), icon: 'bird', color: THEME_ORANGE },
-            { label: 'Ranging', detail: 'active batches', value: String(rangingBatches.length), icon: 'leaf', color: THEME_ORANGE },
-            { label: 'Cordate', detail: 'stags housed', value: String(cordingBirds.length), icon: 'home-variant', color: THEME_ORANGE },
+            { label: 'Incubating', detail: 'active batches', value: String(ACTIVE_CHICKEN_BATCHES.length), icon: 'egg-outline', badgeImage: INCUBATION_EGG_IMAGE, color: THEME_ORANGE },
+            { label: 'Brooding', detail: 'active chicks', value: String(addedBroodingBatches.length + 1), icon: 'bird', badgeImage: HATCHED_CHICK_IMAGE, color: THEME_ORANGE },
+            { label: 'Ranging', detail: 'active batches', value: String(rangingBatches.length), icon: 'leaf', badgeImage: RANGING_BADGE_IMAGE, color: THEME_ORANGE },
+            { label: 'Cordate', detail: 'stags housed', value: String(cordingBirds.length), icon: 'home-variant', badgeImage: FLOCK_BADGE_IMAGE, color: THEME_ORANGE },
           ]}
           onBack={() => setScreen('farms')}
           onOpenBreeding={() => setScreen('breeding')}
@@ -2690,6 +4080,8 @@ export default function App() {
                 cross: source.cross,
                 chicks: source.hatched,
                 marking: source.marking,
+                markedToday: source.markedToday,
+                markingNotes: source.markingNotes,
               })),
             };
             setAddedBroodingBatches((current) => [broodingBatch, ...current.filter((batch) => batch.id !== broodingBatchId)]);
@@ -3193,7 +4585,7 @@ export default function App() {
           onSave={(settings) => {
             setManagementSettings(settings);
             setScreen(settingsReturn);
-            Alert.alert('Settings saved', 'Management settings have been updated.');
+            Alert.alert('Settings saved', 'Farm settings have been updated.');
           }}
         />
       ) : screen === 'flock' ? (
@@ -3851,9 +5243,11 @@ const styles = StyleSheet.create({
   blankIncubationBatchHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   blankIncubationBatchIdentity: { minWidth: 0, flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
   blankIncubationBatchIcon: {
-    width: 40, height: 40, borderRadius: 7, backgroundColor: 'rgba(255, 122, 0, 0.1)',
-    alignItems: 'center', justifyContent: 'center',
+    width: 44, height: 44, borderRadius: 7, borderWidth: 1, borderColor: 'rgba(255, 122, 0, 0.32)',
+    backgroundColor: 'rgba(255, 122, 0, 0.1)', alignItems: 'center', justifyContent: 'center',
   },
+  blankIncubationBatchIconLabel: { color: '#ffad5c', fontSize: 7, lineHeight: 9, fontWeight: '900', letterSpacing: 0 },
+  blankIncubationBatchIconValue: { marginTop: 1, color: '#ffffff', fontSize: 16, lineHeight: 18, fontWeight: '900', letterSpacing: 0 },
   blankIncubationBatchName: { color: '#eef2f3', fontSize: 13, fontWeight: '800', letterSpacing: 0 },
   blankIncubationBatchId: { marginTop: 3, color: '#758287', fontSize: 9, letterSpacing: 0 },
   blankIncubationChickenCount: { alignItems: 'flex-end' },
@@ -3968,6 +5362,7 @@ const styles = StyleSheet.create({
   batchSetupTitle: { marginTop: 5, color: '#edf1f2', fontSize: 20, fontWeight: '800', letterSpacing: 0 },
   batchSetupDescription: { marginTop: 6, color: '#89969a', fontSize: 12, lineHeight: 18, letterSpacing: 0 },
   batchSetupDetailsSection: { marginTop: 20, gap: 9 },
+  batchSetupDetailsSectionFirst: { marginTop: 0 },
   batchSetupDetailsRow: { flexDirection: 'row', gap: 9 },
   batchSetupTextField: { flex: 1, minWidth: 0, gap: 6 },
   batchSetupInputShell: {
@@ -4041,6 +5436,82 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
   },
   batchSetupSaveText: { color: '#ffffff', fontSize: 13, lineHeight: 18, fontWeight: '800' },
+  kennelBatchInputShell: { borderColor: 'rgba(139, 92, 246, 0.45)' },
+  kennelPairPreview: {
+    minHeight: 210, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(139, 92, 246, 0.38)',
+    backgroundColor: '#071216', padding: 10, flexDirection: 'row', alignItems: 'stretch', gap: 8,
+  },
+  kennelPairPreviewDog: {
+    flex: 1, minWidth: 0, borderRadius: 8, overflow: 'hidden', backgroundColor: '#0b161d',
+    borderWidth: 1, borderColor: '#263940', paddingBottom: 10,
+  },
+  kennelPairPreviewImage: { width: '100%', height: 118, backgroundColor: '#10191d' },
+  kennelPairPreviewRole: { marginTop: 9, paddingHorizontal: 9, color: KENNEL_PURPLE, fontSize: 8, lineHeight: 11, fontWeight: '900' },
+  kennelPairPreviewName: { paddingHorizontal: 9, marginTop: 3, color: '#fff', fontSize: 13, lineHeight: 17, fontWeight: '900' },
+  kennelPairPreviewMeta: { paddingHorizontal: 9, marginTop: 3, color: '#9aa5a8', fontSize: 9, lineHeight: 12, fontWeight: '700' },
+  kennelPairLink: {
+    width: 36, height: 36, borderRadius: 18, alignSelf: 'center', backgroundColor: KENNEL_PURPLE_TINT,
+    alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(139, 92, 246, 0.42)',
+  },
+  kennelPairSearchColumns: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
+  kennelPairSearchColumnsCompact: { flexDirection: 'column' },
+  kennelPairSearchPanel: {
+    flex: 1, minWidth: 0, borderRadius: 8, borderWidth: 1, borderColor: '#263940',
+    backgroundColor: '#071216', padding: 10,
+  },
+  kennelPairSearchPanelCompact: { width: '100%' },
+  kennelPairSearchHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  kennelPairSearchTitleRow: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  kennelPairSearchTitle: { color: '#f4f6f7', fontSize: 13, lineHeight: 17, fontWeight: '900' },
+  kennelPairSearchCount: {
+    borderRadius: 10, backgroundColor: KENNEL_PURPLE_TINT, paddingHorizontal: 8, paddingVertical: 3,
+    color: KENNEL_PURPLE, fontSize: 8, lineHeight: 11, fontWeight: '900', overflow: 'hidden',
+  },
+  kennelPairSearchShell: { marginTop: 10, minHeight: 44 },
+  kennelPairSuggestionList: { marginTop: 10, gap: 8 },
+  kennelPairEmptySuggestion: {
+    minHeight: 74, borderRadius: 8, borderWidth: 1, borderStyle: 'dashed', borderColor: '#263940',
+    alignItems: 'center', justifyContent: 'center', gap: 5, backgroundColor: '#061014',
+  },
+  kennelPairEmptyText: { color: '#8d999d', fontSize: 10, lineHeight: 14, fontWeight: '800' },
+  kennelPairChoiceGrid: { gap: 9 },
+  kennelPairChoice: {
+    minHeight: 74, borderRadius: 8, borderWidth: 1, borderColor: '#263940',
+    backgroundColor: '#071216', padding: 8, flexDirection: 'row', alignItems: 'center', gap: 10,
+  },
+  kennelPairChoiceActive: { borderColor: KENNEL_PURPLE, backgroundColor: 'rgba(139, 92, 246, 0.1)' },
+  kennelPairChoiceImage: { width: 56, height: 56, borderRadius: 8, backgroundColor: '#10191d' },
+  kennelPairChoiceCopy: { flex: 1, minWidth: 0 },
+  kennelPairChoiceName: { color: '#f3f5f6', fontSize: 12, lineHeight: 16, fontWeight: '900' },
+  kennelPairChoiceMeta: { marginTop: 4, color: '#8d999d', fontSize: 9, lineHeight: 12, fontWeight: '700' },
+  kennelPairChoiceCheck: {
+    width: 22, height: 22, borderRadius: 11, borderWidth: 1, borderColor: '#3a4a51',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  kennelPairChoiceCheckActive: { borderColor: KENNEL_PURPLE, backgroundColor: KENNEL_PURPLE },
+  kennelBatchSaveButton: { backgroundColor: KENNEL_PURPLE },
+  kennelBatchSummary: { marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#263940', gap: 7 },
+  kennelBatchSummaryRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  kennelBatchSummaryText: { flex: 1, color: '#aeb8bb', fontSize: 10, lineHeight: 14, fontWeight: '700' },
+  kennelDogList: { gap: 9 },
+  kennelDogSimpleRow: {
+    minHeight: 86, borderRadius: 8, borderWidth: 1, borderColor: '#263940',
+    backgroundColor: '#071216', padding: 9, flexDirection: 'row', alignItems: 'center', gap: 11,
+  },
+  kennelDogPhoto: { width: 68, height: 68, borderRadius: 8, backgroundColor: '#10191d' },
+  kennelDogSimpleCopy: { flex: 1, minWidth: 0 },
+  kennelDogSimpleTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 },
+  kennelDogSimpleTitleWrap: { flex: 1, minWidth: 0 },
+  kennelDogName: { color: '#f3f5f6', fontSize: 12, lineHeight: 16, fontWeight: '900' },
+  kennelDogId: { marginTop: 2, color: '#657278', fontSize: 8, lineHeight: 11, fontWeight: '800' },
+  kennelDogCellText: { color: '#c5ced1', fontSize: 10, lineHeight: 14, fontWeight: '700' },
+  kennelDogMetaRow: { marginTop: 10, flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 9 },
+  kennelDogMetaItem: { maxWidth: '100%', flexDirection: 'row', alignItems: 'center', gap: 5 },
+  kennelDogStatus: {
+    alignSelf: 'flex-start', borderRadius: 10, backgroundColor: KENNEL_PURPLE_TINT,
+    paddingHorizontal: 8, paddingVertical: 3, color: KENNEL_PURPLE,
+    fontSize: 8, lineHeight: 11, fontWeight: '900', overflow: 'hidden',
+  },
   heroEyebrow: { marginBottom: 5, color: THEME_ORANGE, fontSize: 9, fontWeight: '800', letterSpacing: 0 },
   brand: {
     color: '#f5f4f0', fontSize: 38, lineHeight: 44, fontWeight: '800',
@@ -4081,6 +5552,33 @@ const styles = StyleSheet.create({
   },
   landingPrimaryText: { color: '#ffffff', fontSize: 14, lineHeight: 18, fontWeight: '800' },
   landingSecondaryText: { color: '#f2f5f6', fontSize: 14, lineHeight: 18, fontWeight: '800' },
+  categoryGrid: { marginTop: 22, flexDirection: 'row', gap: 10 },
+  categoryGridCompact: { flexDirection: 'column' },
+  categoryCard: {
+    flex: 1, minHeight: 190, borderRadius: 8, borderWidth: 1,
+    borderColor: 'rgba(255, 122, 0, 0.42)', backgroundColor: '#081115',
+    overflow: 'hidden', padding: 14, justifyContent: 'space-between',
+  },
+  categoryCardCompact: { minHeight: 160 },
+  categoryIcon: {
+    width: 48, height: 48, borderRadius: 24, borderWidth: 1,
+    borderColor: 'rgba(255, 122, 0, 0.55)', backgroundColor: 'rgba(255, 122, 0, 0.22)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  categoryCopy: { marginTop: 'auto' },
+  categoryTitle: {
+    color: '#ffffff', fontSize: 24, lineHeight: 29, fontWeight: '800',
+    fontFamily: Platform.select({ ios: 'Georgia', android: 'serif', web: 'Georgia' }),
+    letterSpacing: 0, textShadowColor: 'rgba(0, 0, 0, 0.72)',
+    textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 5,
+  },
+  categorySubtitle: { marginTop: 4, color: '#d3dade', fontSize: 12, lineHeight: 17, letterSpacing: 0 },
+  categoryAction: {
+    marginTop: 13, minHeight: 34, borderRadius: 17, backgroundColor: THEME_ORANGE,
+    paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    gap: 8,
+  },
+  categoryActionText: { flex: 1, color: '#ffffff', fontSize: 10, lineHeight: 13, fontWeight: '900', letterSpacing: 0 },
   farmsPage: { width: '100%', maxWidth: 720, minHeight: '100%', backgroundColor: '#020709' },
   farmsHero: { height: 252, overflow: 'hidden', backgroundColor: '#101719' },
   farmsHeroCompact: { height: 235 },
@@ -4112,6 +5610,7 @@ const styles = StyleSheet.create({
     backgroundColor: THEME_ORANGE, flexDirection: 'row', alignItems: 'center',
     justifyContent: 'center', gap: 9,
   },
+  kennelPrimaryButton: { backgroundColor: KENNEL_PURPLE },
   farmsAddPrimaryCompact: { width: 52, minWidth: 52, paddingHorizontal: 0 },
   farmsAddPrimaryText: { color: '#ffffff', fontSize: 15, lineHeight: 19, fontWeight: '800' },
   farmsEyebrow: { color: '#9da8ab', fontSize: 9, lineHeight: 12, fontWeight: '800', letterSpacing: 0 },
@@ -4133,23 +5632,21 @@ const styles = StyleSheet.create({
     borderColor: '#1c2a30', backgroundColor: '#0b1418', alignItems: 'center', justifyContent: 'center',
   },
   farmsCountText: { color: '#b8c0c2', fontSize: 9, lineHeight: 12, fontWeight: '700' },
-  farmStatusBadgeDraft: { backgroundColor: 'rgba(71, 80, 84, 0.92)' },
-  farmStatusDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#61df67' },
-  farmStatusDotDraft: { backgroundColor: '#c4cbcd' },
-  farmStatusText: { color: '#ffffff', fontSize: 9, lineHeight: 12, fontWeight: '700' },
   farmCardGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 9 },
   farmWorkspaceCard: {
     flexBasis: '47%', flexGrow: 1, maxWidth: '49%', minHeight: 214,
     borderRadius: 8, borderWidth: 1, borderColor: '#172329',
     backgroundColor: '#0a1317', overflow: 'hidden', justifyContent: 'flex-end',
   },
-  farmCardStatus: {
+  farmCardRole: {
     position: 'absolute', top: 8, right: 8, minHeight: 21, borderRadius: 11,
-    backgroundColor: 'rgba(0, 119, 68, 0.88)', flexDirection: 'row',
+    backgroundColor: 'rgba(255, 122, 0, 0.92)', flexDirection: 'row',
     alignItems: 'center', gap: 4, paddingHorizontal: 7, zIndex: 2,
   },
-  farmCardStatusDraft: { backgroundColor: 'rgba(71, 80, 84, 0.92)' },
-  farmCardStatusText: { color: '#ffffff', fontSize: 9, lineHeight: 12, fontWeight: '700' },
+  farmCardRoleSecondary: { backgroundColor: 'rgba(255, 122, 0, 0.72)' },
+  farmRoleDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#ffffff' },
+  farmRoleDotSecondary: { backgroundColor: '#ffffff' },
+  farmCardRoleText: { color: '#ffffff', fontSize: 9, lineHeight: 12, fontWeight: '700' },
   farmCardBody: { zIndex: 1, paddingHorizontal: 10, paddingBottom: 11 },
   farmCardTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 5, minWidth: 0 },
   farmCardName: {
@@ -4366,6 +5863,101 @@ const styles = StyleSheet.create({
     alignItems: 'center', gap: 8,
   },
   cordateSearchInput: { flex: 1, height: 50, padding: 0, color: '#e7ebec', fontSize: 12, outlineStyle: 'none' },
+  cordateLayoutAddButton: {
+    minHeight: 34, borderRadius: 7, backgroundColor: THEME_ORANGE,
+    paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'center', gap: 5,
+  },
+  cordateLayoutAddText: { color: '#ffffff', fontSize: 10, lineHeight: 13, fontWeight: '900' },
+  cordateLayoutPlan: {
+    marginTop: 2, flexDirection: 'row',
+    flexWrap: 'wrap', gap: 6,
+  },
+  cordateLayoutSlot: {
+    width: '49%', minHeight: 66, borderRadius: 6, borderWidth: 1,
+    borderColor: '#24373f', backgroundColor: '#081216', padding: 6,
+    justifyContent: 'space-between',
+    cursor: Platform.OS === 'web' ? 'grab' : undefined,
+  },
+  cordateLayoutSlotSelected: { borderColor: THEME_ORANGE, backgroundColor: 'rgba(255,122,0,.08)' },
+  cordateLayoutSlotDropReady: { borderColor: '#45636d', backgroundColor: '#0d1d22' },
+  cordateLayoutSlotDragging: { opacity: 0.55, borderColor: THEME_ORANGE },
+  cordateLayoutSlotTop: { minHeight: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 6 },
+  cordateLayoutSlotLabel: { color: '#607077', fontSize: 8, lineHeight: 10, fontWeight: '900' },
+  cordateLayoutSlotMenu: {
+    width: 22, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,.04)',
+  },
+  cordateLayoutBirdTile: {
+    minHeight: 34, borderRadius: 17, borderWidth: 1, borderColor: 'rgba(255,122,0,.35)',
+    backgroundColor: 'rgba(255,122,0,.08)', paddingHorizontal: 8,
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+  },
+  cordateLayoutEmptyTpTile: {
+    minHeight: 34, borderRadius: 17, borderWidth: 1, borderStyle: 'dashed',
+    borderColor: '#30444c', backgroundColor: '#0b171b',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  cordateLayoutBirdTileSelected: { borderColor: THEME_ORANGE, backgroundColor: THEME_ORANGE },
+  cordateLayoutBirdTileDragging: { transform: [{ scale: 0.98 }] },
+  cordateLayoutBirdPhoto: { width: 24, height: 24, borderRadius: 12, backgroundColor: '#10191d' },
+  cordateLayoutBirdPhotoFallback: {
+    width: 24, height: 24, borderRadius: 12, backgroundColor: 'rgba(255,255,255,.08)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  cordateLayoutBirdCopy: { flex: 1, minWidth: 0 },
+  cordateLayoutOpenButton: {
+    width: 22, height: 22, borderRadius: 11, backgroundColor: 'rgba(255,255,255,.08)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  cordateLayoutBirdName: { color: '#eef2f3', fontSize: 9, lineHeight: 12, fontWeight: '900' },
+  cordateLayoutBirdStatus: { fontSize: 9, lineHeight: 12, fontWeight: '900' },
+  cordateLayoutBirdMeta: { marginTop: 1, color: '#a6b1b5', fontSize: 7, lineHeight: 10, fontWeight: '800' },
+  cordateLayoutBirdTextSelected: { color: '#ffffff' },
+  cordateLayoutEmpty: {
+    minHeight: 34, borderRadius: 17, borderWidth: 1, borderStyle: 'dashed',
+    borderColor: '#263a42', alignItems: 'center', justifyContent: 'center',
+  },
+  cordateLayoutEmptyText: { color: '#56676e', fontSize: 8, lineHeight: 11, fontWeight: '900' },
+  cordateLayoutActionSheet: {
+    width: '92%', maxWidth: 420, alignSelf: 'center', borderRadius: 9,
+    borderWidth: 1, borderColor: '#30434a', backgroundColor: '#071216',
+    padding: 16,
+  },
+  cordateLayoutActionGroup: {
+    marginTop: 13, marginBottom: 7, color: '#7f8b8f',
+    fontSize: 8, lineHeight: 11, fontWeight: '900',
+  },
+  cordateLayoutActionGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
+  cordateLayoutActionButton: {
+    minHeight: 34, minWidth: '30%', flex: 1, borderRadius: 7, borderWidth: 1,
+    borderColor: '#26373e', backgroundColor: '#0a171b',
+    alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8,
+  },
+  cordateLayoutActionButtonActive: { borderColor: THEME_ORANGE, backgroundColor: 'rgba(255,122,0,.12)' },
+  cordateLayoutActionText: { color: '#cbd3d6', fontSize: 9, lineHeight: 12, fontWeight: '900' },
+  cordateLayoutActionTextActive: { color: '#ffffff' },
+  cordateLayoutActionList: { gap: 7 },
+  cordateLayoutActionRow: {
+    minHeight: 42, borderRadius: 7, borderWidth: 1, borderColor: '#26373e',
+    backgroundColor: '#0a171b', paddingHorizontal: 11,
+    flexDirection: 'row', alignItems: 'center', gap: 9,
+  },
+  cordateLayoutActionRowActive: { borderColor: THEME_ORANGE, backgroundColor: 'rgba(255,122,0,.1)' },
+  cordateLayoutActionRowText: { color: '#e7edef', fontSize: 10, lineHeight: 13, fontWeight: '900' },
+  cordateLayoutActionRowTextActive: { color: '#ffffff' },
+  cordateLayoutActionDangerText: { color: '#ff9d95' },
+  cordateLayoutActionSaveRow: { marginTop: 12, flexDirection: 'row', gap: 8 },
+  cordateLayoutActionCancel: {
+    flex: 1, minHeight: 40, borderRadius: 7, borderWidth: 1, borderColor: '#30434a',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  cordateLayoutActionCancelText: { color: '#aeb8bb', fontSize: 10, lineHeight: 13, fontWeight: '900' },
+  cordateLayoutActionSave: {
+    flex: 1, minHeight: 40, borderRadius: 7, backgroundColor: THEME_ORANGE,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  cordateLayoutActionSaveText: { color: '#ffffff', fontSize: 10, lineHeight: 13, fontWeight: '900' },
   cordateDropdownRow: { marginVertical: 10, flexDirection: 'row', gap: 8, zIndex: 3 },
   cordateDropdownWrap: { flex: 1, minWidth: 0, position: 'relative' },
   cordateDropdownField: {
@@ -4484,11 +6076,34 @@ const styles = StyleSheet.create({
   cordateStoryButtonCopy: { flex: 1, minWidth: 0 },
   cordateStoryButtonTitle: { color: '#ffffff', fontSize: 11, lineHeight: 14, fontWeight: '900' },
   cordateStoryButtonText: { marginTop: 3, color: '#b8c2c5', fontSize: 8, lineHeight: 11, fontWeight: '700' },
+  cordateStoryHeader: { marginTop: 18, marginBottom: 8 },
+  cordateStoryToggleTitle: { marginTop: 0, marginBottom: 0 },
+  cordateStoryToggleHint: { marginTop: 2, color: '#7f8b8f', fontSize: 8, lineHeight: 11, fontWeight: '700' },
   cordateStorySectionTitle: { marginTop: 18, marginBottom: 8, color: '#edf1f2', fontSize: 15, lineHeight: 19, fontWeight: '900' },
   cordateStoryCard: {
     borderRadius: 8, borderWidth: 1, borderColor: '#213239', backgroundColor: '#071014',
     paddingHorizontal: 12, paddingVertical: 4,
   },
+  cordateTimelineCard: {
+    borderRadius: 8, borderWidth: 1, borderColor: '#213239', backgroundColor: '#071014',
+    paddingHorizontal: 10, paddingVertical: 10,
+  },
+  cordateTimelineItem: { flexDirection: 'row', gap: 10, minHeight: 76 },
+  cordateTimelineRail: { width: 30, alignItems: 'center', position: 'relative' },
+  cordateTimelineLine: {
+    position: 'absolute', top: 32, bottom: -8, width: 1, backgroundColor: '#263940',
+  },
+  cordateTimelineDot: {
+    width: 30, height: 30, borderRadius: 15, borderWidth: 1, borderColor: 'rgba(255,122,0,.55)',
+    backgroundColor: '#10191d', alignItems: 'center', justifyContent: 'center', zIndex: 1,
+  },
+  cordateTimelineDotTagged: { borderColor: THEME_ORANGE, backgroundColor: THEME_ORANGE },
+  cordateTimelineEvent: {
+    flex: 1, minWidth: 0, marginBottom: 10, borderRadius: 7, borderWidth: 1,
+    borderColor: '#1f3037', backgroundColor: '#091317', padding: 10,
+  },
+  cordateTimelineTitle: { flex: 1, color: '#edf2f3', fontSize: 11, lineHeight: 15, fontWeight: '900' },
+  cordateTimelineDetail: { marginTop: 5, color: '#aab5b8', fontSize: 9, lineHeight: 13, fontWeight: '700' },
   cordateStoryRow: { minHeight: 58, flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 9 },
   cordateStoryDivider: { borderBottomWidth: 1, borderBottomColor: '#17272d' },
   cordateStorySmallIcon: {
@@ -4496,8 +6111,14 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   cordateStoryRowCopy: { flex: 1, minWidth: 0 },
+  cordateHistoryTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  cordateHistoryTag: {
+    minHeight: 18, borderRadius: 9, backgroundColor: 'rgba(255,122,0,.1)', paddingHorizontal: 7,
+    color: THEME_ORANGE, fontSize: 7, lineHeight: 17, fontWeight: '900', overflow: 'hidden',
+  },
   cordateStoryRowTitle: { color: '#edf2f3', fontSize: 11, lineHeight: 15, fontWeight: '900' },
   cordateStoryRowDetail: { marginTop: 3, color: '#879397', fontSize: 9, lineHeight: 12, fontWeight: '700' },
+  cordateHistoryMeta: { marginTop: 3, color: '#657278', fontSize: 8, lineHeight: 11, fontWeight: '700' },
   cordateStoryNote: { paddingVertical: 10, color: '#9ca8ab', fontSize: 10, lineHeight: 15 },
   cordateStoryStatus: {
     minWidth: 48, minHeight: 22, borderRadius: 11, backgroundColor: 'rgba(93,220,129,.12)',
@@ -4557,15 +6178,26 @@ const styles = StyleSheet.create({
   cordateEvidenceLabel: { paddingVertical: 6, color: '#b8c2c5', fontSize: 8, lineHeight: 11, fontWeight: '800' },
   cordateLossPhotoRow: { marginTop: 14, flexDirection: 'row', gap: 8 },
   cordateLossPhotoPick: {
-    flex: 1, height: 112, borderRadius: 8, borderWidth: 1, borderStyle: 'dashed',
-    borderColor: '#30434a', backgroundColor: '#071014', alignItems: 'center', justifyContent: 'center',
-    overflow: 'hidden',
+    flex: 1, minHeight: 146, borderRadius: 8, borderWidth: 1, borderStyle: 'dashed',
+    borderColor: '#30434a', backgroundColor: '#071014', padding: 7, gap: 7,
+  },
+  cordateLossPhotoPreview: {
+    height: 88, borderRadius: 7, backgroundColor: '#0a171b',
+    alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
   },
   cordateLossPhotoImage: { width: '100%', height: '100%' },
   cordateLossPhotoText: {
     position: 'absolute', left: 8, bottom: 8, borderRadius: 9, backgroundColor: 'rgba(2,7,9,.72)',
     paddingHorizontal: 8, paddingVertical: 3, color: '#ffffff', fontSize: 8, lineHeight: 11, fontWeight: '900',
   },
+  cordateLossPhotoActions: { flexDirection: 'row', gap: 5 },
+  cordateLossPhotoButton: {
+    flex: 1, minHeight: 30, borderRadius: 6, borderWidth: 1, borderColor: '#30434a',
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4,
+  },
+  cordateLossPhotoButtonPrimary: { borderColor: THEME_ORANGE, backgroundColor: THEME_ORANGE },
+  cordateLossPhotoButtonText: { color: THEME_ORANGE, fontSize: 8, lineHeight: 11, fontWeight: '900' },
+  cordateLossPhotoButtonTextPrimary: { color: '#ffffff', fontSize: 8, lineHeight: 11, fontWeight: '900' },
   overdue: { color: '#ff3d4d' },
   setupPanel: {
     borderRadius: 8, borderWidth: 1, borderColor: '#26343a',
@@ -4623,32 +6255,11 @@ const styles = StyleSheet.create({
   },
   memberPillImage: { width: 22, height: 22, borderRadius: 11 },
   memberPillText: { color: '#dfe4e5', fontSize: 11, lineHeight: 14, fontWeight: '700' },
-  visibilityGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 9 },
-  visibilityOption: {
-    flexBasis: '48%', flexGrow: 1, minWidth: 220, minHeight: 76, borderRadius: 8,
-    borderWidth: 1, borderColor: '#26343a', backgroundColor: '#0b1418',
-    flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 12, paddingVertical: 12,
-  },
-  visibilityOptionActive: { borderColor: THEME_ORANGE, backgroundColor: '#091216' },
-  visibilityRadio: { width: 14, height: 14, borderRadius: 7, borderWidth: 1, borderColor: '#8a9699' },
-  visibilityRadioActive: { borderWidth: 4, borderColor: THEME_ORANGE },
-  visibilityIcon: {
-    width: 42, height: 42, borderRadius: 21, backgroundColor: 'rgba(255,122,0,0.12)',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  visibilityCopy: { flex: 1, minWidth: 0 },
-  visibilityTitle: { color: '#f1f4f4', fontSize: 13, lineHeight: 17, fontWeight: '800' },
-  visibilityDescription: { marginTop: 3, color: '#9aa5a8', fontSize: 10, lineHeight: 14 },
   setupActions: { marginTop: 2, flexDirection: 'row', justifyContent: 'space-between', gap: 10 },
-  setupSecondaryButton: {
-    flex: 1, minHeight: 48, borderRadius: 8, borderWidth: 1, borderColor: THEME_ORANGE,
-    backgroundColor: 'transparent', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 10,
-  },
   setupPrimaryButton: {
     flex: 1, minHeight: 48, borderRadius: 8, backgroundColor: THEME_ORANGE,
     alignItems: 'center', justifyContent: 'center', paddingHorizontal: 10,
   },
-  setupSecondaryText: { color: THEME_ORANGE, fontSize: 13, lineHeight: 18, fontWeight: '800' },
   setupPrimaryText: { color: '#ffffff', fontSize: 13, lineHeight: 18, fontWeight: '800' },
   activityHeading: { marginTop: 23, marginBottom: 9, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' }, activitySectionTitle: { color: '#e7ebec', fontSize: 16, fontWeight: '700' }, activitySectionSubtitle: { marginTop: 3, color: '#707d81', fontSize: 8 }, activityToday: { color: THEME_ORANGE, fontSize: 8, fontWeight: '700' }, activityList: { borderWidth: 1, borderColor: '#26343a', borderRadius: 8, backgroundColor: '#091216', overflow: 'hidden' }, activityRow: { minHeight: 65, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 9 }, activityDivider: { borderBottomWidth: 1, borderBottomColor: '#223037' }, activityPressed: { backgroundColor: '#111d22' }, activityIcon: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,122,0,0.08)', alignItems: 'center', justifyContent: 'center' }, activityCopy: { flex: 1, minWidth: 0 }, activityTitle: { color: '#dfe4e5', fontSize: 10, fontWeight: '700' }, activityDetail: { marginTop: 4, color: '#788589', fontSize: 8 }, activityTime: { color: '#8a9699', fontSize: 7 },
   processBackButton: { alignSelf: 'flex-start', marginTop: 4, flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 7, paddingRight: 10 },
